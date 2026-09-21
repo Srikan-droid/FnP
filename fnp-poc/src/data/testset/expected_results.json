@@ -1,0 +1,1151 @@
+{
+  "generated": "2026-09-13",
+  "purpose": "Ground truth for the data authentication stage. Compare engine output field by field.",
+  "verdicts": {
+    "MATCH": "Declared value corroborated by the evidence document",
+    "MATCH_VARIANT": "Differs only by formatting, legal suffix or known name variant; must not be flagged",
+    "MISMATCH": "Evidence contradicts the declared value; case returns to the filer",
+    "CONTRADICTION": "Evidence contradicts the Yes/No answer itself, not just a field",
+    "UNVERIFIABLE": "Document uploaded but the field cannot be located in it",
+    "EVIDENCE_MISSING": "Mandatory document was not uploaded"
+  },
+  "applications": {
+    "APP001": {
+      "applicant": "Johanna N. Amutenya",
+      "profile": "Clean baseline — every declared value is corroborated by its evidence.",
+      "fields": [
+        {
+          "qid": "A1",
+          "field": "date_of_birth",
+          "declared": "1974-06-18",
+          "in_evidence": "1974-06-18",
+          "doc_type": "national_id",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CS4",
+          "field": "declaration_date",
+          "declared": "2026-08-14",
+          "in_evidence": "2026-08-14",
+          "doc_type": "suitability_declaration",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CS4",
+          "field": "declaration_signatory",
+          "declared": "Johanna N. Amutenya",
+          "in_evidence": "Johanna N. Amutenya",
+          "doc_type": "suitability_declaration",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "company_name",
+          "declared": "Kavango Financial Services (Pty) Ltd",
+          "in_evidence": "Kavango Financial Services (Pty) Ltd",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "company_registration_number",
+          "declared": "CC/2011/04872",
+          "in_evidence": "CC/2011/04872",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "director_appointment_date",
+          "declared": "2016-05-12",
+          "in_evidence": "2016-05-12",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC1",
+          "field": "criminal_record_status",
+          "declared": "No record",
+          "in_evidence": "No record",
+          "doc_type": "police_clearance",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "tax_identification_number",
+          "declared": "TIN-4471982",
+          "in_evidence": "TIN-4471982",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "tax_compliance_status",
+          "declared": "Compliant",
+          "in_evidence": "Compliant",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "certificate_valid_to",
+          "declared": "2026-12-31",
+          "in_evidence": "2026-12-31",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "qualification",
+          "declared": "Bachelor of Commerce (Accounting)",
+          "in_evidence": "Bachelor of Commerce (Accounting)",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "institution",
+          "declared": "University of Namibia",
+          "in_evidence": "University of Namibia",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "year_awarded",
+          "declared": "1997",
+          "in_evidence": "1997",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employer",
+          "declared": "Standard Trust Bank Limited",
+          "in_evidence": "Standard Trust Bank Limited",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "role",
+          "declared": "Head of Credit Risk",
+          "in_evidence": "Head of Credit Risk",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employment_start",
+          "declared": "2009-02-01",
+          "in_evidence": "2009-02-01",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employment_end",
+          "declared": "2024-11-30",
+          "in_evidence": "2024-11-30",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "relevant_experience_years",
+          "declared": 15,
+          "in_evidence": 15,
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T1",
+          "field": "appointed_position",
+          "declared": "Non-Executive Director",
+          "in_evidence": "Non-Executive Director",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T1",
+          "field": "time_commitment_hours_per_week",
+          "declared": 12,
+          "in_evidence": 12,
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T2",
+          "field": "executive_responsibility",
+          "declared": "No",
+          "in_evidence": "No",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T2",
+          "field": "appointment_effective_date",
+          "declared": "2026-07-01",
+          "in_evidence": "2026-07-01",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        }
+      ]
+    },
+    "APP002": {
+      "applicant": "Petrus K. Shivute",
+      "profile": "Two transcription-level mismatches: date of birth digits transposed, degree year off by one.",
+      "fields": [
+        {
+          "qid": "A1",
+          "field": "date_of_birth",
+          "declared": "1978-03-12",
+          "in_evidence": "1978-03-21",
+          "doc_type": "national_id",
+          "expected": "MISMATCH",
+          "note": "Document reads 1978-03-21"
+        },
+        {
+          "qid": "CS4",
+          "field": "declaration_date",
+          "declared": "2026-08-11",
+          "in_evidence": "2026-08-11",
+          "doc_type": "suitability_declaration",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CS4",
+          "field": "declaration_signatory",
+          "declared": "Petrus K. Shivute",
+          "in_evidence": "Petrus K. Shivute",
+          "doc_type": "suitability_declaration",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "company_name",
+          "declared": "Erongo Building Society",
+          "in_evidence": "Erongo Building Society",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "company_registration_number",
+          "declared": "BS/2004/00019",
+          "in_evidence": "BS/2004/00019",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "director_appointment_date",
+          "declared": "2019-09-02",
+          "in_evidence": "2019-09-02",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC1",
+          "field": "criminal_record_status",
+          "declared": "No record",
+          "in_evidence": "No record",
+          "doc_type": "police_clearance",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "tax_identification_number",
+          "declared": "TIN-5590214",
+          "in_evidence": "TIN-5590214",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "tax_compliance_status",
+          "declared": "Compliant",
+          "in_evidence": "Compliant",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "certificate_valid_to",
+          "declared": "2027-03-31",
+          "in_evidence": "2027-03-31",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "qualification",
+          "declared": "Master of Business Administration",
+          "in_evidence": "Master of Business Administration",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "institution",
+          "declared": "Namibia Business School",
+          "in_evidence": "Namibia Business School",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "year_awarded",
+          "declared": "2008",
+          "in_evidence": "2009",
+          "doc_type": "degree_certificate",
+          "expected": "MISMATCH",
+          "note": "Document reads 2009"
+        },
+        {
+          "qid": "Q3",
+          "field": "employer",
+          "declared": "Erongo Building Society",
+          "in_evidence": "Erongo Building Society",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "role",
+          "declared": "Chief Operating Officer",
+          "in_evidence": "Chief Operating Officer",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employment_start",
+          "declared": "2012-08-15",
+          "in_evidence": "2012-08-15",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employment_end",
+          "declared": "2026-05-31",
+          "in_evidence": "2026-05-31",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "relevant_experience_years",
+          "declared": 13,
+          "in_evidence": 13,
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T1",
+          "field": "appointed_position",
+          "declared": "Executive Director",
+          "in_evidence": "Executive Director",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T1",
+          "field": "time_commitment_hours_per_week",
+          "declared": 40,
+          "in_evidence": 40,
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T2",
+          "field": "executive_responsibility",
+          "declared": "Yes",
+          "in_evidence": "Yes",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T2",
+          "field": "appointment_effective_date",
+          "declared": "2026-07-01",
+          "in_evidence": "2026-07-01",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        }
+      ]
+    },
+    "APP003": {
+      "applicant": "Elias T. Haufiku",
+      "profile": "Overstated experience (declared 12 years, letter supports 8) and a missing tax certificate — exercises MISMATCH plus EVIDENCE_MISSING.",
+      "fields": [
+        {
+          "qid": "A1",
+          "field": "date_of_birth",
+          "declared": "1969-11-05",
+          "in_evidence": "1969-11-05",
+          "doc_type": "national_id",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "A4",
+          "field": "citizenship_status",
+          "declared": "Naturalised citizen",
+          "in_evidence": "Naturalised citizen",
+          "doc_type": "naturalisation_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "A4",
+          "field": "naturalisation_certificate_no",
+          "declared": "NAT/2003/11947",
+          "in_evidence": "NAT/2003/11947",
+          "doc_type": "naturalisation_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CS4",
+          "field": "declaration_date",
+          "declared": "2026-08-19",
+          "in_evidence": "2026-08-19",
+          "doc_type": "suitability_declaration",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CS4",
+          "field": "declaration_signatory",
+          "declared": "Elias T. Haufiku",
+          "in_evidence": "Elias T. Haufiku",
+          "doc_type": "suitability_declaration",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "company_name",
+          "declared": "Namib Trust Company (Pty) Ltd",
+          "in_evidence": "Namib Trust Company (Pty) Ltd",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "company_registration_number",
+          "declared": "PT/2009/00311",
+          "in_evidence": "PT/2009/00311",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "director_appointment_date",
+          "declared": "2014-01-06",
+          "in_evidence": "2014-01-06",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC1",
+          "field": "criminal_record_status",
+          "declared": "No record",
+          "in_evidence": "No record",
+          "doc_type": "police_clearance",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "tax_identification_number",
+          "declared": "TIN-3320876",
+          "in_evidence": "(document not uploaded)",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "EVIDENCE_MISSING",
+          "note": "tax_compliance_certificate was not uploaded"
+        },
+        {
+          "qid": "PC19",
+          "field": "tax_compliance_status",
+          "declared": "Compliant",
+          "in_evidence": "(document not uploaded)",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "EVIDENCE_MISSING",
+          "note": "tax_compliance_certificate was not uploaded"
+        },
+        {
+          "qid": "PC19",
+          "field": "certificate_valid_to",
+          "declared": "2026-10-31",
+          "in_evidence": "(document not uploaded)",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "EVIDENCE_MISSING",
+          "note": "tax_compliance_certificate was not uploaded"
+        },
+        {
+          "qid": "Q1",
+          "field": "qualification",
+          "declared": "Bachelor of Laws (LLB)",
+          "in_evidence": "Bachelor of Laws (LLB)",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "institution",
+          "declared": "University of Cape Town",
+          "in_evidence": "University of Cape Town",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "year_awarded",
+          "declared": "1994",
+          "in_evidence": "1994",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employer",
+          "declared": "Namib Trust Company (Pty) Ltd",
+          "in_evidence": "Namib Trust Company (Pty) Ltd",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "role",
+          "declared": "Compliance Director",
+          "in_evidence": "Compliance Director",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employment_start",
+          "declared": "2014-01-06",
+          "in_evidence": "2018-03-01",
+          "doc_type": "employment_letter",
+          "expected": "MISMATCH",
+          "note": "Document reads 2018-03-01"
+        },
+        {
+          "qid": "Q3",
+          "field": "employment_end",
+          "declared": "2026-04-30",
+          "in_evidence": "2026-04-30",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "relevant_experience_years",
+          "declared": 12,
+          "in_evidence": 12,
+          "doc_type": "employment_letter",
+          "expected": "MISMATCH",
+          "note": "Declared 12 years; letter supports 2018-03-01 to 2026-04-30, about 8 years"
+        },
+        {
+          "qid": "T1",
+          "field": "appointed_position",
+          "declared": "Non-Executive Director",
+          "in_evidence": "Non-Executive Director",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T1",
+          "field": "time_commitment_hours_per_week",
+          "declared": 10,
+          "in_evidence": 10,
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T2",
+          "field": "executive_responsibility",
+          "declared": "No",
+          "in_evidence": "No",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T2",
+          "field": "appointment_effective_date",
+          "declared": "2026-07-01",
+          "in_evidence": "2026-07-01",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        }
+      ]
+    },
+    "APP004": {
+      "applicant": "Maria L. van Wyk",
+      "profile": "Direct contradiction: declares no criminal record but the clearance certificate lists a conviction; share count off by a factor of ten.",
+      "fields": [
+        {
+          "qid": "A1",
+          "field": "date_of_birth",
+          "declared": "1972-01-27",
+          "in_evidence": "1972-01-27",
+          "doc_type": "national_id",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CS4",
+          "field": "declaration_date",
+          "declared": "2026-08-09",
+          "in_evidence": "2026-08-09",
+          "doc_type": "suitability_declaration",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CS4",
+          "field": "declaration_signatory",
+          "declared": "Maria L. van Wyk",
+          "in_evidence": "Maria L. van Wyk",
+          "doc_type": "suitability_declaration",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "company_name",
+          "declared": "Windhoek Commercial Bank Limited",
+          "in_evidence": "Windhoek Commercial Bank Limited",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "company_registration_number",
+          "declared": "CO/1998/00742",
+          "in_evidence": "CO/1998/00742",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "director_appointment_date",
+          "declared": "2015-03-18",
+          "in_evidence": "2015-03-18",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI6",
+          "field": "beneficial_interest_entity",
+          "declared": "Van Wyk Family Holdings (Pty) Ltd",
+          "in_evidence": "Van Wyk Family Holdings (Pty) Ltd",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI6",
+          "field": "beneficial_holding_pct",
+          "declared": "62%",
+          "in_evidence": "62%",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoL1",
+          "field": "shares_held",
+          "declared": "250,000",
+          "in_evidence": "25,000",
+          "doc_type": "share_certificate",
+          "expected": "MISMATCH",
+          "note": "Document reads 25,000"
+        },
+        {
+          "qid": "CoL1",
+          "field": "share_certificate_no",
+          "declared": "SC-0417",
+          "in_evidence": "SC-0417",
+          "doc_type": "share_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "FC5",
+          "field": "facility_reference",
+          "declared": "FAC-2019-88231",
+          "in_evidence": "FAC-2019-88231",
+          "doc_type": "bank_reference_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "FC5",
+          "field": "facility_status",
+          "declared": "Restructured, since regularised",
+          "in_evidence": "Restructured, since regularised",
+          "doc_type": "bank_reference_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "FC7",
+          "field": "total_indebtedness",
+          "declared": "J$4,200,000",
+          "in_evidence": "J$4,200,000",
+          "doc_type": "bank_reference_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC1",
+          "field": "criminal_record_status",
+          "declared": "No record",
+          "in_evidence": "One conviction recorded: contravention of s.34 Companies Act, fine imposed 2013",
+          "doc_type": "police_clearance",
+          "expected": "CONTRADICTION",
+          "note": "Answer to PC1 is No, but the clearance certificate records a conviction"
+        },
+        {
+          "qid": "PC19",
+          "field": "tax_identification_number",
+          "declared": "TIN-6041559",
+          "in_evidence": "TIN-6041559",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "tax_compliance_status",
+          "declared": "Compliant",
+          "in_evidence": "Compliant",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "certificate_valid_to",
+          "declared": "2027-01-31",
+          "in_evidence": "2027-01-31",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "qualification",
+          "declared": "Chartered Accountant (CA(NAM))",
+          "in_evidence": "Chartered Accountant (CA(NAM))",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "institution",
+          "declared": "Institute of Chartered Accountants of Namibia",
+          "in_evidence": "Institute of Chartered Accountants of Namibia",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "year_awarded",
+          "declared": "2001",
+          "in_evidence": "2001",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employer",
+          "declared": "Windhoek Commercial Bank Limited",
+          "in_evidence": "Windhoek Commercial Bank Limited",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "role",
+          "declared": "Chief Financial Officer",
+          "in_evidence": "Chief Financial Officer",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employment_start",
+          "declared": "2010-04-01",
+          "in_evidence": "2010-04-01",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employment_end",
+          "declared": "2026-06-30",
+          "in_evidence": "2026-06-30",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "relevant_experience_years",
+          "declared": 16,
+          "in_evidence": 16,
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T1",
+          "field": "appointed_position",
+          "declared": "Executive Director",
+          "in_evidence": "Executive Director",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T1",
+          "field": "time_commitment_hours_per_week",
+          "declared": 40,
+          "in_evidence": 40,
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T2",
+          "field": "executive_responsibility",
+          "declared": "Yes",
+          "in_evidence": "Yes",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T2",
+          "field": "appointment_effective_date",
+          "declared": "2026-07-01",
+          "in_evidence": "2026-07-01",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        }
+      ]
+    },
+    "APP005": {
+      "applicant": "Margaret Kaapanda",
+      "profile": "Tolerance cases: maiden name on the degree, legal-suffix variant on the employer, and a registry extract that omits the appointment date — should not be scored as mismatches.",
+      "fields": [
+        {
+          "qid": "A1",
+          "field": "date_of_birth",
+          "declared": "1966-09-30",
+          "in_evidence": "1966-09-30",
+          "doc_type": "national_id",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CS4",
+          "field": "declaration_date",
+          "declared": "2026-08-21",
+          "in_evidence": "2026-08-21",
+          "doc_type": "suitability_declaration",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CS4",
+          "field": "declaration_signatory",
+          "declared": "Margaret Kaapanda",
+          "in_evidence": "Margaret Kaapanda",
+          "doc_type": "suitability_declaration",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "company_name",
+          "declared": "Kaapanda Investments CC",
+          "in_evidence": "Kaapanda Investments CC",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "company_registration_number",
+          "declared": "CC/2013/09920",
+          "in_evidence": "CC/2013/09920",
+          "doc_type": "company_registry_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoI2",
+          "field": "director_appointment_date",
+          "declared": "2013-06-24",
+          "in_evidence": "(field absent)",
+          "doc_type": "company_registry_extract",
+          "expected": "UNVERIFIABLE",
+          "note": "Registry extract lists the director but omits the appointment date"
+        },
+        {
+          "qid": "CoL3",
+          "field": "relative_name",
+          "declared": "Johannes Kaapanda",
+          "in_evidence": "Johannes Kaapanda",
+          "doc_type": "share_register_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoL3",
+          "field": "relative_relationship",
+          "declared": "Spouse",
+          "in_evidence": "Spouse",
+          "doc_type": "share_register_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "CoL3",
+          "field": "relative_shares_held",
+          "declared": "15,000",
+          "in_evidence": "15,000",
+          "doc_type": "share_register_extract",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC1",
+          "field": "criminal_record_status",
+          "declared": "No record",
+          "in_evidence": "No record",
+          "doc_type": "police_clearance",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "tax_identification_number",
+          "declared": "TIN-2287340",
+          "in_evidence": "TIN-2287340",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "tax_compliance_status",
+          "declared": "Compliant",
+          "in_evidence": "Compliant",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "PC19",
+          "field": "certificate_valid_to",
+          "declared": "2026-11-30",
+          "in_evidence": "2026-11-30",
+          "doc_type": "tax_compliance_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "qualification",
+          "declared": "Bachelor of Economics",
+          "in_evidence": "Bachelor of Economics",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": "Certificate is in the maiden name Margaret Iipinge — holder identity needs a name-variant check, the qualification itself matches"
+        },
+        {
+          "qid": "Q1",
+          "field": "institution",
+          "declared": "University of Namibia",
+          "in_evidence": "University of Namibia",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "year_awarded",
+          "declared": "1989",
+          "in_evidence": "1989",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q1",
+          "field": "certificate_holder_name",
+          "declared": "Margaret Kaapanda",
+          "in_evidence": "Margaret Iipinge",
+          "doc_type": "degree_certificate",
+          "expected": "MATCH_VARIANT",
+          "note": "Maiden name on the certificate; engine should ask for a name-variant check rather than fail the field"
+        },
+        {
+          "qid": "Q3",
+          "field": "employer",
+          "declared": "Standard Trust Bank Limited",
+          "in_evidence": "Standard Trust Bank Ltd.",
+          "doc_type": "employment_letter",
+          "expected": "MATCH_VARIANT",
+          "note": "Legal suffix differs only (Limited vs Ltd.) — should not be a mismatch"
+        },
+        {
+          "qid": "Q3",
+          "field": "role",
+          "declared": "Regional Director",
+          "in_evidence": "Regional Director",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employment_start",
+          "declared": "2005-07-01",
+          "in_evidence": "2005-07-01",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "employment_end",
+          "declared": "2023-12-31",
+          "in_evidence": "2023-12-31",
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "Q3",
+          "field": "relevant_experience_years",
+          "declared": 18,
+          "in_evidence": 18,
+          "doc_type": "employment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T1",
+          "field": "appointed_position",
+          "declared": "Non-Executive Director",
+          "in_evidence": "Non-Executive Director",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T1",
+          "field": "time_commitment_hours_per_week",
+          "declared": 8,
+          "in_evidence": 8,
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T2",
+          "field": "executive_responsibility",
+          "declared": "No",
+          "in_evidence": "No",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        },
+        {
+          "qid": "T2",
+          "field": "appointment_effective_date",
+          "declared": "2026-07-01",
+          "in_evidence": "2026-07-01",
+          "doc_type": "board_appointment_letter",
+          "expected": "MATCH",
+          "note": ""
+        }
+      ]
+    }
+  }
+}

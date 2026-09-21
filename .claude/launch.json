@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "fnp-poc",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "fnp-poc", "run", "dev"],
+      "port": 5173
+    }
+  ]
+}
