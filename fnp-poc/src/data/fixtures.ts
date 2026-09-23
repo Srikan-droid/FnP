@@ -14,14 +14,6 @@ export const APPLICATION_FORMS: Record<string, ApplicationForm> = {
   APP005: app005 as unknown as ApplicationForm,
 };
 
-export const APPLICANT_PROFILES: { id: string; name: string; blurb: string }[] = [
-  { id: "APP001", name: "Johanna N. Amutenya", blurb: "Clean baseline — everything matches." },
-  { id: "APP002", name: "Petrus K. Shivute", blurb: "Two transcription-level mismatches (DOB, degree year)." },
-  { id: "APP003", name: "Elias T. Haufiku", blurb: "Overstated experience + a missing tax certificate." },
-  { id: "APP004", name: "Maria L. van Wyk", blurb: "Declares no record, but clearance shows a conviction." },
-  { id: "APP005", name: "Margaret Kaapanda", blurb: "Maiden name / legal-suffix tolerance cases." },
-];
-
 interface ExpectedResultsFile {
   applications: Record<string, { applicant: string; profile: string; fields: FieldExpectation[] }>;
 }

@@ -1,25 +1,31 @@
 import { APPLICATION_FORMS } from "../data/fixtures";
 import { QUESTIONS } from "../domain/questions";
 import { isEvidenceRequired } from "../domain/evidenceRules";
+import type { Assignment } from "../data/assignments";
 import type { ApplicationForm } from "../domain/types";
 
-const storageKey = (applicationId: string) => `fnp-draft-${applicationId}`;
+const storageKey = (assignmentId: string) => `fnp-draft-${assignmentId}`;
 
-export interface NewApplicationDetails {
-  entityName: string;
-  positionAppliedFor: string;
+/** Entity and position always come from the parent application, never from the draft. */
+function withParentDetails(form: ApplicationForm, assignment: Assignment): ApplicationForm {
+  return {
+    ...form,
+    application_id: assignment.id,
+    licensee: assignment.entity,
+    applicant: { ...form.applicant, proposed_role: assignment.position },
+  };
 }
 
-function blankForm(applicationId: string, details?: NewApplicationDetails): ApplicationForm {
-  const identity = APPLICATION_FORMS[applicationId];
+function blankForm(assignment: Assignment): ApplicationForm {
+  const source = APPLICATION_FORMS[assignment.applicantId];
   return {
-    application_id: applicationId,
-    licensee: details?.entityName ?? identity?.licensee ?? "",
+    application_id: assignment.id,
+    licensee: assignment.entity,
     applicant: {
-      full_name: identity?.applicant.full_name ?? applicationId,
-      proposed_role: details?.positionAppliedFor ?? identity?.applicant.proposed_role ?? "",
-      date_of_birth: identity?.applicant.date_of_birth ?? "",
-      town: identity?.applicant.town ?? "",
+      full_name: assignment.applicantName,
+      proposed_role: assignment.position,
+      date_of_birth: source?.applicant.date_of_birth ?? "",
+      town: source?.applicant.town ?? "",
     },
     submitted_at: new Date().toISOString(),
     responses: QUESTIONS.map((q) => ({
@@ -34,34 +40,45 @@ function blankForm(applicationId: string, details?: NewApplicationDetails): Appl
   };
 }
 
-/** The seeded "old draft" — the first time a user's draft is read, it's the full test fixture. */
-export function getDraft(applicationId: string): ApplicationForm {
-  const raw = localStorage.getItem(storageKey(applicationId));
+function seededForm(assignment: Assignment): ApplicationForm {
+  const source = APPLICATION_FORMS[assignment.applicantId];
+  if (!source) return blankForm(assignment);
+  const clone = JSON.parse(JSON.stringify(source)) as ApplicationForm;
+  return withParentDetails(clone, assignment);
+}
+
+/**
+ * A draft exists only once the filer has started one. Assessments flagged `seededDraft`
+ * simulate a department where the filer already began, so both states are demonstrable.
+ */
+export function hasDraft(assignment: Assignment): boolean {
+  return localStorage.getItem(storageKey(assignment.id)) !== null || assignment.seededDraft;
+}
+
+export function getDraft(assignment: Assignment): ApplicationForm {
+  const raw = localStorage.getItem(storageKey(assignment.id));
   if (raw) {
     try {
-      return JSON.parse(raw) as ApplicationForm;
+      return withParentDetails(JSON.parse(raw) as ApplicationForm, assignment);
     } catch {
-      // fall through to reseed below
+      // fall through and rebuild below
     }
   }
-  const seeded = APPLICATION_FORMS[applicationId]
-    ? (JSON.parse(JSON.stringify(APPLICATION_FORMS[applicationId])) as ApplicationForm)
-    : blankForm(applicationId);
-  saveDraft(applicationId, seeded);
-  return seeded;
+  if (assignment.seededDraft) {
+    const seeded = seededForm(assignment);
+    saveDraft(assignment.id, seeded);
+    return seeded;
+  }
+  return blankForm(assignment);
 }
 
-export function saveDraft(applicationId: string, form: ApplicationForm): void {
-  localStorage.setItem(storageKey(applicationId), JSON.stringify(form));
+export function saveDraft(assignmentId: string, form: ApplicationForm): void {
+  localStorage.setItem(storageKey(assignmentId), JSON.stringify(form));
 }
 
-/** Overwrites whatever draft exists (seeded or user-edited) with a blank one. */
-export function resetDraft(applicationId: string, details: NewApplicationDetails): ApplicationForm {
-  const fresh = blankForm(applicationId, details);
-  saveDraft(applicationId, fresh);
+/** Overwrites whatever draft exists with a blank one. */
+export function resetDraft(assignment: Assignment): ApplicationForm {
+  const fresh = blankForm(assignment);
+  saveDraft(assignment.id, fresh);
   return fresh;
-}
-
-export function hasSavedDraft(applicationId: string): boolean {
-  return localStorage.getItem(storageKey(applicationId)) !== null;
 }

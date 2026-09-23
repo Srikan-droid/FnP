@@ -1,6 +1,8 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../state/AssessmentContext";
+import { getAssignment, departmentFor } from "../data/assignments";
 import QuestionCard from "../components/QuestionCard";
+import AssessmentNotFound from "../components/AssessmentNotFound";
 import { ArrowRightIcon, AlertTriangleIcon } from "../components/icons";
 import { DOC_TYPE_BY_QID, hasMissingMandatoryEvidence } from "../domain/evidenceRules";
 import { displaySection } from "../domain/sectionLabels";
@@ -10,15 +12,21 @@ export default function ApplyPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const { getForm, updateAnswer, attachEvidence } = useAssessment();
-  const form = getForm(id);
+  const assignment = getAssignment(id);
 
+  if (!assignment) return <AssessmentNotFound />;
+
+  const form = getForm(assignment);
   const sections = Array.from(new Set(form.responses.map((r) => r.section)));
   const required = form.responses.filter((r) => r.evidence_required);
   const missing = required.filter(hasMissingMandatoryEvidence);
 
   const handleAttachEvidence = (qid: string) => {
     const docType = DOC_TYPE_BY_QID[qid] ?? "document";
-    attachEvidence(id, qid, { doc_type: docType, path: `evidence/${id}/${docType}.pdf` });
+    attachEvidence(assignment, qid, {
+      doc_type: docType,
+      path: `evidence/${assignment.applicantId}/${docType}.pdf`,
+    });
   };
 
   return (
@@ -34,16 +42,16 @@ export default function ApplyPage() {
 
         <dl className="meta-grid">
           <div>
-            <dt>Applicant</dt>
-            <dd>{form.applicant.full_name}</dd>
+            <dt>Requested by</dt>
+            <dd>{departmentFor(assignment).name}</dd>
           </div>
           <div>
             <dt>Entity</dt>
-            <dd>{form.licensee || "—"}</dd>
+            <dd>{assignment.entity}</dd>
           </div>
           <div>
             <dt>Position applied for</dt>
-            <dd>{form.applicant.proposed_role || "—"}</dd>
+            <dd>{assignment.position}</dd>
           </div>
         </dl>
       </header>
@@ -62,9 +70,11 @@ export default function ApplyPage() {
               {items.map((r) => (
                 <QuestionCard
                   key={r.qid}
-                  applicationId={id}
+                  applicantId={assignment.applicantId}
                   response={r}
-                  onAnswerChange={(qid: string, answer: Answer) => updateAnswer(id, qid, answer)}
+                  onAnswerChange={(qid: string, answer: Answer) =>
+                    updateAnswer(assignment, qid, answer)
+                  }
                   onAttachEvidence={handleAttachEvidence}
                 />
               ))}
@@ -90,7 +100,7 @@ export default function ApplyPage() {
         <span className="actionbar-note">
           {required.length - missing.length} of {required.length} required documents attached
         </span>
-        <button className="btn btn-primary" onClick={() => navigate(`/apply/${id}/review`)}>
+        <button className="btn btn-primary" onClick={() => navigate(`/apply/${assignment.id}/review`)}>
           Continue to review
           <ArrowRightIcon size={15} />
         </button>

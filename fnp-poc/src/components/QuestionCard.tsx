@@ -4,12 +4,12 @@ import { DOC_TYPE_BY_QID } from "../domain/evidenceRules";
 import type { Answer, ResponseItem } from "../domain/types";
 
 export default function QuestionCard({
-  applicationId,
+  applicantId,
   response,
   onAnswerChange,
   onAttachEvidence,
 }: {
-  applicationId: string;
+  applicantId: string;
   response: ResponseItem;
   onAnswerChange: (qid: string, answer: Answer) => void;
   onAttachEvidence: (qid: string) => void;
@@ -34,7 +34,7 @@ export default function QuestionCard({
 
       {response.evidence_required && (
         <EvidenceBlock
-          applicationId={applicationId}
+          applicantId={applicantId}
           evidence={response.evidence}
           docType={DOC_TYPE_BY_QID[response.qid] ?? "document"}
           onAttach={() => onAttachEvidence(response.qid)}

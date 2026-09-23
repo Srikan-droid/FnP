@@ -1,37 +1,60 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { getDraft, saveDraft, resetDraft as resetDraftInStore } from "./draftStore";
-import type { NewApplicationDetails } from "./draftStore";
+import { getDraft, saveDraft, resetDraft } from "./draftStore";
 import { isEvidenceRequired } from "../domain/evidenceRules";
+import type { Assignment } from "../data/assignments";
 import type { Answer, ApplicationForm, EvidenceRef } from "../domain/types";
 
+const SESSION_KEY = "fnp-session-email";
+
 interface AssessmentContextValue {
-  getForm: (applicationId: string) => ApplicationForm;
-  updateAnswer: (applicationId: string, qid: string, answer: Answer) => void;
-  attachEvidence: (applicationId: string, qid: string, evidence: EvidenceRef) => void;
-  startNewApplication: (applicationId: string, details: NewApplicationDetails) => void;
+  email: string | null;
+  signIn: (email: string) => void;
+  signOut: () => void;
+  getForm: (assignment: Assignment) => ApplicationForm;
+  updateAnswer: (assignment: Assignment, qid: string, answer: Answer) => void;
+  attachEvidence: (assignment: Assignment, qid: string, evidence: EvidenceRef) => void;
+  startNewApplication: (assignment: Assignment) => void;
 }
 
 const AssessmentContext = createContext<AssessmentContextValue | null>(null);
 
+function readStoredEmail(): string | null {
+  try {
+    return sessionStorage.getItem(SESSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function AssessmentProvider({ children }: { children: ReactNode }) {
   const [forms, setForms] = useState<Record<string, ApplicationForm>>({});
+  const [email, setEmail] = useState<string | null>(readStoredEmail);
+
+  const signIn = useCallback((value: string) => {
+    const normalized = value.trim().toLowerCase();
+    sessionStorage.setItem(SESSION_KEY, normalized);
+    setEmail(normalized);
+  }, []);
+
+  const signOut = useCallback(() => {
+    sessionStorage.removeItem(SESSION_KEY);
+    setEmail(null);
+  }, []);
 
   const getForm = useCallback(
-    (applicationId: string) => {
-      return forms[applicationId] ?? getDraft(applicationId);
-    },
+    (assignment: Assignment) => forms[assignment.id] ?? getDraft(assignment),
     [forms]
   );
 
-  const persist = useCallback((applicationId: string, next: ApplicationForm) => {
-    setForms((prev) => ({ ...prev, [applicationId]: next }));
-    saveDraft(applicationId, next);
+  const persist = useCallback((assignmentId: string, next: ApplicationForm) => {
+    setForms((prev) => ({ ...prev, [assignmentId]: next }));
+    saveDraft(assignmentId, next);
   }, []);
 
   const updateAnswer = useCallback(
-    (applicationId: string, qid: string, answer: Answer) => {
-      const base = forms[applicationId] ?? getDraft(applicationId);
+    (assignment: Assignment, qid: string, answer: Answer) => {
+      const base = forms[assignment.id] ?? getDraft(assignment);
       const next: ApplicationForm = {
         ...base,
         responses: base.responses.map((r) => {
@@ -48,36 +71,38 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
           };
         }),
       };
-      persist(applicationId, next);
+      persist(assignment.id, next);
     },
     [forms, persist]
   );
 
   const attachEvidence = useCallback(
-    (applicationId: string, qid: string, evidence: EvidenceRef) => {
-      const base = forms[applicationId] ?? getDraft(applicationId);
+    (assignment: Assignment, qid: string, evidence: EvidenceRef) => {
+      const base = forms[assignment.id] ?? getDraft(assignment);
       const next: ApplicationForm = {
         ...base,
         responses: base.responses.map((r) =>
-          r.qid === qid ? { ...r, evidence: [...r.evidence.filter((e) => e.doc_type !== evidence.doc_type), evidence] } : r
+          r.qid === qid
+            ? {
+                ...r,
+                evidence: [...r.evidence.filter((e) => e.doc_type !== evidence.doc_type), evidence],
+              }
+            : r
         ),
       };
-      persist(applicationId, next);
+      persist(assignment.id, next);
     },
     [forms, persist]
   );
 
-  const startNewApplication = useCallback(
-    (applicationId: string, details: NewApplicationDetails) => {
-      const fresh = resetDraftInStore(applicationId, details);
-      setForms((prev) => ({ ...prev, [applicationId]: fresh }));
-    },
-    []
-  );
+  const startNewApplication = useCallback((assignment: Assignment) => {
+    const fresh = resetDraft(assignment);
+    setForms((prev) => ({ ...prev, [assignment.id]: fresh }));
+  }, []);
 
   const value = useMemo(
-    () => ({ getForm, updateAnswer, attachEvidence, startNewApplication }),
-    [getForm, updateAnswer, attachEvidence, startNewApplication]
+    () => ({ email, signIn, signOut, getForm, updateAnswer, attachEvidence, startNewApplication }),
+    [email, signIn, signOut, getForm, updateAnswer, attachEvidence, startNewApplication]
   );
 
   return <AssessmentContext.Provider value={value}>{children}</AssessmentContext.Provider>;

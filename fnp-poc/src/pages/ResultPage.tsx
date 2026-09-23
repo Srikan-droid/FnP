@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../state/AssessmentContext";
+import { getAssignment, departmentFor } from "../data/assignments";
 import { getExpectedFields } from "../data/fixtures";
 import { authenticate, score } from "../domain/engine";
 import ReportView from "../components/ReportView";
+import AssessmentNotFound from "../components/AssessmentNotFound";
 import { AlertTriangleIcon, ArrowLeftIcon, ArrowRightIcon } from "../components/icons";
 import type { Verdict } from "../domain/types";
 
@@ -21,13 +23,21 @@ export default function ResultPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const { getForm } = useAssessment();
-  const form = getForm(id);
 
-  const authResult = useMemo(() => authenticate(id, getExpectedFields(id)), [id]);
-  const scoreResult = useMemo(
-    () => (authResult.isClean ? score(form) : null),
-    [authResult.isClean, form]
+  const assignment = getAssignment(id);
+  const form = assignment ? getForm(assignment) : null;
+
+  const authResult = useMemo(
+    () =>
+      assignment ? authenticate(assignment.id, getExpectedFields(assignment.applicantId)) : null,
+    [assignment]
   );
+  const scoreResult = useMemo(
+    () => (authResult?.isClean && form ? score(form) : null),
+    [authResult, form]
+  );
+
+  if (!assignment || !form || !authResult) return <AssessmentNotFound />;
 
   if (!authResult.isClean) {
     const count = authResult.blockingFields.length;
@@ -81,8 +91,8 @@ export default function ResultPage() {
         </div>
 
         <footer className="actionbar">
-          <span className="actionbar-note">{form.applicant.full_name}</span>
-          <button className="btn btn-primary" onClick={() => navigate(`/apply/${id}`)}>
+          <span className="actionbar-note">{departmentFor(assignment).name}</span>
+          <button className="btn btn-primary" onClick={() => navigate(`/apply/${assignment.id}`)}>
             Return to form and correct
             <ArrowRightIcon size={15} />
           </button>
@@ -103,16 +113,16 @@ export default function ResultPage() {
 
         <dl className="meta-grid">
           <div>
-            <dt>Applicant</dt>
-            <dd>{form.applicant.full_name}</dd>
+            <dt>Requested by</dt>
+            <dd>{departmentFor(assignment).name}</dd>
           </div>
           <div>
             <dt>Entity</dt>
-            <dd>{form.licensee || "—"}</dd>
+            <dd>{assignment.entity}</dd>
           </div>
           <div>
             <dt>Position applied for</dt>
-            <dd>{form.applicant.proposed_role || "—"}</dd>
+            <dd>{assignment.position}</dd>
           </div>
         </dl>
       </header>
@@ -120,9 +130,9 @@ export default function ResultPage() {
       <ReportView form={form} authentication={authResult} scoreResult={scoreResult!} />
 
       <footer className="actionbar">
-        <button className="btn btn-ghost" onClick={() => navigate("/")}>
+        <button className="btn btn-ghost" onClick={() => navigate("/assessments")}>
           <ArrowLeftIcon size={15} />
-          Back to start
+          Back to your assessments
         </button>
       </footer>
     </div>

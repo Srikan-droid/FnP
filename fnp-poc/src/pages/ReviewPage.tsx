@@ -1,5 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../state/AssessmentContext";
+import { getAssignment, departmentFor } from "../data/assignments";
+import AssessmentNotFound from "../components/AssessmentNotFound";
 import {
   AlertTriangleIcon,
   ArrowLeftIcon,
@@ -14,8 +16,11 @@ export default function ReviewPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const { getForm } = useAssessment();
-  const form = getForm(id);
+  const assignment = getAssignment(id);
 
+  if (!assignment) return <AssessmentNotFound />;
+
+  const form = getForm(assignment);
   const sections = Array.from(new Set(form.responses.map((r) => r.section)));
   const missing = form.responses.filter(hasMissingMandatoryEvidence);
 
@@ -32,16 +37,16 @@ export default function ReviewPage() {
 
         <dl className="meta-grid">
           <div>
-            <dt>Applicant</dt>
-            <dd>{form.applicant.full_name}</dd>
+            <dt>Requested by</dt>
+            <dd>{departmentFor(assignment).name}</dd>
           </div>
           <div>
             <dt>Entity</dt>
-            <dd>{form.licensee || "—"}</dd>
+            <dd>{assignment.entity}</dd>
           </div>
           <div>
             <dt>Position applied for</dt>
-            <dd>{form.applicant.proposed_role || "—"}</dd>
+            <dd>{assignment.position}</dd>
           </div>
         </dl>
       </header>
@@ -103,11 +108,14 @@ export default function ReviewPage() {
       )}
 
       <footer className="actionbar">
-        <button className="btn btn-ghost" onClick={() => navigate(`/apply/${id}`)}>
+        <button className="btn btn-ghost" onClick={() => navigate(`/apply/${assignment.id}`)}>
           <ArrowLeftIcon size={15} />
           Back to edit
         </button>
-        <button className="btn btn-primary" onClick={() => navigate(`/apply/${id}/processing`)}>
+        <button
+          className="btn btn-primary"
+          onClick={() => navigate(`/apply/${assignment.id}/processing`)}
+        >
           Submit application
           <ArrowRightIcon size={15} />
         </button>

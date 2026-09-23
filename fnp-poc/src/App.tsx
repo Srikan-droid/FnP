@@ -1,7 +1,8 @@
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { AssessmentProvider } from "./state/AssessmentContext";
 import AppShell from "./components/AppShell";
-import StartPage from "./pages/StartPage";
+import LoginPage from "./pages/LoginPage";
+import AssessmentsPage from "./pages/AssessmentsPage";
 import ApplyPage from "./pages/ApplyPage";
 import ReviewPage from "./pages/ReviewPage";
 import ProcessingPage from "./pages/ProcessingPage";
@@ -14,7 +15,8 @@ export default function App() {
       <HashRouter>
         <AppShell>
           <Routes>
-            <Route path="/" element={<StartPage />} />
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/assessments" element={<AssessmentsPage />} />
             <Route path="/apply/:id" element={<ApplyPage />} />
             <Route path="/apply/:id/review" element={<ReviewPage />} />
             <Route path="/apply/:id/processing" element={<ProcessingPage />} />

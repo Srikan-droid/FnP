@@ -5,12 +5,12 @@ import type { EvidenceRef } from "../domain/types";
 const prettyDocType = (docType: string) => docType.replaceAll("_", " ");
 
 export default function EvidenceBlock({
-  applicationId,
+  applicantId,
   evidence,
   docType,
   onAttach,
 }: {
-  applicationId: string;
+  applicantId: string;
   evidence: EvidenceRef[];
   docType: string;
   onAttach: () => void;
@@ -47,7 +47,7 @@ export default function EvidenceBlock({
             </span>
             <a
               className="btn btn-ghost btn-sm"
-              href={evidenceUrl(applicationId, fileName)}
+              href={evidenceUrl(applicantId, fileName)}
               target="_blank"
               rel="noreferrer"
             >
