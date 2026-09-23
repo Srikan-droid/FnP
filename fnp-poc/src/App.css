@@ -692,6 +692,12 @@
   color: var(--ink);
 }
 
+.required-mark {
+  margin-left: 0.2rem;
+  color: var(--critical);
+  font-weight: 600;
+}
+
 /* ============================================================
    Segmented answer control
    ============================================================ */
@@ -1078,32 +1084,40 @@
 /* ============================================================
    Review
    ============================================================ */
-.review-group + .review-group {
-  border-top: 1px solid var(--hairline);
+.review-table .col-answer {
+  width: 6rem;
 }
 
-.review-group-title {
-  padding: 0.7rem 1.25rem;
-  background: var(--surface-sunken);
+/* Shrink to content and right-align, so the right inset matches the left */
+.review-table .col-attachment,
+.review-table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Section bands read as headings, not as a second row of column labels */
+.review-group-row th {
+  padding: 0.9rem 1.25rem 0.5rem;
+  background: var(--surface);
+  color: var(--ink);
   font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--ink-3);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  text-align: left;
+  border-top: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
 }
 
-.review-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 1.25rem;
-  font-size: 0.8125rem;
+.review-table tbody:first-of-type .review-group-row th {
+  border-top: none;
 }
 
-.review-row + .review-row {
-  border-top: 1px solid var(--hairline);
+.review-question-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
 }
 
 .review-question {
@@ -1114,17 +1128,14 @@
   overflow: hidden;
 }
 
-.review-evidence {
-  font-size: 0.6875rem;
-  white-space: nowrap;
-}
-
 .review-evidence-ok,
 .review-evidence-missing,
 .review-evidence-none {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .review-evidence-ok {
@@ -1541,7 +1552,7 @@
   font-size: 0.8125rem;
 }
 
-.data-table th {
+.data-table thead th {
   padding: 0.6rem 0.75rem;
   text-align: left;
   font-size: 0.625rem;
@@ -1549,8 +1560,20 @@
   letter-spacing: 0.07em;
   font-weight: 600;
   color: var(--ink-3);
+  background: var(--surface-sunken);
   border-bottom: 1px solid var(--hairline);
   white-space: nowrap;
+}
+
+/* Table content lines up with the padding of every other card on the page. */
+.data-table th:first-child,
+.data-table td:first-child {
+  padding-left: 1.25rem;
+}
+
+.data-table th:last-child,
+.data-table td:last-child {
+  padding-right: 1.25rem;
 }
 
 .data-table td {
@@ -1836,15 +1859,6 @@
 
   .diff-sep {
     height: 1px;
-  }
-
-  .review-row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    row-gap: 0.4rem;
-  }
-
-  .review-evidence {
-    grid-column: 2 / -1;
   }
 
   .sbar-row {

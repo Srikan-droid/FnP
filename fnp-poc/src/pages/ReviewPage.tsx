@@ -52,37 +52,65 @@ export default function ReviewPage() {
       </header>
 
       <section className="card">
-        {sections.map((section) => (
-          <div className="review-group" key={section}>
-            <h2 className="review-group-title">{displaySection(section)}</h2>
-            {form.responses
-              .filter((r) => r.section === section)
-              .map((r) => (
-                <div className="review-row" key={r.qid}>
-                  <span className="qid">{r.qid}</span>
-                  <p className="review-question">{r.question}</p>
-                  <span className="review-evidence">
-                    {!r.evidence_required ? (
-                      <span className="review-evidence-none">No document needed</span>
-                    ) : r.evidence.length > 0 ? (
-                      <span className="review-evidence-ok">
-                        <FileTextIcon size={13} />
-                        Attached
-                      </span>
-                    ) : (
-                      <span className="review-evidence-missing">
-                        <AlertTriangleIcon size={13} />
-                        Missing
-                      </span>
-                    )}
-                  </span>
-                  <span className={`answer-tag answer-${r.answer.toLowerCase().replace("/", "")}`}>
-                    {r.answer}
-                  </span>
-                </div>
-              ))}
-          </div>
-        ))}
+        <div className="table-wrap">
+          <table className="data-table review-table">
+            <thead>
+              <tr>
+                <th scope="col">Question</th>
+                <th scope="col" className="col-answer">
+                  Answer
+                </th>
+                <th scope="col" className="col-attachment">
+                  Attachment
+                </th>
+              </tr>
+            </thead>
+
+            {sections.map((section) => (
+              <tbody key={section}>
+                <tr className="review-group-row">
+                  <th colSpan={3} scope="colgroup">
+                    {displaySection(section)}
+                  </th>
+                </tr>
+                {form.responses
+                  .filter((r) => r.section === section)
+                  .map((r) => (
+                    <tr key={r.qid}>
+                      <td>
+                        <div className="review-question-cell">
+                          <span className="qid">{r.qid}</span>
+                          <p className="review-question">{r.question}</p>
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className={`answer-tag answer-${r.answer.toLowerCase().replace("/", "")}`}
+                        >
+                          {r.answer}
+                        </span>
+                      </td>
+                      <td>
+                        {!r.evidence_required ? (
+                          <span className="review-evidence-none">Not required</span>
+                        ) : r.evidence.length > 0 ? (
+                          <span className="review-evidence-ok">
+                            <FileTextIcon size={13} />
+                            Attached
+                          </span>
+                        ) : (
+                          <span className="review-evidence-missing">
+                            <AlertTriangleIcon size={13} />
+                            Missing
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            ))}
+          </table>
+        </div>
       </section>
 
       {missing.length > 0 ? (

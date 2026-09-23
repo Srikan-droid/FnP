@@ -12,7 +12,7 @@ export default function AnswerToggle({
   labelledBy: string;
 }) {
   return (
-    <div className="segmented" role="radiogroup" aria-labelledby={labelledBy}>
+    <div className="segmented" role="radiogroup" aria-labelledby={labelledBy} aria-required="true">
       {options.map((option) => (
         <button
           key={option}

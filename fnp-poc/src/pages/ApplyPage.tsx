@@ -42,8 +42,9 @@ export default function ApplyPage() {
         <div className="page-head-text">
           <h1>Data collection</h1>
           <p className="page-sub">
-            {form.responses.length} questions across {sections.length} sections. Attach supporting
-            documents where they are asked for.
+            {form.responses.length} questions across {sections.length} sections. Fields marked{" "}
+            <span className="required-mark">*</span> are mandatory — attach supporting documents
+            where they are asked for.
           </p>
         </div>
 

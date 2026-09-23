@@ -26,6 +26,9 @@ export default function QuestionCard({
           <span className="qid">{response.qid}</span>
           <p className="qtext" id={labelId}>
             {response.question}
+            <span className="required-mark" aria-hidden="true">
+              *
+            </span>
           </p>
         </div>
         <AnswerToggle
