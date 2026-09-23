@@ -14,6 +14,7 @@ interface AssessmentContextValue {
   getForm: (assignment: Assignment) => ApplicationForm;
   updateAnswer: (assignment: Assignment, qid: string, answer: Answer) => void;
   attachEvidence: (assignment: Assignment, qid: string, evidence: EvidenceRef) => void;
+  removeEvidence: (assignment: Assignment, qid: string, docType: string) => void;
   startNewApplication: (assignment: Assignment) => void;
 }
 
@@ -95,14 +96,46 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
     [forms, persist]
   );
 
+  const removeEvidence = useCallback(
+    (assignment: Assignment, qid: string, docType: string) => {
+      const base = forms[assignment.id] ?? getDraft(assignment);
+      const next: ApplicationForm = {
+        ...base,
+        responses: base.responses.map((r) =>
+          r.qid === qid ? { ...r, evidence: r.evidence.filter((e) => e.doc_type !== docType) } : r
+        ),
+      };
+      persist(assignment.id, next);
+    },
+    [forms, persist]
+  );
+
   const startNewApplication = useCallback((assignment: Assignment) => {
     const fresh = resetDraft(assignment);
     setForms((prev) => ({ ...prev, [assignment.id]: fresh }));
   }, []);
 
   const value = useMemo(
-    () => ({ email, signIn, signOut, getForm, updateAnswer, attachEvidence, startNewApplication }),
-    [email, signIn, signOut, getForm, updateAnswer, attachEvidence, startNewApplication]
+    () => ({
+      email,
+      signIn,
+      signOut,
+      getForm,
+      updateAnswer,
+      attachEvidence,
+      removeEvidence,
+      startNewApplication,
+    }),
+    [
+      email,
+      signIn,
+      signOut,
+      getForm,
+      updateAnswer,
+      attachEvidence,
+      removeEvidence,
+      startNewApplication,
+    ]
   );
 
   return <AssessmentContext.Provider value={value}>{children}</AssessmentContext.Provider>;

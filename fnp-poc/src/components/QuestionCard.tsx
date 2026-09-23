@@ -1,6 +1,7 @@
 import AnswerToggle from "./AnswerToggle";
 import EvidenceBlock from "./EvidenceBlock";
 import { DOC_TYPE_BY_QID } from "../domain/evidenceRules";
+import { answerOptionsFor } from "../domain/questions";
 import type { Answer, ResponseItem } from "../domain/types";
 
 export default function QuestionCard({
@@ -8,11 +9,13 @@ export default function QuestionCard({
   response,
   onAnswerChange,
   onAttachEvidence,
+  onRemoveEvidence,
 }: {
   applicantId: string;
   response: ResponseItem;
   onAnswerChange: (qid: string, answer: Answer) => void;
   onAttachEvidence: (qid: string) => void;
+  onRemoveEvidence: (qid: string, docType: string) => void;
 }) {
   const labelId = `q-${response.qid}-label`;
 
@@ -27,6 +30,7 @@ export default function QuestionCard({
         </div>
         <AnswerToggle
           value={response.answer}
+          options={answerOptionsFor(response.qid, response.answer)}
           labelledBy={labelId}
           onChange={(answer) => onAnswerChange(response.qid, answer)}
         />
@@ -38,6 +42,7 @@ export default function QuestionCard({
           evidence={response.evidence}
           docType={DOC_TYPE_BY_QID[response.qid] ?? "document"}
           onAttach={() => onAttachEvidence(response.qid)}
+          onRemove={(docType) => onRemoveEvidence(response.qid, docType)}
         />
       )}
     </article>

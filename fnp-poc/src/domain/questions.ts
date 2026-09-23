@@ -1,3 +1,5 @@
+import type { Answer } from "./types";
+
 export interface QuestionDef {
   qid: string;
   section: string;
@@ -160,3 +162,13 @@ export const QUESTIONS: QuestionDef[] = [
 export const QUESTION_BY_QID: Record<string, QuestionDef> = Object.fromEntries(
   QUESTIONS.map((q) => [q.qid, q])
 );
+
+// Every question demands a Yes or a No. N/A is only meaningful for T2, where a non-executive
+// appointment genuinely has no executive responsibility to declare either way.
+const NA_ELIGIBLE_QIDS = new Set(["T2"]);
+
+export function answerOptionsFor(qid: string, currentAnswer?: Answer): Answer[] {
+  const options: Answer[] = ["Yes", "No"];
+  if (NA_ELIGIBLE_QIDS.has(qid) || currentAnswer === "N/A") options.push("N/A");
+  return options;
+}

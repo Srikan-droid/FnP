@@ -1,5 +1,5 @@
 import { evidenceUrl } from "../data/fixtures";
-import { ExternalLinkIcon, FileTextIcon, UploadIcon } from "./icons";
+import { ExternalLinkIcon, FileTextIcon, UploadIcon, XIcon } from "./icons";
 import type { EvidenceRef } from "../domain/types";
 
 const prettyDocType = (docType: string) => docType.replaceAll("_", " ");
@@ -9,11 +9,13 @@ export default function EvidenceBlock({
   evidence,
   docType,
   onAttach,
+  onRemove,
 }: {
   applicantId: string;
   evidence: EvidenceRef[];
   docType: string;
   onAttach: () => void;
+  onRemove: (docType: string) => void;
 }) {
   if (evidence.length === 0) {
     return (
@@ -54,6 +56,15 @@ export default function EvidenceBlock({
               View
               <ExternalLinkIcon size={13} />
             </a>
+            <button
+              type="button"
+              className="btn-remove"
+              onClick={() => onRemove(file.doc_type)}
+              aria-label={`Remove ${fileName}`}
+              title="Remove attachment"
+            >
+              <XIcon size={14} />
+            </button>
           </div>
         );
       })}

@@ -1,19 +1,19 @@
 import type { Answer } from "../domain/types";
 
-const OPTIONS: Answer[] = ["Yes", "No", "N/A"];
-
 export default function AnswerToggle({
   value,
+  options,
   onChange,
   labelledBy,
 }: {
   value: Answer;
+  options: Answer[];
   onChange: (answer: Answer) => void;
   labelledBy: string;
 }) {
   return (
     <div className="segmented" role="radiogroup" aria-labelledby={labelledBy}>
-      {OPTIONS.map((option) => (
+      {options.map((option) => (
         <button
           key={option}
           type="button"

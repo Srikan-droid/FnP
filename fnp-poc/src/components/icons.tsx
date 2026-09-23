@@ -165,6 +165,23 @@ export function ChartIcon({ size = 16, className }: IconProps) {
   );
 }
 
+export function XIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="m6.75 6.75 10.5 10.5" />
+      <path d="m17.25 6.75-10.5 10.5" />
+    </svg>
+  );
+}
+
+export function ChevronDownIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="m6.5 9.75 5.5 5.5 5.5-5.5" />
+    </svg>
+  );
+}
+
 export function MailIcon({ size = 16, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>
