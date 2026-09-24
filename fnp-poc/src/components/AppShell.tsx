@@ -4,14 +4,20 @@ import { useAssessment } from "../state/AssessmentContext";
 import { getAssignment, departmentFor } from "../data/assignments";
 import { CheckIcon, LogOutIcon, ShieldCheckIcon } from "./icons";
 
-const STEPS = ["Data collection", "Review", "Assessment", "Result"] as const;
+const STEPS = ["Data collection", "Review", "Authentication", "Result"] as const;
+
+const STEP_BY_STAGE: Record<string, number> = {
+  review: 1,
+  status: 2,
+  authentication: 2,
+  result: 3,
+};
 
 function readRoute(pathname: string): { assignmentId: string | null; stepIndex: number | null } {
-  const match = /^\/apply\/([^/]+)(?:\/(review|processing|result))?\/?$/.exec(pathname);
+  const match = /^\/apply\/([^/]+)(?:\/(review|status|authentication|result))?\/?$/.exec(pathname);
   if (!match) return { assignmentId: null, stepIndex: null };
   const stage = match[2];
-  const stepIndex = stage === "review" ? 1 : stage === "processing" ? 2 : stage === "result" ? 3 : 0;
-  return { assignmentId: match[1], stepIndex };
+  return { assignmentId: match[1], stepIndex: stage ? STEP_BY_STAGE[stage] : 0 };
 }
 
 export default function AppShell({ children }: { children: ReactNode }) {

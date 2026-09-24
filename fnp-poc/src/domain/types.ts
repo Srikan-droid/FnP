@@ -1,16 +1,12 @@
 export type Answer = "Yes" | "No" | "N/A";
 
-export type Verdict =
-  | "MATCH"
-  | "MATCH_VARIANT"
-  | "MISMATCH"
-  | "CONTRADICTION"
-  | "UNVERIFIABLE"
-  | "EVIDENCE_MISSING";
-
 export interface EvidenceRef {
   doc_type: string;
   path: string;
+  /** Dropdown option the filer picked. Absent on drafts seeded from the source test set. */
+  option_code?: string;
+  /** What the filer typed when they picked "Other — please specify". */
+  description?: string;
 }
 
 export interface ResponseItem {
@@ -18,9 +14,10 @@ export interface ResponseItem {
   section: string;
   question: string;
   answer: Answer;
-  declared_values: Record<string, string | number | boolean>;
   evidence_required: boolean;
   evidence: EvidenceRef[];
+  /** Named checks the authentication engine runs for this question (v2 test set). */
+  checks_to_perform: string[];
 }
 
 export interface ApplicationForm {
@@ -36,23 +33,38 @@ export interface ApplicationForm {
   responses: ResponseItem[];
 }
 
-export interface FieldExpectation {
-  qid: string;
-  field: string;
-  declared: string | number;
-  in_evidence: string | number;
-  doc_type: string;
-  expected: Verdict;
+export type CheckStatus = "pass" | "caution" | "fail";
+
+export interface CheckResult {
+  name: string;
+  label: string;
+  status: CheckStatus;
+  /** 0–1. Low confidence is how a failed or shaky check announces itself. */
+  confidence: number;
   note: string;
 }
 
-export interface AuthenticationFieldResult extends FieldExpectation {}
+export type QuestionAuthStatus = "authenticated" | "issue" | "not_checked";
 
-export interface AuthenticationResult {
-  applicationId: string;
+export interface QuestionAuthResult {
+  qid: string;
+  section: string;
+  question: string;
+  answer: Answer;
+  status: QuestionAuthStatus;
+  checks: CheckResult[];
+  /** Weakest check carries the question. Null when no checks ran. */
+  confidence: number | null;
+  summary: string;
+}
+
+export interface AuthenticationOutcome {
+  assessmentId: string;
+  questions: QuestionAuthResult[];
+  issues: QuestionAuthResult[];
   isClean: boolean;
-  fields: AuthenticationFieldResult[];
-  blockingFields: AuthenticationFieldResult[];
+  overallConfidence: number | null;
+  checksRun: number;
 }
 
 export interface SectionScoreLine {
@@ -82,14 +94,4 @@ export interface ScoreResult {
   knockOutTriggered: boolean;
   knockOutReason?: string;
   recommendation: string;
-}
-
-export interface AssessmentReport {
-  applicationId: string;
-  applicantName: string;
-  proposedRole: string;
-  licensee: string;
-  generatedAt: string;
-  authentication: AuthenticationResult;
-  score: ScoreResult | null;
 }

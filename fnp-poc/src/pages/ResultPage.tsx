@@ -1,23 +1,14 @@
 import { useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../state/AssessmentContext";
 import { getAssignment, departmentFor } from "../data/assignments";
-import { getExpectedFields } from "../data/fixtures";
-import { authenticate, score } from "../domain/engine";
+import { authenticate } from "../domain/authentication";
+import { score } from "../domain/engine";
+import { statusFor } from "../state/submissionStore";
 import ReportView from "../components/ReportView";
+import OutcomeTabs from "../components/OutcomeTabs";
 import AssessmentNotFound from "../components/AssessmentNotFound";
-import { AlertTriangleIcon, ArrowLeftIcon, ArrowRightIcon } from "../components/icons";
-import type { Verdict } from "../domain/types";
-
-const VERDICT_COPY: Record<string, { label: string; tone: string }> = {
-  MISMATCH: { label: "Evidence contradicts the value entered", tone: "critical" },
-  CONTRADICTION: { label: "Evidence contradicts the Yes/No answer itself", tone: "critical" },
-  EVIDENCE_MISSING: { label: "Mandatory document was not uploaded", tone: "warning" },
-  UNVERIFIABLE: { label: "Document uploaded, but the field is not in it", tone: "serious" },
-};
-
-const verdictCopy = (verdict: Verdict) =>
-  VERDICT_COPY[verdict] ?? { label: verdict, tone: "neutral" };
+import { ArrowLeftIcon } from "../components/icons";
 
 export default function ResultPage() {
   const { id = "" } = useParams();
@@ -27,95 +18,35 @@ export default function ResultPage() {
   const assignment = getAssignment(id);
   const form = assignment ? getForm(assignment) : null;
 
-  const authResult = useMemo(
-    () =>
-      assignment ? authenticate(assignment.id, getExpectedFields(assignment.applicantId)) : null,
-    [assignment]
+  const outcome = useMemo(
+    () => (assignment && form ? authenticate(assignment.id, assignment.applicantId, form) : null),
+    [assignment, form]
   );
   const scoreResult = useMemo(
-    () => (authResult?.isClean && form ? score(form) : null),
-    [authResult, form]
+    () => (outcome?.isClean && form ? score(form) : null),
+    [outcome, form]
   );
 
-  if (!assignment || !form || !authResult) return <AssessmentNotFound />;
+  if (!assignment || !form || !outcome) return <AssessmentNotFound />;
 
-  if (!authResult.isClean) {
-    const count = authResult.blockingFields.length;
-    return (
-      <div className="page">
-        <header className="page-head">
-          <div className="page-head-text">
-            <span className="chip chip-critical">
-              <AlertTriangleIcon size={14} />
-              Returned to filer
-            </span>
-            <h1>
-              Authentication found {count} issue{count > 1 ? "s" : ""}
-            </h1>
-            <p className="page-sub">
-              Scoring did not run — the engine only scores a fully authenticated submission.
-              Correct the fields below and resubmit.
-            </p>
-          </div>
-        </header>
-
-        <div className="findings">
-          {authResult.blockingFields.map((f, i) => {
-            const copy = verdictCopy(f.expected);
-            return (
-              <article className="card finding" key={`${f.qid}-${f.field}-${i}`}>
-                <header className="finding-head">
-                  <span className="qid">{f.qid}</span>
-                  <span className="finding-field">{f.field.replaceAll("_", " ")}</span>
-                  <span className={`chip chip-${copy.tone}`}>{f.expected}</span>
-                </header>
-
-                <p className="finding-reason">{copy.label}</p>
-
-                <div className="diff">
-                  <div className="diff-col">
-                    <span className="diff-label">You entered</span>
-                    <span className="diff-value">{String(f.declared)}</span>
-                  </div>
-                  <span className="diff-sep" aria-hidden="true" />
-                  <div className="diff-col is-evidence">
-                    <span className="diff-label">Evidence shows</span>
-                    <span className="diff-value">{String(f.in_evidence)}</span>
-                  </div>
-                </div>
-
-                {f.note && <p className="finding-note">{f.note}</p>}
-              </article>
-            );
-          })}
-        </div>
-
-        <footer className="actionbar">
-          <span className="actionbar-note">{departmentFor(assignment).name}</span>
-          <button className="btn btn-primary" onClick={() => navigate(`/apply/${assignment.id}`)}>
-            Return to form and correct
-            <ArrowRightIcon size={15} />
-          </button>
-        </footer>
-      </div>
-    );
+  // Scoring only exists once authentication has cleared and the engine has finished.
+  const status = statusFor(id, outcome.isClean);
+  if (status !== "COMPLETED" || !scoreResult) {
+    return <Navigate to={`/apply/${id}/status`} replace />;
   }
 
   return (
     <div className="page">
       <header className="page-head">
         <div className="page-head-text">
-          <h1>Assessment result</h1>
+          <h1>Scoring result</h1>
           <p className="page-sub">
-            Every declared value was corroborated by its evidence, so the submission was scored.
+            Weighted against authenticated answers only. {departmentFor(assignment).name} ·{" "}
+            {assignment.reference}
           </p>
         </div>
 
         <dl className="meta-grid">
-          <div>
-            <dt>Requested by</dt>
-            <dd>{departmentFor(assignment).name}</dd>
-          </div>
           <div>
             <dt>Entity</dt>
             <dd>{assignment.entity}</dd>
@@ -127,7 +58,9 @@ export default function ResultPage() {
         </dl>
       </header>
 
-      <ReportView form={form} authentication={authResult} scoreResult={scoreResult!} />
+      <OutcomeTabs assessmentId={id} active="scoring" scoringReady />
+
+      <ReportView form={form} authentication={outcome} scoreResult={scoreResult} />
 
       <footer className="actionbar">
         <button className="btn btn-ghost" onClick={() => navigate("/assessments")}>

@@ -4,7 +4,9 @@ import { isEvidenceRequired } from "../domain/evidenceRules";
 import type { Assignment } from "../data/assignments";
 import type { ApplicationForm } from "../domain/types";
 
-const storageKey = (assignmentId: string) => `fnp-draft-${assignmentId}`;
+// Versioned: the v2 test set changed the question shape, so drafts saved by an earlier build
+// are not loadable and must be rebuilt from the fixture.
+const storageKey = (assignmentId: string) => `fnp-draft-v2-${assignmentId}`;
 
 /** Entity and position always come from the parent application, never from the draft. */
 function withParentDetails(form: ApplicationForm, assignment: Assignment): ApplicationForm {
@@ -33,9 +35,9 @@ function blankForm(assignment: Assignment): ApplicationForm {
       section: q.section,
       question: q.question,
       answer: "No" as const,
-      declared_values: {},
       evidence_required: isEvidenceRequired(q.qid, "No"),
       evidence: [],
+      checks_to_perform: [],
     })),
   };
 }

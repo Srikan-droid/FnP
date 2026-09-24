@@ -5,7 +5,8 @@ import LoginPage from "./pages/LoginPage";
 import AssessmentsPage from "./pages/AssessmentsPage";
 import ApplyPage from "./pages/ApplyPage";
 import ReviewPage from "./pages/ReviewPage";
-import ProcessingPage from "./pages/ProcessingPage";
+import StatusPage from "./pages/StatusPage";
+import AuthenticationPage from "./pages/AuthenticationPage";
 import ResultPage from "./pages/ResultPage";
 import "./App.css";
 
@@ -19,7 +20,8 @@ export default function App() {
             <Route path="/assessments" element={<AssessmentsPage />} />
             <Route path="/apply/:id" element={<ApplyPage />} />
             <Route path="/apply/:id/review" element={<ReviewPage />} />
-            <Route path="/apply/:id/processing" element={<ProcessingPage />} />
+            <Route path="/apply/:id/status" element={<StatusPage />} />
+            <Route path="/apply/:id/authentication" element={<AuthenticationPage />} />
             <Route path="/apply/:id/result" element={<ResultPage />} />
           </Routes>
         </AppShell>

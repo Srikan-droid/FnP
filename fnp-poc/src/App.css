@@ -771,6 +771,7 @@
   border-style: dashed;
   border-color: var(--warning);
   background: var(--warning-wash);
+  align-items: flex-end;
 }
 
 .evidence-icon {
@@ -812,6 +813,33 @@
 
 .evidence-sub {
   font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+.evidence-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.evidence-picker .field-label {
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+.input-sm {
+  padding: 0.4rem 0.55rem;
+  font-size: 0.8125rem;
+  border-radius: var(--r-xs);
+  background: var(--surface);
+}
+
+.evidence-pending .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: var(--hairline);
   color: var(--ink-3);
 }
 
@@ -1128,7 +1156,7 @@
   overflow: hidden;
 }
 
-.review-evidence-ok,
+.review-evidence-link,
 .review-evidence-missing,
 .review-evidence-none {
   display: inline-flex;
@@ -1138,8 +1166,18 @@
   white-space: nowrap;
 }
 
-.review-evidence-ok {
+.review-evidence-link {
   color: var(--good-ink);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.review-evidence-link:hover {
+  text-decoration: underline;
+}
+
+.review-evidence-link svg:last-child {
+  opacity: 0.6;
 }
 
 .review-evidence-missing {
@@ -1242,6 +1280,392 @@
 .processing-detail {
   font-size: 0.75rem;
   color: var(--ink-3);
+}
+
+/* ============================================================
+   Submission status
+   ============================================================ */
+.status-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.25rem 1.75rem 1.75rem;
+  gap: 0.6rem;
+}
+
+.status-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 17px;
+  margin-bottom: 0.3rem;
+}
+
+.status-info .status-icon {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.status-good .status-icon {
+  background: var(--good-wash);
+  color: var(--good);
+}
+
+.status-critical .status-icon {
+  background: var(--critical-wash);
+  color: var(--critical);
+}
+
+.status-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--accent-track);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status-title {
+  font-size: 1.125rem;
+}
+
+.status-detail {
+  max-width: 44ch;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+.status-card .progress-track {
+  width: 100%;
+  max-width: 320px;
+  margin: 0.6rem 0 0;
+}
+
+.status-stages {
+  display: flex;
+  gap: 1.75rem;
+  list-style: none;
+  margin: 1rem 0 0.5rem;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.status-stages li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stage-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hairline);
+}
+
+.status-stages .is-done {
+  color: var(--ink-2);
+}
+
+.status-stages .is-done .stage-dot {
+  background: var(--good);
+}
+
+.status-stages .is-active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.status-stages .is-active .stage-dot {
+  background: var(--accent);
+  animation: pulse 1.1s ease-in-out infinite;
+}
+
+.status-stages .is-blocked .stage-dot {
+  background: var(--critical);
+}
+
+.status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+}
+
+/* ============================================================
+   Outcome tabs
+   ============================================================ */
+.outcome-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 0.3rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+}
+
+.outcome-tab {
+  padding: 0.4rem 1rem;
+  border-radius: var(--r-pill);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.outcome-tab:hover {
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.outcome-tab.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.outcome-tab.is-disabled {
+  color: var(--ink-3);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.outcome-tab-status {
+  margin-left: auto;
+  padding-right: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+/* ============================================================
+   Authentication report
+   ============================================================ */
+.auth-summary-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.5rem;
+  padding: 1.1rem 1.25rem;
+}
+
+.auth-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-stat-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.auth-stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-stat-value.is-critical {
+  color: var(--critical);
+}
+
+.section-head-static {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.auth-question + .auth-question {
+  border-top: 1px solid var(--hairline);
+}
+
+.auth-question.is-issue {
+  background: var(--critical-wash);
+}
+
+.auth-question-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.auth-chevron {
+  display: grid;
+  place-items: center;
+  color: var(--ink-3);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.auth-question-head[aria-expanded="false"] .auth-chevron {
+  transform: rotate(-90deg);
+}
+
+.auth-question-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.auth-question-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.auth-confidence {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+.auth-question-body {
+  padding: 0 1.25rem 1rem 3rem;
+}
+
+.auth-summary {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  margin-bottom: 0.7rem;
+}
+
+.check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.check {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  border-left: 3px solid var(--hairline);
+}
+
+.check-good {
+  border-left-color: var(--good);
+}
+
+.check-warning {
+  border-left-color: var(--warning);
+}
+
+.check-critical {
+  border-left-color: var(--critical);
+  background: var(--critical-wash);
+}
+
+.check-icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.check-good .check-icon {
+  color: var(--good);
+}
+
+.check-warning .check-icon {
+  color: var(--warning-ink);
+}
+
+.check-critical .check-icon {
+  color: var(--critical);
+}
+
+.check-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.check-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.2rem;
+}
+
+.check-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.check-confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.confidence-track {
+  display: block;
+  width: 54px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+.confidence-fill {
+  display: block;
+  height: 100%;
+  border-radius: 0 3px 3px 0;
+  background: var(--good);
+}
+
+.check-warning .confidence-fill {
+  background: var(--warning);
+}
+
+.check-critical .confidence-fill {
+  background: var(--critical);
+}
+
+.check-note {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--ink-2);
 }
 
 /* ============================================================

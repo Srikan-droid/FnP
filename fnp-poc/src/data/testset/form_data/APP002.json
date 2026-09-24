@@ -1,234 +1,278 @@
 {
   "application_id": "APP002",
   "licensee": "Oshakati Microfinance Bank Limited",
+  "group_id": "G01",
   "applicant": {
     "full_name": "Petrus K. Shivute",
     "proposed_role": "Executive Director",
-    "date_of_birth": "1978-03-12",
+    "date_of_birth": "1964-03-12",
     "town": "Ongwediva"
   },
   "submitted_at": "2026-08-25T10:15:00",
-  "responses": [
+  "sections": [
     {
-      "qid": "A1",
-      "section": "Age",
-      "question": "Is the applicant between 45–60 years of age?",
-      "answer": "No",
-      "declared_values": {
-        "date_of_birth": "1978-03-12"
-      },
-      "evidence_required": true,
-      "evidence": [
+      "section": "Basic Details",
+      "section_weight": 4,
+      "questions": [
         {
-          "doc_type": "national_id",
-          "path": "evidence/APP002/national_id.pdf"
+          "qid": "A1",
+          "question": "Is the applicant between 45–60 years of age?",
+          "question_weight": 2.5,
+          "polarity": "Positive",
+          "knockout": 0,
+          "answer": "No",
+          "evidence_required": true,
+          "evidence": [
+            {
+              "doc_type": "national_id",
+              "path": "evidence/APP002/national_id.pdf"
+            }
+          ],
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Age_Check"
+          ]
+        },
+        {
+          "qid": "A4",
+          "question": "Is the applicant a naturalized citizen?",
+          "question_weight": 1.5,
+          "polarity": "Negative",
+          "knockout": 0,
+          "answer": "No",
+          "evidence_required": false,
+          "evidence": [],
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Naturalization_Check"
+          ]
         }
       ]
     },
     {
-      "qid": "A4",
-      "section": "Age",
-      "question": "Is the applicant a naturalized citizen?",
-      "answer": "No",
-      "declared_values": {
-        "citizenship_status": "Citizen by birth"
-      },
-      "evidence_required": false,
-      "evidence": []
-    },
-    {
-      "qid": "Q1",
       "section": "Qualifications & Experience",
-      "question": "Does the applicant hold a relevant academic qualification?",
-      "answer": "Yes",
-      "declared_values": {
-        "qualification": "Master of Business Administration",
-        "institution": "Namibia Business School",
-        "year_awarded": "2008"
-      },
-      "evidence_required": true,
-      "evidence": [
+      "section_weight": 18,
+      "questions": [
         {
-          "doc_type": "degree_certificate",
-          "path": "evidence/APP002/degree_certificate.pdf"
+          "qid": "Q1",
+          "question": "Does the applicant hold a relevant academic qualification?",
+          "question_weight": 6,
+          "polarity": "Positive",
+          "knockout": 0,
+          "answer": "Yes",
+          "evidence_required": true,
+          "evidence": [
+            {
+              "doc_type": "degree_certificate",
+              "path": "evidence/APP002/degree_certificate.pdf"
+            }
+          ],
+          "checks_to_perform": []
+        },
+        {
+          "qid": "Q3",
+          "question": "Does the applicant have ≥10 years relevant experience?",
+          "question_weight": 12,
+          "polarity": "Positive",
+          "knockout": 0,
+          "answer": "Yes",
+          "evidence_required": true,
+          "evidence": [
+            {
+              "doc_type": "employment_letter",
+              "path": "evidence/APP002/employment_letter.pdf"
+            }
+          ],
+          "checks_to_perform": []
         }
       ]
     },
     {
-      "qid": "Q3",
-      "section": "Qualifications & Experience",
-      "question": "Does the applicant have ≥10 years relevant experience?",
-      "answer": "Yes",
-      "declared_values": {
-        "employer": "Erongo Building Society",
-        "role": "Chief Operating Officer",
-        "employment_start": "2012-08-15",
-        "employment_end": "2026-05-31",
-        "relevant_experience_years": 13
-      },
-      "evidence_required": true,
-      "evidence": [
-        {
-          "doc_type": "employment_letter",
-          "path": "evidence/APP002/employment_letter.pdf"
-        }
-      ]
-    },
-    {
-      "qid": "PC1",
       "section": "Professional Conduct /Reputation/Integrity",
-      "question": "Have you at any time been charged with or convicted of any offence or otherwise found liable by a Civil, Criminal or Military Court (excluding minor road traffic offences) whether in Jamaica or elsewhere?",
-      "answer": "No",
-      "declared_values": {
-        "criminal_record_status": "No record"
-      },
-      "evidence_required": true,
-      "evidence": [
+      "section_weight": 26,
+      "questions": [
         {
-          "doc_type": "police_clearance",
-          "path": "evidence/APP002/police_clearance.pdf"
+          "qid": "PC1",
+          "question": "Have you at any time been charged with or convicted of any offence or otherwise found liable by a Civil, Criminal or Military Court (excluding minor road traffic offences) whether in Jamaica or elsewhere?",
+          "question_weight": 18,
+          "polarity": "Negative",
+          "knockout": 1,
+          "answer": "No",
+          "evidence_required": true,
+          "evidence": [
+            {
+              "doc_type": "police_clearance",
+              "path": "evidence/APP002/police_clearance.pdf"
+            }
+          ],
+          "checks_to_perform": []
+        },
+        {
+          "qid": "PC19",
+          "question": "Was there a time when you were not in compliance with any tax or other statutory requirements imposed on you?  (Section 3(1)(iii) of the Act)",
+          "question_weight": 8,
+          "polarity": "Negative",
+          "knockout": 0,
+          "answer": "No",
+          "evidence_required": true,
+          "evidence": [
+            {
+              "doc_type": "tax_compliance_certificate",
+              "path": "evidence/APP002/tax_compliance_certificate.pdf"
+            }
+          ],
+          "checks_to_perform": []
         }
       ]
     },
     {
-      "qid": "PC19",
-      "section": "Professional Conduct /Reputation/Integrity",
-      "question": "Was there a time when you were not in compliance with any tax or other statutory requirements imposed on you?  (Section 3(1)(iii) of the Act)",
-      "answer": "No",
-      "declared_values": {
-        "tax_identification_number": "TIN-5590214",
-        "tax_compliance_status": "Compliant",
-        "certificate_valid_to": "2027-03-31"
-      },
-      "evidence_required": true,
-      "evidence": [
-        {
-          "doc_type": "tax_compliance_certificate",
-          "path": "evidence/APP002/tax_compliance_certificate.pdf"
-        }
-      ]
-    },
-    {
-      "qid": "FC5",
       "section": "Financial Soundness",
-      "question": "Has any loan or credit facility (or part thereof) extended to you by any financial institution, been restructured, renegotiated, provided against or been the subject of a write-off or debt forgiveness for reasons of non-payment by you?",
-      "answer": "No",
-      "declared_values": {
-        "answer_only": true
-      },
-      "evidence_required": false,
-      "evidence": []
+      "section_weight": 16,
+      "questions": [
+        {
+          "qid": "FC5",
+          "question": "Has any loan or credit facility (or part thereof) extended to you by any financial institution, been restructured, renegotiated, provided against or been the subject of a write-off or debt forgiveness for reasons of non-payment by you?",
+          "question_weight": 10,
+          "polarity": "Negative",
+          "knockout": 0,
+          "answer": "No",
+          "evidence_required": false,
+          "evidence": [],
+          "checks_to_perform": []
+        },
+        {
+          "qid": "FC7",
+          "question": "Do you (in your personal capacity), or through any legal person or arrangement controlled by you and/or any immediate relative have outstanding any loans or other forms of indebtedness (including guarantees) in excess of J$2.5mn?",
+          "question_weight": 6,
+          "polarity": "Negative",
+          "knockout": 0,
+          "answer": "No",
+          "evidence_required": false,
+          "evidence": [],
+          "checks_to_perform": []
+        }
+      ]
     },
     {
-      "qid": "FC7",
-      "section": "Financial Soundness",
-      "question": "Do you (in your personal capacity), or through any legal person or arrangement controlled by you and/or any immediate relative have outstanding any loans or other forms of indebtedness (including guarantees) in excess of J$2.5mn?",
-      "answer": "No",
-      "declared_values": {
-        "answer_only": true
-      },
-      "evidence_required": false,
-      "evidence": []
-    },
-    {
-      "qid": "CoI2",
       "section": "Conflict of interest. (Entity/Enterprise based)",
-      "question": "Have you ever been or are you currently a Director of any limited liability companies, societies, or other business enterprises engaged in financial services, as defined in the BSA?",
-      "answer": "Yes",
-      "declared_values": {
-        "company_name": "Erongo Building Society",
-        "company_registration_number": "BS/2004/00019",
-        "director_appointment_date": "2019-09-02"
-      },
-      "evidence_required": true,
-      "evidence": [
+      "section_weight": 14,
+      "questions": [
         {
-          "doc_type": "company_registry_extract",
-          "path": "evidence/APP002/company_registry_extract.pdf"
+          "qid": "CoI2",
+          "question": "Have you ever been or are you currently a Director of any limited liability companies, societies, or other business enterprises engaged in financial services, as defined in the BSA?",
+          "question_weight": 5,
+          "polarity": "Negative",
+          "knockout": 0,
+          "answer": "Yes",
+          "evidence_required": true,
+          "evidence": [
+            {
+              "doc_type": "company_registry_extract",
+              "path": "evidence/APP002/company_registry_extract.pdf"
+            }
+          ],
+          "checks_to_perform": []
+        },
+        {
+          "qid": "CoI6",
+          "question": "Are you a beneficial owner of any controlling interest in any financial institution, partnerships, societies, or trust corporations or other body, organization or entity whether for business, benevolent or other purposes?",
+          "question_weight": 9,
+          "polarity": "Negative",
+          "knockout": 0,
+          "answer": "No",
+          "evidence_required": false,
+          "evidence": [],
+          "checks_to_perform": []
         }
       ]
     },
     {
-      "qid": "CoI6",
-      "section": "Conflict of interest. (Entity/Enterprise based)",
-      "question": "Are you a beneficial owner of any controlling interest in any financial institution, partnerships, societies, or trust corporations or other body, organization or entity whether for business, benevolent or other purposes?",
-      "answer": "No",
-      "declared_values": {
-        "answer_only": true
-      },
-      "evidence_required": false,
-      "evidence": []
-    },
-    {
-      "qid": "T1",
       "section": "Time Commitment",
-      "question": "Will you be actively engaged in the business of the Licensee to which this application relates and devote the major portion of your time thereto?",
-      "answer": "Yes",
-      "declared_values": {
-        "appointed_position": "Executive Director",
-        "time_commitment_hours_per_week": 40
-      },
-      "evidence_required": true,
-      "evidence": [
+      "section_weight": 8,
+      "questions": [
         {
-          "doc_type": "board_appointment_letter",
-          "path": "evidence/APP002/board_appointment_letter.pdf"
+          "qid": "T1",
+          "question": "Will you be actively engaged in the business of the Licensee to which this application relates and devote the major portion of your time thereto?",
+          "question_weight": 5,
+          "polarity": "Positive",
+          "knockout": 0,
+          "answer": "Yes",
+          "evidence_required": true,
+          "evidence": [
+            {
+              "doc_type": "board_appointment_letter",
+              "path": "evidence/APP002/board_appointment_letter.pdf"
+            }
+          ],
+          "checks_to_perform": []
+        },
+        {
+          "qid": "T2",
+          "question": "If you are completing this form in the capacity of director or proposed director, please indicate whether you have or will have any executive responsibility for the management of the institution’s business",
+          "question_weight": 3,
+          "polarity": "Positive",
+          "knockout": 0,
+          "answer": "Yes",
+          "evidence_required": true,
+          "evidence": [
+            {
+              "doc_type": "board_appointment_letter",
+              "path": "evidence/APP002/board_appointment_letter.pdf"
+            }
+          ],
+          "checks_to_perform": []
         }
       ]
     },
     {
-      "qid": "T2",
-      "section": "Time Commitment",
-      "question": "If you are completing this form in the capacity of director or proposed director, please indicate whether you have or will have any executive responsibility for the management of the institution’s business",
-      "answer": "Yes",
-      "declared_values": {
-        "executive_responsibility": "Yes",
-        "appointment_effective_date": "2026-07-01"
-      },
-      "evidence_required": true,
-      "evidence": [
+      "section": "Conflict of interest. (Licensee based)",
+      "section_weight": 8,
+      "questions": [
         {
-          "doc_type": "board_appointment_letter",
-          "path": "evidence/APP002/board_appointment_letter.pdf"
+          "qid": "CoL1",
+          "question": "Are any shares of the Licensee registered in your name?",
+          "question_weight": 5,
+          "polarity": "Negative",
+          "knockout": 0,
+          "answer": "No",
+          "evidence_required": false,
+          "evidence": [],
+          "checks_to_perform": []
+        },
+        {
+          "qid": "CoL3",
+          "question": "Are any shares of the Licensee registered in the name of an immediate relative?",
+          "question_weight": 3,
+          "polarity": "Negative",
+          "knockout": 0,
+          "answer": "No",
+          "evidence_required": false,
+          "evidence": [],
+          "checks_to_perform": []
         }
       ]
     },
     {
-      "qid": "CoL1",
-      "section": "Conflict of interest. (Licensee based)",
-      "question": "Are any shares of the Licensee registered in your name?",
-      "answer": "No",
-      "declared_values": {
-        "answer_only": true
-      },
-      "evidence_required": false,
-      "evidence": []
-    },
-    {
-      "qid": "CoL3",
-      "section": "Conflict of interest. (Licensee based)",
-      "question": "Are any shares of the Licensee registered in the name of an immediate relative?",
-      "answer": "No",
-      "declared_values": {
-        "answer_only": true
-      },
-      "evidence_required": false,
-      "evidence": []
-    },
-    {
-      "qid": "CS4",
       "section": "Collective Suitability",
-      "question": "Have you acquainted yourself with and do you understand the extent of the rights and powers, as well as your responsibilities and duties, as a director, officer or key employee or a proposed director, officer or key employee of the institution for which this questionnaire is being completed, as contained in the applicable law, regulations, and guidelines?",
-      "answer": "Yes",
-      "declared_values": {
-        "declaration_date": "2026-08-11",
-        "declaration_signatory": "Petrus K. Shivute"
-      },
-      "evidence_required": true,
-      "evidence": [
+      "section_weight": 6,
+      "questions": [
         {
-          "doc_type": "suitability_declaration",
-          "path": "evidence/APP002/suitability_declaration.pdf"
+          "qid": "CS4",
+          "question": "Have you acquainted yourself with and do you understand the extent of the rights and powers, as well as your responsibilities and duties, as a director, officer or key employee or a proposed director, officer or key employee of the institution for which this questionnaire is being completed, as contained in the applicable law, regulations, and guidelines?",
+          "question_weight": 6,
+          "polarity": "Positive",
+          "knockout": 0,
+          "answer": "Yes",
+          "evidence_required": true,
+          "evidence": [
+            {
+              "doc_type": "suitability_declaration",
+              "path": "evidence/APP002/suitability_declaration.pdf"
+            }
+          ],
+          "checks_to_perform": []
         }
       ]
     }

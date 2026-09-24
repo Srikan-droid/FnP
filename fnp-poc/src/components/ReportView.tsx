@@ -1,7 +1,7 @@
 import ScoreGauge from "./ScoreGauge";
 import { AlertOctagonIcon, AlertTriangleIcon, CheckCircleIcon, InfoIcon } from "./icons";
 import { displaySection } from "../domain/sectionLabels";
-import type { ApplicationForm, AuthenticationResult, Band, ScoreResult } from "../domain/types";
+import type { ApplicationForm, AuthenticationOutcome, Band, ScoreResult } from "../domain/types";
 
 const BAND_ICON = {
   Low: CheckCircleIcon,
@@ -37,10 +37,12 @@ export default function ReportView({
   scoreResult,
 }: {
   form: ApplicationForm;
-  authentication: AuthenticationResult;
+  authentication: AuthenticationOutcome;
   scoreResult: ScoreResult;
 }) {
-  const variants = authentication.fields.filter((f) => f.expected === "MATCH_VARIANT");
+  const cautions = authentication.questions.filter((q) =>
+    q.checks.some((c) => c.status === "caution")
+  );
   const sections = sectionTotals(scoreResult);
   const BandIcon = BAND_ICON[scoreResult.band];
 
@@ -82,16 +84,16 @@ export default function ReportView({
         </div>
       )}
 
-      {variants.length > 0 && (
+      {cautions.length > 0 && (
         <div className="notice notice-info">
           <InfoIcon size={17} />
           <div>
             <strong>
-              {variants.length} field{variants.length > 1 ? "s" : ""} matched as a name or format
-              variant
+              {cautions.length} question{cautions.length > 1 ? "s" : ""} authenticated at reduced
+              confidence
             </strong>{" "}
-            and were not flagged:{" "}
-            {variants.map((v) => `${v.qid} · ${v.field.replaceAll("_", " ")}`).join(", ")}.
+            ({cautions.map((q) => q.qid).join(", ")}). Scoring treats them as authenticated — see
+            the authentication report for why.
           </div>
         </div>
       )}

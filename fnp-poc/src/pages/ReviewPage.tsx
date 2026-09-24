@@ -7,9 +7,12 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   CheckCircleIcon,
+  ExternalLinkIcon,
   FileTextIcon,
 } from "../components/icons";
+import { evidenceUrl } from "../data/fixtures";
 import { hasMissingMandatoryEvidence } from "../domain/evidenceRules";
+import { recordSubmission } from "../state/submissionStore";
 import { displaySection } from "../domain/sectionLabels";
 
 export default function ReviewPage() {
@@ -61,7 +64,7 @@ export default function ReviewPage() {
                   Answer
                 </th>
                 <th scope="col" className="col-attachment">
-                  Attachment
+                  Evidence
                 </th>
               </tr>
             </thead>
@@ -94,10 +97,24 @@ export default function ReviewPage() {
                         {!r.evidence_required ? (
                           <span className="review-evidence-none">Not required</span>
                         ) : r.evidence.length > 0 ? (
-                          <span className="review-evidence-ok">
-                            <FileTextIcon size={13} />
-                            Attached
-                          </span>
+                          (() => {
+                            const fileName =
+                              r.evidence[0].path.split("/").pop() ?? r.evidence[0].path;
+                            return (
+                              <a
+                                className="review-evidence-link"
+                                href={evidenceUrl(assignment.applicantId, fileName)}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={fileName}
+                                aria-label={`View ${fileName}`}
+                              >
+                                <FileTextIcon size={13} />
+                                Attached
+                                <ExternalLinkIcon size={11} />
+                              </a>
+                            );
+                          })()
                         ) : (
                           <span className="review-evidence-missing">
                             <AlertTriangleIcon size={13} />
@@ -142,7 +159,10 @@ export default function ReviewPage() {
         </button>
         <button
           className="btn btn-primary"
-          onClick={() => navigate(`/apply/${assignment.id}/processing`)}
+          onClick={() => {
+            recordSubmission(assignment.id);
+            navigate(`/apply/${assignment.id}/status`);
+          }}
         >
           Submit application
           <ArrowRightIcon size={15} />

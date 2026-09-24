@@ -1,37 +1,6 @@
 import { QUESTIONS, QUESTION_BY_QID } from "./questions";
 import { bandFor } from "./bands";
-import type {
-  Answer,
-  ApplicationForm,
-  AuthenticationFieldResult,
-  AuthenticationResult,
-  FieldExpectation,
-  ScoreResult,
-  SectionScoreLine,
-} from "./types";
-
-// Verdicts that must send the case back to the filer instead of proceeding to scoring.
-const BLOCKING_VERDICTS = new Set(["MISMATCH", "CONTRADICTION", "EVIDENCE_MISSING", "UNVERIFIABLE"]);
-
-export function authenticate(
-  applicationId: string,
-  expectedFields: FieldExpectation[]
-): AuthenticationResult {
-  const fields: AuthenticationFieldResult[] = expectedFields;
-  const blockingFields = fields.filter((f) => BLOCKING_VERDICTS.has(f.expected));
-  return {
-    applicationId,
-    isClean: blockingFields.length === 0,
-    fields,
-    blockingFields,
-  };
-}
-
-// T2 ("executive responsibility") is only a risk question for executive appointments. For a
-// non-executive director, "No" is the expected, risk-free answer — the scoring model (per
-// Notes and Assumptions) treats that as N/A rather than charging it as a Positive-polarity "No".
-const appointedPosition = (form: ApplicationForm) =>
-  form.responses.find((r) => r.qid === "T1")?.declared_values.appointed_position;
+import type { Answer, ApplicationForm, ScoreResult, SectionScoreLine } from "./types";
 
 export function score(form: ApplicationForm): ScoreResult {
   const lines: SectionScoreLine[] = [];
@@ -39,13 +8,12 @@ export function score(form: ApplicationForm): ScoreResult {
   let totalWeightedRisk = 0;
   let knockOutTriggered = false;
   let knockOutReason: string | undefined;
-  const nonExecutive = appointedPosition(form) === "Non-Executive Director";
 
   for (const response of form.responses) {
     const def = QUESTION_BY_QID[response.qid];
     if (!def) continue;
 
-    const answer: Answer = def.qid === "T2" && nonExecutive ? "N/A" : response.answer;
+    const answer: Answer = response.answer;
     const applicableWeight = answer === "N/A" ? 0 : def.questionWeight;
 
     // Risk flag: for Positive-polarity questions, "No" carries risk; for Negative-polarity, "Yes" does.

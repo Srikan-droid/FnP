@@ -1,20 +1,17 @@
 import AnswerToggle from "./AnswerToggle";
 import EvidenceBlock from "./EvidenceBlock";
-import { DOC_TYPE_BY_QID } from "../domain/evidenceRules";
 import { answerOptionsFor } from "../domain/questions";
 import type { Answer, ResponseItem } from "../domain/types";
 
 export default function QuestionCard({
-  applicantId,
   response,
   onAnswerChange,
   onAttachEvidence,
   onRemoveEvidence,
 }: {
-  applicantId: string;
   response: ResponseItem;
   onAnswerChange: (qid: string, answer: Answer) => void;
-  onAttachEvidence: (qid: string) => void;
+  onAttachEvidence: (qid: string, optionCode: string, description?: string) => void;
   onRemoveEvidence: (qid: string, docType: string) => void;
 }) {
   const labelId = `q-${response.qid}-label`;
@@ -41,10 +38,11 @@ export default function QuestionCard({
 
       {response.evidence_required && (
         <EvidenceBlock
-          applicantId={applicantId}
+          qid={response.qid}
           evidence={response.evidence}
-          docType={DOC_TYPE_BY_QID[response.qid] ?? "document"}
-          onAttach={() => onAttachEvidence(response.qid)}
+          onAttach={(optionCode, description) =>
+            onAttachEvidence(response.qid, optionCode, description)
+          }
           onRemove={(docType) => onRemoveEvidence(response.qid, docType)}
         />
       )}

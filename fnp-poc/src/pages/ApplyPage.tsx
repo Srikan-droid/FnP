@@ -5,7 +5,8 @@ import { getAssignment, departmentFor } from "../data/assignments";
 import QuestionCard from "../components/QuestionCard";
 import AssessmentNotFound from "../components/AssessmentNotFound";
 import { ArrowRightIcon, AlertTriangleIcon, ChevronDownIcon } from "../components/icons";
-import { DOC_TYPE_BY_QID, hasMissingMandatoryEvidence } from "../domain/evidenceRules";
+import { hasMissingMandatoryEvidence } from "../domain/evidenceRules";
+import { findOption } from "../domain/evidenceOptions";
 import { displaySection } from "../domain/sectionLabels";
 import type { Answer } from "../domain/types";
 
@@ -28,11 +29,14 @@ export default function ApplyPage() {
   const toggleSection = (section: string, isOpen: boolean) =>
     setOpenSections((prev) => ({ ...prev, [section]: !isOpen }));
 
-  const handleAttachEvidence = (qid: string) => {
-    const docType = DOC_TYPE_BY_QID[qid] ?? "document";
+  const handleAttachEvidence = (qid: string, optionCode: string, description?: string) => {
+    const option = findOption(qid, optionCode);
+    if (!option) return;
     attachEvidence(assignment, qid, {
-      doc_type: docType,
-      path: `evidence/${assignment.applicantId}/${docType}.pdf`,
+      doc_type: option.docType,
+      path: `evidence/${assignment.applicantId}/${option.docType}.pdf`,
+      option_code: option.code,
+      description,
     });
   };
 
@@ -100,7 +104,6 @@ export default function ApplyPage() {
                 {items.map((r) => (
                   <QuestionCard
                     key={r.qid}
-                    applicantId={assignment.applicantId}
                     response={r}
                     onAnswerChange={(qid: string, answer: Answer) =>
                       updateAnswer(assignment, qid, answer)
