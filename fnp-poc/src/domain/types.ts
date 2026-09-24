@@ -48,7 +48,6 @@ export type QuestionAuthStatus = "authenticated" | "issue" | "not_checked";
 
 export interface QuestionAuthResult {
   qid: string;
-  section: string;
   question: string;
   answer: Answer;
   status: QuestionAuthStatus;
@@ -58,10 +57,15 @@ export interface QuestionAuthResult {
   summary: string;
 }
 
+export interface SectionAuthResult {
+  section: string;
+  issueCount: number;
+  questions: QuestionAuthResult[];
+}
+
 export interface AuthenticationOutcome {
   assessmentId: string;
-  questions: QuestionAuthResult[];
-  issues: QuestionAuthResult[];
+  sections: SectionAuthResult[];
   isClean: boolean;
   overallConfidence: number | null;
   checksRun: number;

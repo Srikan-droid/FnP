@@ -1,4 +1,5 @@
 import ScoreGauge from "./ScoreGauge";
+import { allQuestions } from "../domain/authentication";
 import { AlertOctagonIcon, AlertTriangleIcon, CheckCircleIcon, InfoIcon } from "./icons";
 import { displaySection } from "../domain/sectionLabels";
 import type { ApplicationForm, AuthenticationOutcome, Band, ScoreResult } from "../domain/types";
@@ -40,7 +41,7 @@ export default function ReportView({
   authentication: AuthenticationOutcome;
   scoreResult: ScoreResult;
 }) {
-  const cautions = authentication.questions.filter((q) =>
+  const cautions = allQuestions(authentication).filter((q) =>
     q.checks.some((c) => c.status === "caution")
   );
   const sections = sectionTotals(scoreResult);

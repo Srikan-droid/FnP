@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../state/AssessmentContext";
 import { getAssignment, departmentFor } from "../data/assignments";
-import { authenticate } from "../domain/authentication";
+import { authenticate, issuesIn } from "../domain/authentication";
 import { statusFor } from "../state/submissionStore";
 import { displaySection } from "../domain/sectionLabels";
 import AssessmentNotFound from "../components/AssessmentNotFound";
@@ -116,7 +116,7 @@ export default function AuthenticationPage() {
   if (!assignment || !outcome) return <AssessmentNotFound />;
 
   const status = statusFor(id, outcome.isClean);
-  const sections = Array.from(new Set(outcome.questions.map((q) => q.section)));
+  const issues = issuesIn(outcome);
 
   return (
     <div className="page">
@@ -145,22 +145,20 @@ export default function AuthenticationPage() {
         </div>
         <div className="auth-stat">
           <span className="auth-stat-label">Questions with issues</span>
-          <span className={`auth-stat-value${outcome.issues.length > 0 ? " is-critical" : ""}`}>
-            {outcome.issues.length}
+          <span className={`auth-stat-value${issues.length > 0 ? " is-critical" : ""}`}>
+            {issues.length}
           </span>
         </div>
       </section>
 
-      {outcome.issues.length > 0 ? (
+      {issues.length > 0 ? (
         <div className="notice notice-critical">
           <AlertTriangleIcon size={17} />
           <div>
             <strong>
-              {outcome.issues.length} question{outcome.issues.length > 1 ? "s" : ""} could not be
-              authenticated
+              {issues.length} question{issues.length > 1 ? "s" : ""} could not be authenticated
             </strong>{" "}
-            ({outcome.issues.map((q) => q.qid).join(", ")}). Scoring does not run until these are
-            resolved.
+            ({issues.map((q) => q.qid).join(", ")}). Scoring does not run until these are resolved.
           </div>
         </div>
       ) : (
@@ -173,31 +171,27 @@ export default function AuthenticationPage() {
         </div>
       )}
 
-      {sections.map((section) => {
-        const questions = outcome.questions.filter((q) => q.section === section);
-        const issueCount = questions.filter((q) => q.status === "issue").length;
-        return (
-          <section className="card section" key={section}>
-            <div className="section-head section-head-static">
-              <span className="section-title">{displaySection(section)}</span>
-              {issueCount > 0 && (
-                <span className="section-flag">
-                  <AlertTriangleIcon size={12} />
-                  {issueCount} issue{issueCount > 1 ? "s" : ""}
-                </span>
-              )}
-              <span className="section-count">
-                {questions.length} question{questions.length > 1 ? "s" : ""}
+      {outcome.sections.map((section) => (
+        <section className="card section" key={section.section}>
+          <div className="section-head section-head-static">
+            <span className="section-title">{displaySection(section.section)}</span>
+            {section.issueCount > 0 && (
+              <span className="section-flag">
+                <AlertTriangleIcon size={12} />
+                {section.issueCount} issue{section.issueCount > 1 ? "s" : ""}
               </span>
-            </div>
-            <div className="section-body">
-              {questions.map((q) => (
-                <QuestionRow key={q.qid} result={q} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+            )}
+            <span className="section-count">
+              {section.questions.length} question{section.questions.length > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="section-body">
+            {section.questions.map((q) => (
+              <QuestionRow key={q.qid} result={q} />
+            ))}
+          </div>
+        </section>
+      ))}
 
       <footer className="actionbar">
         <button className="btn btn-ghost" onClick={() => navigate(`/apply/${id}/status`)}>

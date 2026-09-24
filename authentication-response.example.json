@@ -1,0 +1,495 @@
+{
+  "assessmentId": "FNP-2026-0398",
+  "parentApplication": {
+    "reference": "BL-2026-0398",
+    "department": "Banking Licence",
+    "entity": "Windhoek Commercial Bank Limited",
+    "positionAppliedFor": "Chief Financial Officer"
+  },
+  "applicant": {
+    "id": "APP004",
+    "fullName": "Maria L. van Wyk",
+    "email": "m.vanwyk@example.na"
+  },
+  "status": "AUTH_COMPLETE_ISSUES",
+  "submittedAt": "2026-09-24T09:14:02Z",
+  "authenticatedAt": "2026-09-24T09:14:11Z",
+  "engineVersion": "auth-0.2.0",
+  "summary": {
+    "isClean": false,
+    "overallConfidence": 0.8661538461538463,
+    "checksRun": 39,
+    "questionsWithIssues": 1
+  },
+  "sections": [
+    {
+      "section": "Basic Details",
+      "issueCount": 0,
+      "questions": [
+        {
+          "qid": "A1",
+          "question": "Is the applicant between 45–60 years of age?",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a national identity card, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Age_Check",
+              "label": "Age derived from document",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "Date of birth read from the national identity card; the age at the reference date falls as the answer states."
+            }
+          ],
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
+        },
+        {
+          "qid": "A4",
+          "question": "Is the applicant a naturalized citizen?",
+          "answer": "No",
+          "status": "not_checked",
+          "checks": [],
+          "confidence": null,
+          "summary": "No supporting document was required for this answer."
+        }
+      ]
+    },
+    {
+      "section": "Qualifications & Experience",
+      "issueCount": 0,
+      "questions": [
+        {
+          "qid": "Q1",
+          "question": "Does the applicant hold a relevant academic qualification?",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a degree or professional qualification certificate, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The degree or professional qualification certificate supports the answer of \"Yes\"."
+            }
+          ],
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
+        },
+        {
+          "qid": "Q3",
+          "question": "Does the applicant have ≥10 years relevant experience?",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a employment or service letter, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The employment or service letter supports the answer of \"Yes\"."
+            }
+          ],
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
+        }
+      ]
+    },
+    {
+      "section": "Professional Conduct /Reputation/Integrity",
+      "issueCount": 1,
+      "questions": [
+        {
+          "qid": "PC1",
+          "question": "Have you at any time been charged with or convicted of any offence or otherwise found liable by a Civil, Criminal or Military Court (excluding minor road traffic offences) whether in Jamaica or elsewhere?",
+          "answer": "No",
+          "status": "issue",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a police clearance certificate, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "fail",
+              "confidence": 0.19,
+              "note": "The clearance certificate records a 2013 conviction under section 34 of the Companies Act (Annexure A), not expunged. The answer derived from the evidence is Yes."
+            }
+          ],
+          "confidence": 0.19,
+          "summary": "1 check could not be satisfied by the evidence."
+        },
+        {
+          "qid": "PC19",
+          "question": "Was there a time when you were not in compliance with any tax or other statutory requirements imposed on you?  (Section 3(1)(iii) of the Act)",
+          "answer": "No",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a tax compliance certificate, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The tax compliance certificate supports the answer of \"No\"."
+            }
+          ],
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
+        }
+      ]
+    },
+    {
+      "section": "Financial Soundness",
+      "issueCount": 0,
+      "questions": [
+        {
+          "qid": "FC5",
+          "question": "Has any loan or credit facility (or part thereof) extended to you by any financial institution, been restructured, renegotiated, provided against or been the subject of a write-off or debt forgiveness for reasons of non-payment by you?",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a bank reference letter, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "caution",
+              "confidence": 0.76,
+              "note": "The letter confirms the facility was restructured but explicitly not written off or forgiven. The question is disjunctive, so Yes is correct."
+            }
+          ],
+          "confidence": 0.76,
+          "summary": "Authenticated, with 1 check the engine had to work for."
+        },
+        {
+          "qid": "FC7",
+          "question": "Do you (in your personal capacity), or through any legal person or arrangement controlled by you and/or any immediate relative have outstanding any loans or other forms of indebtedness (including guarantees) in excess of J$2.5mn?",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a bank reference letter, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "caution",
+              "confidence": 0.71,
+              "note": "The bank letter states N$4,200,000 while the question is written against a J$2.5mn threshold. Compared across currencies rather than returned as unverifiable."
+            }
+          ],
+          "confidence": 0.71,
+          "summary": "Authenticated, with 1 check the engine had to work for."
+        }
+      ]
+    },
+    {
+      "section": "Conflict of interest. (Entity/Enterprise based)",
+      "issueCount": 0,
+      "questions": [
+        {
+          "qid": "CoI2",
+          "question": "Have you ever been or are you currently a Director of any limited liability companies, societies, or other business enterprises engaged in financial services, as defined in the BSA?",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a company registry extract, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The company registry extract supports the answer of \"Yes\"."
+            }
+          ],
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
+        },
+        {
+          "qid": "CoI6",
+          "question": "Are you a beneficial owner of any controlling interest in any financial institution, partnerships, societies, or trust corporations or other body, organization or entity whether for business, benevolent or other purposes?",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a company registry extract, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The company registry extract supports the answer of \"Yes\"."
+            }
+          ],
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
+        }
+      ]
+    },
+    {
+      "section": "Time Commitment",
+      "issueCount": 0,
+      "questions": [
+        {
+          "qid": "T1",
+          "question": "Will you be actively engaged in the business of the Licensee to which this application relates and devote the major portion of your time thereto?",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a board appointment letter, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The board appointment letter supports the answer of \"Yes\"."
+            }
+          ],
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
+        },
+        {
+          "qid": "T2",
+          "question": "If you are completing this form in the capacity of director or proposed director, please indicate whether you have or will have any executive responsibility for the management of the institution’s business",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a board appointment letter, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The board appointment letter supports the answer of \"Yes\"."
+            }
+          ],
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
+        }
+      ]
+    },
+    {
+      "section": "Conflict of interest. (Licensee based)",
+      "issueCount": 0,
+      "questions": [
+        {
+          "qid": "CoL1",
+          "question": "Are any shares of the Licensee registered in your name?",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a share certificate, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The share certificate supports the answer of \"Yes\"."
+            }
+          ],
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
+        },
+        {
+          "qid": "CoL3",
+          "question": "Are any shares of the Licensee registered in the name of an immediate relative?",
+          "answer": "No",
+          "status": "not_checked",
+          "checks": [],
+          "confidence": null,
+          "summary": "No supporting document was required for this answer."
+        }
+      ]
+    },
+    {
+      "section": "Collective Suitability",
+      "issueCount": 0,
+      "questions": [
+        {
+          "qid": "CS4",
+          "question": "Have you acquainted yourself with and do you understand the extent of the rights and powers, as well as your responsibilities and duties, as a director, officer or key employee or a proposed director, officer or key employee of the institution for which this questionnaire is being completed, as contained in the applicable law, regulations, and guidelines?",
+          "answer": "Yes",
+          "status": "authenticated",
+          "checks": [
+            {
+              "name": "Document_Check",
+              "label": "Document type",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The uploaded file reads as a signed suitability declaration, matching the document type selected."
+            },
+            {
+              "name": "Name_Check",
+              "label": "Document belongs to applicant",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Answer_Check",
+              "label": "Answer supported by evidence",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The signed suitability declaration supports the answer of \"Yes\"."
+            }
+          ],
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
+        }
+      ]
+    }
+  ]
+}

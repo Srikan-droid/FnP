@@ -6,6 +6,7 @@ import type {
   CheckStatus,
   QuestionAuthResult,
   ResponseItem,
+  SectionAuthResult,
 } from "./types";
 
 const CHECK_LABELS: Record<string, string> = {
@@ -113,7 +114,6 @@ function runCheck(applicantId: string, response: ResponseItem, checkName: string
 function authenticateQuestion(applicantId: string, response: ResponseItem): QuestionAuthResult {
   const base = {
     qid: response.qid,
-    section: response.section,
     question: response.question,
     answer: response.answer,
   };
@@ -156,18 +156,38 @@ export function authenticate(
   applicantId: string,
   form: ApplicationForm
 ): AuthenticationOutcome {
-  const questions = form.responses.map((r) => authenticateQuestion(applicantId, r));
-  const issues = questions.filter((q) => q.status === "issue");
+  const sections: SectionAuthResult[] = [];
+
+  for (const response of form.responses) {
+    const result = authenticateQuestion(applicantId, response);
+    let section = sections.find((s) => s.section === response.section);
+    if (!section) {
+      section = { section: response.section, issueCount: 0, questions: [] };
+      sections.push(section);
+    }
+    section.questions.push(result);
+    if (result.status === "issue") section.issueCount += 1;
+  }
+
+  const questions = sections.flatMap((s) => s.questions);
   const scored = questions.filter((q) => q.confidence !== null);
-  const checksRun = questions.reduce((total, q) => total + q.checks.length, 0);
 
   return {
     assessmentId,
-    questions,
-    issues,
-    isClean: issues.length === 0,
+    sections,
+    isClean: sections.every((s) => s.issueCount === 0),
     overallConfidence:
-      scored.length > 0 ? scored.reduce((sum, q) => sum + (q.confidence ?? 0), 0) / scored.length : null,
-    checksRun,
+      scored.length > 0
+        ? scored.reduce((sum, q) => sum + (q.confidence ?? 0), 0) / scored.length
+        : null,
+    checksRun: questions.reduce((total, q) => total + q.checks.length, 0),
   };
+}
+
+export function allQuestions(outcome: AuthenticationOutcome): QuestionAuthResult[] {
+  return outcome.sections.flatMap((s) => s.questions);
+}
+
+export function issuesIn(outcome: AuthenticationOutcome): QuestionAuthResult[] {
+  return allQuestions(outcome).filter((q) => q.status === "issue");
 }
