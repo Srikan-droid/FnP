@@ -10,7 +10,7 @@ import {
   ExternalLinkIcon,
   FileTextIcon,
 } from "../components/icons";
-import { evidenceUrl } from "../data/fixtures";
+import { evidenceUrl, hasEvidenceFile } from "../data/fixtures";
 import { hasMissingMandatoryEvidence } from "../domain/evidenceRules";
 import { recordSubmission } from "../state/submissionStore";
 import { displaySection } from "../domain/sectionLabels";
@@ -98,8 +98,18 @@ export default function ReviewPage() {
                           <span className="review-evidence-none">Not required</span>
                         ) : r.evidence.length > 0 ? (
                           (() => {
-                            const fileName =
-                              r.evidence[0].path.split("/").pop() ?? r.evidence[0].path;
+                            const file = r.evidence[0];
+                            const fileName = file.path.split("/").pop() ?? file.path;
+                            // The test pack ships a document only for each question's primary
+                            // option, so anything else has nothing to open.
+                            if (!hasEvidenceFile(assignment.applicantId, file.doc_type)) {
+                              return (
+                                <span className="review-evidence-none" title={fileName}>
+                                  <FileTextIcon size={13} />
+                                  Attached
+                                </span>
+                              );
+                            }
                             return (
                               <a
                                 className="review-evidence-link"

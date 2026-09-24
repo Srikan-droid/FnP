@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { getDraft, saveDraft, resetDraft } from "./draftStore";
 import { isEvidenceRequired } from "../domain/evidenceRules";
@@ -48,14 +48,25 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
     [forms]
   );
 
+  // Edits read through this ref rather than the rendered `forms` map: two changes dispatched
+  // before React re-renders would both start from the same stale copy, and the second would
+  // silently discard the first.
+  const formsRef = useRef<Record<string, ApplicationForm>>({});
+
+  const currentForm = useCallback(
+    (assignment: Assignment) => formsRef.current[assignment.id] ?? getDraft(assignment),
+    []
+  );
+
   const persist = useCallback((assignmentId: string, next: ApplicationForm) => {
-    setForms((prev) => ({ ...prev, [assignmentId]: next }));
+    formsRef.current = { ...formsRef.current, [assignmentId]: next };
+    setForms(formsRef.current);
     saveDraft(assignmentId, next);
   }, []);
 
   const updateAnswer = useCallback(
     (assignment: Assignment, qid: string, answer: Answer) => {
-      const base = forms[assignment.id] ?? getDraft(assignment);
+      const base = currentForm(assignment);
       const next: ApplicationForm = {
         ...base,
         responses: base.responses.map((r) => {
@@ -74,12 +85,12 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       };
       persist(assignment.id, next);
     },
-    [forms, persist]
+    [currentForm, persist]
   );
 
   const attachEvidence = useCallback(
     (assignment: Assignment, qid: string, evidence: EvidenceRef) => {
-      const base = forms[assignment.id] ?? getDraft(assignment);
+      const base = currentForm(assignment);
       const next: ApplicationForm = {
         ...base,
         responses: base.responses.map((r) =>
@@ -93,12 +104,12 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       };
       persist(assignment.id, next);
     },
-    [forms, persist]
+    [currentForm, persist]
   );
 
   const removeEvidence = useCallback(
     (assignment: Assignment, qid: string, docType: string) => {
-      const base = forms[assignment.id] ?? getDraft(assignment);
+      const base = currentForm(assignment);
       const next: ApplicationForm = {
         ...base,
         responses: base.responses.map((r) =>
@@ -107,13 +118,17 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       };
       persist(assignment.id, next);
     },
-    [forms, persist]
+    [currentForm, persist]
   );
 
-  const startNewApplication = useCallback((assignment: Assignment) => {
-    const fresh = resetDraft(assignment);
-    setForms((prev) => ({ ...prev, [assignment.id]: fresh }));
-  }, []);
+  const startNewApplication = useCallback(
+    (assignment: Assignment) => {
+      const fresh = resetDraft(assignment);
+      formsRef.current = { ...formsRef.current, [assignment.id]: fresh };
+      setForms(formsRef.current);
+    },
+    []
+  );
 
   const value = useMemo(
     () => ({

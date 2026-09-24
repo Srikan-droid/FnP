@@ -8,11 +8,11 @@ import {
 import { FileTextIcon, UploadIcon, XIcon } from "./icons";
 import type { EvidenceRef } from "../domain/types";
 
-function describe(file: EvidenceRef): string {
+function describe(file: EvidenceRef, qid: string): string {
   if (file.option_code === OTHER_OPTION.code) {
     return file.description ? `Other — ${file.description}` : OTHER_OPTION.label;
   }
-  return labelForDocType(file.doc_type);
+  return labelForDocType(file.doc_type, qid);
 }
 
 export default function EvidenceBlock({
@@ -42,7 +42,7 @@ export default function EvidenceBlock({
               </span>
               <span className="evidence-meta">
                 <span className="evidence-name">{fileName}</span>
-                <span className="evidence-sub">{describe(file)} · attached</span>
+                <span className="evidence-sub">{describe(file, qid)} · attached</span>
               </span>
               <button
                 type="button"

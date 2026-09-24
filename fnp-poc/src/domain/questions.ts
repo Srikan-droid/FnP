@@ -53,7 +53,7 @@ export const QUESTIONS: QuestionDef[] = [
     section: "Professional Conduct /Reputation/Integrity",
     sectionWeight: 26,
     question:
-      "Have you at any time been charged with or convicted of any offence or otherwise found liable by a Civil, Criminal or Military Court (excluding minor road traffic offences) whether in Jamaica or elsewhere?",
+      "Have you at any time been charged with or convicted of any offence or otherwise found liable by a Civil, Criminal or Military Court (excluding minor road traffic offences), in any jurisdiction?",
     polarity: "Negative",
     questionWeight: 18,
     isKnockOut: true,
@@ -83,7 +83,7 @@ export const QUESTIONS: QuestionDef[] = [
     section: "Financial Soundness",
     sectionWeight: 16,
     question:
-      "Do you (in your personal capacity), or through any legal person or arrangement controlled by you and/or any immediate relative have outstanding any loans or other forms of indebtedness (including guarantees) in excess of J$2.5mn?",
+      "Do you (in your personal capacity), or through any legal person or arrangement controlled by you and/or any immediate relative have outstanding any loans or other forms of indebtedness (including guarantees) in excess of N$2.5mn?",
     polarity: "Negative",
     questionWeight: 6,
     isKnockOut: false,
@@ -103,7 +103,7 @@ export const QUESTIONS: QuestionDef[] = [
     section: "Conflict of interest. (Entity/Enterprise based)",
     sectionWeight: 14,
     question:
-      "Are you a beneficial owner of any controlling interest in any financial institution, partnerships, societies, or trust corporations or other body, organization or entity whether for business, benevolent or other purposes?",
+      "Are you a beneficial owner of a controlling interest (20% or more of the voting shares, or the ability to appoint or remove a majority of the board) in any financial institution, partnerships, societies, or trust corporations or other body, organization or entity whether for business, benevolent or other purposes?",
     polarity: "Negative",
     questionWeight: 9,
     isKnockOut: false,

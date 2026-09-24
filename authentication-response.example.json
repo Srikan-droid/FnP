@@ -14,11 +14,11 @@
   "status": "AUTH_COMPLETE_ISSUES",
   "submittedAt": "2026-09-24T09:14:02Z",
   "authenticatedAt": "2026-09-24T09:14:11Z",
-  "engineVersion": "auth-0.2.0",
+  "engineVersion": "auth-0.3.0",
   "summary": {
     "isClean": false,
-    "overallConfidence": 0.8661538461538463,
-    "checksRun": 39,
+    "overallConfidence": 0.8853846153846155,
+    "checksRun": 44,
     "questionsWithIssues": 1
   },
   "sections": [
@@ -83,7 +83,7 @@
               "label": "Document type",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The uploaded file reads as a degree or professional qualification certificate, matching the document type selected."
+              "note": "The uploaded file reads as a degree or diploma certificate, matching the document type selected."
             },
             {
               "name": "Name_Check",
@@ -93,11 +93,11 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Qualification_Relevance_Check",
+              "label": "Qualification relevant to the role",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The degree or professional qualification certificate supports the answer of \"Yes\"."
+              "note": "The qualification shown is relevant to the oversight and executive responsibilities of the proposed role."
             }
           ],
           "confidence": 0.96,
@@ -114,7 +114,7 @@
               "label": "Document type",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The uploaded file reads as a employment or service letter, matching the document type selected."
+              "note": "The uploaded file reads as a certificate of service or employment letter, matching the document type selected."
             },
             {
               "name": "Name_Check",
@@ -124,11 +124,18 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Experience_Duration_Check",
+              "label": "Length of relevant service",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The employment or service letter supports the answer of \"Yes\"."
+              "note": "Relevant service computed from the dates on the certificate of service or employment letter meets the ten year threshold."
+            },
+            {
+              "name": "Experience_Relevance_Check",
+              "label": "Experience relevant to the role",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The experience shown is relevant to the proposed role on both seniority and sector."
             }
           ],
           "confidence": 0.96,
@@ -142,7 +149,7 @@
       "questions": [
         {
           "qid": "PC1",
-          "question": "Have you at any time been charged with or convicted of any offence or otherwise found liable by a Civil, Criminal or Military Court (excluding minor road traffic offences) whether in Jamaica or elsewhere?",
+          "question": "Have you at any time been charged with or convicted of any offence or otherwise found liable by a Civil, Criminal or Military Court (excluding minor road traffic offences), in any jurisdiction?",
           "answer": "No",
           "status": "issue",
           "checks": [
@@ -161,11 +168,18 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Record_Check",
+              "label": "Conviction or civil finding",
               "status": "fail",
               "confidence": 0.19,
               "note": "The clearance certificate records a 2013 conviction under section 34 of the Companies Act (Annexure A), not expunged. The answer derived from the evidence is Yes."
+            },
+            {
+              "name": "Scope_Check",
+              "label": "Search period and jurisdictions covered",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The search stated on the document covers the period and the jurisdictions the question asks about."
             }
           ],
           "confidence": 0.19,
@@ -173,7 +187,7 @@
         },
         {
           "qid": "PC19",
-          "question": "Was there a time when you were not in compliance with any tax or other statutory requirements imposed on you?  (Section 3(1)(iii) of the Act)",
+          "question": "Was there a time when you were not in compliance with any tax or other statutory requirements imposed on you? (Section 3(1)(iii) of the Act)",
           "answer": "No",
           "status": "authenticated",
           "checks": [
@@ -182,7 +196,7 @@
               "label": "Document type",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The uploaded file reads as a tax compliance certificate, matching the document type selected."
+              "note": "The uploaded file reads as a tax compliance certificate with historical statement, matching the document type selected."
             },
             {
               "name": "Name_Check",
@@ -192,11 +206,18 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Compliance_History_Check",
+              "label": "History of non-compliance",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The tax compliance certificate supports the answer of \"No\"."
+              "note": "The tax compliance certificate with historical statement discloses no period of non-compliance with tax or other statutory obligations."
+            },
+            {
+              "name": "Period_Coverage_Check",
+              "label": "Document covers a historical period",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The document covers a historical period rather than current status alone, so a past lapse would have been visible."
             }
           ],
           "confidence": 0.96,
@@ -219,7 +240,7 @@
               "label": "Document type",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The uploaded file reads as a bank reference letter, matching the document type selected."
+              "note": "The uploaded file reads as a bank reference letter with facility conduct history, matching the document type selected."
             },
             {
               "name": "Name_Check",
@@ -229,8 +250,8 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Facility_Status_Check",
+              "label": "Facility restructured, written off or forgiven",
               "status": "caution",
               "confidence": 0.76,
               "note": "The letter confirms the facility was restructured but explicitly not written off or forgiven. The question is disjunctive, so Yes is correct."
@@ -241,7 +262,7 @@
         },
         {
           "qid": "FC7",
-          "question": "Do you (in your personal capacity), or through any legal person or arrangement controlled by you and/or any immediate relative have outstanding any loans or other forms of indebtedness (including guarantees) in excess of J$2.5mn?",
+          "question": "Do you (in your personal capacity), or through any legal person or arrangement controlled by you and/or any immediate relative have outstanding any loans or other forms of indebtedness (including guarantees) in excess of N$2.5mn?",
           "answer": "Yes",
           "status": "authenticated",
           "checks": [
@@ -250,7 +271,7 @@
               "label": "Document type",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The uploaded file reads as a bank reference letter, matching the document type selected."
+              "note": "The uploaded file reads as a bank reference letter with aggregate exposure, matching the document type selected."
             },
             {
               "name": "Name_Check",
@@ -260,15 +281,15 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
-              "status": "caution",
-              "confidence": 0.71,
-              "note": "The bank letter states N$4,200,000 while the question is written against a J$2.5mn threshold. Compared across currencies rather than returned as unverifiable."
+              "name": "Indebtedness_Amount_Check",
+              "label": "Aggregate indebtedness against the threshold",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "Aggregate indebtedness shown on the bank reference letter with aggregate exposure was reconciled against the threshold in the question."
             }
           ],
-          "confidence": 0.71,
-          "summary": "Authenticated, with 1 check the engine had to work for."
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
         }
       ]
     },
@@ -297,11 +318,18 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Directorship_Check",
+              "label": "Directorship recorded",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The company registry extract supports the answer of \"Yes\"."
+              "note": "The applicant is recorded on the company registry extract as a director, with dates."
+            },
+            {
+              "name": "Entity_Activity_Check",
+              "label": "Entity engaged in financial services",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The entity's principal activity falls within the definition of financial services the question refers to."
             }
           ],
           "confidence": 0.96,
@@ -309,7 +337,7 @@
         },
         {
           "qid": "CoI6",
-          "question": "Are you a beneficial owner of any controlling interest in any financial institution, partnerships, societies, or trust corporations or other body, organization or entity whether for business, benevolent or other purposes?",
+          "question": "Are you a beneficial owner of a controlling interest (20% or more of the voting shares, or the ability to appoint or remove a majority of the board) in any financial institution, partnerships, societies, or trust corporations or other body, organization or entity whether for business, benevolent or other purposes?",
           "answer": "Yes",
           "status": "authenticated",
           "checks": [
@@ -318,7 +346,7 @@
               "label": "Document type",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The uploaded file reads as a company registry extract, matching the document type selected."
+              "note": "The uploaded file reads as a company registry extract with shareholding, matching the document type selected."
             },
             {
               "name": "Name_Check",
@@ -328,11 +356,18 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Beneficial_Ownership_Check",
+              "label": "Beneficial interest held",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The company registry extract supports the answer of \"Yes\"."
+              "note": "The company registry extract with shareholding shows the beneficial interest held by the applicant, directly or through another arrangement."
+            },
+            {
+              "name": "Controlling_Interest_Threshold_Check",
+              "label": "Controlling interest threshold",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The holding shown was compared against the 20% voting-share test and the board-control test."
             }
           ],
           "confidence": 0.96,
@@ -365,11 +400,11 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Time_Commitment_Check",
+              "label": "Time commitment stated",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The board appointment letter supports the answer of \"Yes\"."
+              "note": "The appointment letter states a time commitment consistent with the answer given."
             }
           ],
           "confidence": 0.96,
@@ -377,7 +412,7 @@
         },
         {
           "qid": "T2",
-          "question": "If you are completing this form in the capacity of director or proposed director, please indicate whether you have or will have any executive responsibility for the management of the institution’s business",
+          "question": "If you are completing this form in the capacity of director or proposed director, please indicate whether you have or will have any executive responsibility for the management of the institution's business",
           "answer": "Yes",
           "status": "authenticated",
           "checks": [
@@ -396,11 +431,11 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Executive_Responsibility_Check",
+              "label": "Executive responsibility stated",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The board appointment letter supports the answer of \"Yes\"."
+              "note": "The board appointment letter states whether the appointment carries executive responsibility for managing the institution."
             }
           ],
           "confidence": 0.96,
@@ -433,11 +468,11 @@
               "note": "The name on the document matches the applicant record."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Shareholding_Check",
+              "label": "Shares of the Licensee held",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The share certificate supports the answer of \"Yes\"."
+              "note": "The share certificate shows the shares of the Licensee held by the person named."
             }
           ],
           "confidence": 0.96,
@@ -469,21 +504,21 @@
               "label": "Document type",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The uploaded file reads as a signed suitability declaration, matching the document type selected."
+              "note": "The uploaded file reads as a signed declaration, witnessed by a commissioner of oaths, matching the document type selected."
             },
             {
-              "name": "Name_Check",
-              "label": "Document belongs to applicant",
+              "name": "Signature_Check",
+              "label": "Declaration signed and witnessed",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The name on the document matches the applicant record."
+              "note": "The declaration is signed and witnessed as required."
             },
             {
-              "name": "Answer_Check",
-              "label": "Answer supported by evidence",
+              "name": "Declaration_Content_Check",
+              "label": "Declaration wording covers the attestation",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The signed suitability declaration supports the answer of \"Yes\"."
+              "note": "The declaration's wording covers the specific attestation the question requires."
             }
           ],
           "confidence": 0.96,

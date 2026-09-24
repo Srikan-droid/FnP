@@ -4,9 +4,9 @@ import { isEvidenceRequired } from "../domain/evidenceRules";
 import type { Assignment } from "../data/assignments";
 import type { ApplicationForm } from "../domain/types";
 
-// Versioned: the v2 test set changed the question shape, so drafts saved by an earlier build
-// are not loadable and must be rebuilt from the fixture.
-const storageKey = (assignmentId: string) => `fnp-draft-v2-${assignmentId}`;
+// Versioned: each test set revision changes question wording, evidence options or required
+// flags, so drafts saved by an earlier build are discarded and rebuilt from the fixture.
+const storageKey = (assignmentId: string) => `fnp-draft-v3-${assignmentId}`;
 
 /** Entity and position always come from the parent application, never from the draft. */
 function withParentDetails(form: ApplicationForm, assignment: Assignment): ApplicationForm {

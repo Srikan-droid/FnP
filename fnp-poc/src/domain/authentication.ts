@@ -14,17 +14,66 @@ const CHECK_LABELS: Record<string, string> = {
   Name_Check: "Document belongs to applicant",
   Age_Check: "Age derived from document",
   Naturalization_Check: "Naturalised status",
-  Answer_Check: "Answer supported by evidence",
+  Qualification_Relevance_Check: "Qualification relevant to the role",
+  Experience_Duration_Check: "Length of relevant service",
+  Experience_Relevance_Check: "Experience relevant to the role",
+  Record_Check: "Conviction or civil finding",
+  Scope_Check: "Search period and jurisdictions covered",
+  Compliance_History_Check: "History of non-compliance",
+  Period_Coverage_Check: "Document covers a historical period",
+  Facility_Status_Check: "Facility restructured, written off or forgiven",
+  Indebtedness_Amount_Check: "Aggregate indebtedness against the threshold",
+  Directorship_Check: "Directorship recorded",
+  Entity_Activity_Check: "Entity engaged in financial services",
+  Beneficial_Ownership_Check: "Beneficial interest held",
+  Controlling_Interest_Threshold_Check: "Controlling interest threshold",
+  Time_Commitment_Check: "Time commitment stated",
+  Executive_Responsibility_Check: "Executive responsibility stated",
+  Shareholding_Check: "Shares of the Licensee held",
+  Relative_Name_Check: "Relative identified by name",
+  Relationship_Check: "Relationship stated on the document",
+  Signature_Check: "Declaration signed and witnessed",
+  Declaration_Content_Check: "Declaration wording covers the attestation",
 };
 
 /**
- * The v2 test set names checks only for Basic Details. Document and Name checks are meaningful
- * for any uploaded document, so every question runs those two plus one question-specific check
- * — which is exactly the A1 and A4 lists from the workbook, generalised.
+ * From the "Checks" sheet of fnp_authentication_testset_v5.xlsx, which defines checks for all
+ * 15 questions. Read from here rather than the payload's `checks_to_perform`, which the v5
+ * generator populates for A1 and A4 only and leaves empty for the other thirteen.
+ *
+ * Note the two questions that do not run Name_Check: CS4 verifies the signature instead, and
+ * CoL3 is about a relative rather than the applicant.
  */
+const CHECKS_BY_QID: Record<string, string[]> = {
+  A1: ["Document_Check", "Name_Check", "Age_Check"],
+  A4: ["Document_Check", "Name_Check", "Naturalization_Check"],
+  Q1: ["Document_Check", "Name_Check", "Qualification_Relevance_Check"],
+  Q3: [
+    "Document_Check",
+    "Name_Check",
+    "Experience_Duration_Check",
+    "Experience_Relevance_Check",
+  ],
+  PC1: ["Document_Check", "Name_Check", "Record_Check", "Scope_Check"],
+  PC19: ["Document_Check", "Name_Check", "Compliance_History_Check", "Period_Coverage_Check"],
+  FC5: ["Document_Check", "Name_Check", "Facility_Status_Check"],
+  FC7: ["Document_Check", "Name_Check", "Indebtedness_Amount_Check"],
+  CoI2: ["Document_Check", "Name_Check", "Directorship_Check", "Entity_Activity_Check"],
+  CoI6: [
+    "Document_Check",
+    "Name_Check",
+    "Beneficial_Ownership_Check",
+    "Controlling_Interest_Threshold_Check",
+  ],
+  T1: ["Document_Check", "Name_Check", "Time_Commitment_Check"],
+  T2: ["Document_Check", "Name_Check", "Executive_Responsibility_Check"],
+  CoL1: ["Document_Check", "Name_Check", "Shareholding_Check"],
+  CoL3: ["Document_Check", "Relative_Name_Check", "Relationship_Check", "Shareholding_Check"],
+  CS4: ["Document_Check", "Signature_Check", "Declaration_Content_Check"],
+};
+
 function checksFor(response: ResponseItem): string[] {
-  if (response.checks_to_perform.length > 0) return response.checks_to_perform;
-  return ["Document_Check", "Name_Check", "Answer_Check"];
+  return CHECKS_BY_QID[response.qid] ?? ["Document_Check", "Name_Check"];
 }
 
 interface CheckOverride {
@@ -40,14 +89,14 @@ interface CheckOverride {
  */
 const OVERRIDES: Record<string, Record<string, CheckOverride>> = {
   "APP003:Q3": {
-    Answer_Check: {
+    Experience_Duration_Check: {
       status: "fail",
       confidence: 0.24,
       note: "The letter records 2018-03-01 to 2026-04-30 — 8 years 2 months — and states there was no prior service with this employer. The evidence cannot support a claim of ten years or more.",
     },
   },
   "APP004:PC1": {
-    Answer_Check: {
+    Record_Check: {
       status: "fail",
       confidence: 0.19,
       note: "The clearance certificate records a 2013 conviction under section 34 of the Companies Act (Annexure A), not expunged. The answer derived from the evidence is Yes.",
@@ -67,15 +116,8 @@ const OVERRIDES: Record<string, Record<string, CheckOverride>> = {
       note: "The date of birth appears only on a scanned national ID, so the value was read by OCR rather than from embedded text.",
     },
   },
-  "APP004:FC7": {
-    Answer_Check: {
-      status: "caution",
-      confidence: 0.71,
-      note: "The bank letter states N$4,200,000 while the question is written against a J$2.5mn threshold. Compared across currencies rather than returned as unverifiable.",
-    },
-  },
   "APP004:FC5": {
-    Answer_Check: {
+    Facility_Status_Check: {
       status: "caution",
       confidence: 0.76,
       note: "The letter confirms the facility was restructured but explicitly not written off or forgiven. The question is disjunctive, so Yes is correct.",
@@ -83,21 +125,58 @@ const OVERRIDES: Record<string, Record<string, CheckOverride>> = {
   },
 };
 
+/** What a check says when it passes. `{doc}` is replaced with the attached document's label. */
+const PASSING_NOTES: Record<string, string> = {
+  Document_Check: "The uploaded file reads as a {doc}, matching the document type selected.",
+  Name_Check: "The name on the document matches the applicant record.",
+  Age_Check:
+    "Date of birth read from the {doc}; the age at the reference date falls as the answer states.",
+  Naturalization_Check:
+    "The certificate establishes naturalised status, and the status is current rather than revoked or lapsed.",
+  Qualification_Relevance_Check:
+    "The qualification shown is relevant to the oversight and executive responsibilities of the proposed role.",
+  Experience_Duration_Check:
+    "Relevant service computed from the dates on the {doc} meets the ten year threshold.",
+  Experience_Relevance_Check:
+    "The experience shown is relevant to the proposed role on both seniority and sector.",
+  Record_Check:
+    "The {doc} discloses no conviction, pending charge, civil finding of liability or military tribunal finding.",
+  Scope_Check:
+    "The search stated on the document covers the period and the jurisdictions the question asks about.",
+  Compliance_History_Check:
+    "The {doc} discloses no period of non-compliance with tax or other statutory obligations.",
+  Period_Coverage_Check:
+    "The document covers a historical period rather than current status alone, so a past lapse would have been visible.",
+  Facility_Status_Check:
+    "No facility shown has been restructured, renegotiated, written off or forgiven for non-payment.",
+  Indebtedness_Amount_Check:
+    "Aggregate indebtedness shown on the {doc} was reconciled against the threshold in the question.",
+  Directorship_Check: "The applicant is recorded on the {doc} as a director, with dates.",
+  Entity_Activity_Check:
+    "The entity's principal activity falls within the definition of financial services the question refers to.",
+  Beneficial_Ownership_Check:
+    "The {doc} shows the beneficial interest held by the applicant, directly or through another arrangement.",
+  Controlling_Interest_Threshold_Check:
+    "The holding shown was compared against the 20% voting-share test and the board-control test.",
+  Time_Commitment_Check:
+    "The appointment letter states a time commitment consistent with the answer given.",
+  Executive_Responsibility_Check:
+    "The {doc} states whether the appointment carries executive responsibility for managing the institution.",
+  Shareholding_Check: "The {doc} shows the shares of the Licensee held by the person named.",
+  Relative_Name_Check: "The document identifies a specific relative by name, distinct from the applicant.",
+  Relationship_Check:
+    "The document states a relationship that counts as an immediate relative.",
+  Signature_Check: "The declaration is signed and witnessed as required.",
+  Declaration_Content_Check:
+    "The declaration's wording covers the specific attestation the question requires.",
+};
+
 function passingNote(checkName: string, response: ResponseItem): string {
   const docType = response.evidence[0]?.doc_type ?? "document";
-  const docLabel = labelForDocType(docType).toLowerCase();
-  switch (checkName) {
-    case "Document_Check":
-      return `The uploaded file reads as a ${docLabel}, matching the document type selected.`;
-    case "Name_Check":
-      return "The name on the document matches the applicant record.";
-    case "Age_Check":
-      return `Date of birth read from the ${docLabel}; the age at the reference date falls as the answer states.`;
-    case "Naturalization_Check":
-      return "The certificate establishes naturalised status and the status is current.";
-    default:
-      return `The ${docLabel} supports the answer of "${response.answer}".`;
-  }
+  const docLabel = labelForDocType(docType, response.qid).toLowerCase();
+  const template =
+    PASSING_NOTES[checkName] ?? `The {doc} supports the answer of "${response.answer}".`;
+  return template.replaceAll("{doc}", docLabel);
 }
 
 function runCheck(applicantId: string, response: ResponseItem, checkName: string): CheckResult {
