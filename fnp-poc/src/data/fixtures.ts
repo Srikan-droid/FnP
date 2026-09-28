@@ -4,7 +4,7 @@ import app003 from "./testset/form_data/APP003.json";
 import app004 from "./testset/form_data/APP004.json";
 import app005 from "./testset/form_data/APP005.json";
 import { QUESTION_BY_QID } from "../domain/questions";
-import type { ApplicationForm, ResponseItem } from "../domain/types";
+import type { ApplicationForm, CvSubmission, ResponseItem } from "../domain/types";
 
 /** Shape of the v5 test set files: sections, each holding its questions. */
 interface V5File {
@@ -17,6 +17,7 @@ interface V5File {
     section_weight: number;
     questions: Omit<ResponseItem, "section">[];
   }[];
+  cv_verification?: CvSubmission;
 }
 
 /**
@@ -32,6 +33,7 @@ function flatten(file: V5File): ApplicationForm {
     licensee: file.licensee,
     applicant: file.applicant,
     submitted_at: file.submitted_at,
+    cv_verification: file.cv_verification,
     responses: file.sections.flatMap((section) =>
       section.questions.map((q) => ({
         ...q,
@@ -57,6 +59,7 @@ export const APPLICATION_FORMS: Record<string, ApplicationForm> = {
  */
 const SHARED_DOCS = [
   "board_appointment_letter",
+  "curriculum_vitae",
   "company_registry_extract",
   "degree_certificate",
   "employment_letter",

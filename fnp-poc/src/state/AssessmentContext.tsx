@@ -15,6 +15,8 @@ interface AssessmentContextValue {
   updateAnswer: (assignment: Assignment, qid: string, answer: Answer) => void;
   attachEvidence: (assignment: Assignment, qid: string, evidence: EvidenceRef) => void;
   removeEvidence: (assignment: Assignment, qid: string, docType: string) => void;
+  attachCvEvidence: (assignment: Assignment, evidence: EvidenceRef) => void;
+  removeCvEvidence: (assignment: Assignment) => void;
   startNewApplication: (assignment: Assignment) => void;
 }
 
@@ -129,6 +131,32 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
     [currentForm, persist]
   );
 
+  // The CV sits outside `responses`, so it gets its own pair of actions rather than being
+  // squeezed into the question list as a sixteenth entry.
+  const attachCvEvidence = useCallback(
+    (assignment: Assignment, evidence: EvidenceRef) => {
+      const base = currentForm(assignment);
+      if (!base.cv_verification) return;
+      persist(assignment.id, {
+        ...base,
+        cv_verification: { ...base.cv_verification, evidence: [evidence] },
+      });
+    },
+    [currentForm, persist]
+  );
+
+  const removeCvEvidence = useCallback(
+    (assignment: Assignment) => {
+      const base = currentForm(assignment);
+      if (!base.cv_verification) return;
+      persist(assignment.id, {
+        ...base,
+        cv_verification: { ...base.cv_verification, evidence: [] },
+      });
+    },
+    [currentForm, persist]
+  );
+
   const startNewApplication = useCallback(
     (assignment: Assignment) => {
       const fresh = resetDraft(assignment);
@@ -147,6 +175,8 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       updateAnswer,
       attachEvidence,
       removeEvidence,
+      attachCvEvidence,
+      removeCvEvidence,
       startNewApplication,
     }),
     [
@@ -157,6 +187,8 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       updateAnswer,
       attachEvidence,
       removeEvidence,
+      attachCvEvidence,
+      removeCvEvidence,
       startNewApplication,
     ]
   );

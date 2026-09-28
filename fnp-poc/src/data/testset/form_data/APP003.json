@@ -25,7 +25,6 @@
           "evidence": [
             {
               "doc_type": "national_id",
-              "path": "evidence/APP003/national_id.pdf",
               "role": "primary"
             }
           ],
@@ -46,7 +45,6 @@
           "evidence": [
             {
               "doc_type": "naturalisation_certificate",
-              "path": "evidence/APP003/naturalisation_certificate.pdf",
               "role": "primary"
             }
           ],
@@ -73,7 +71,6 @@
           "evidence": [
             {
               "doc_type": "degree_certificate",
-              "path": "evidence/APP003/degree_certificate.pdf",
               "role": "primary"
             }
           ],
@@ -94,7 +91,6 @@
           "evidence": [
             {
               "doc_type": "employment_letter",
-              "path": "evidence/APP003/employment_letter.pdf",
               "role": "primary"
             }
           ],
@@ -122,7 +118,6 @@
           "evidence": [
             {
               "doc_type": "police_clearance",
-              "path": "evidence/APP003/police_clearance.pdf",
               "role": "primary"
             }
           ],
@@ -144,7 +139,6 @@
           "evidence": [
             {
               "doc_type": "tax_compliance_certificate",
-              "path": "evidence/APP003/tax_compliance_certificate.pdf",
               "role": "primary"
             }
           ],
@@ -210,7 +204,6 @@
           "evidence": [
             {
               "doc_type": "company_registry_extract",
-              "path": "evidence/APP003/company_registry_extract.pdf",
               "role": "primary"
             }
           ],
@@ -254,7 +247,6 @@
           "evidence": [
             {
               "doc_type": "board_appointment_letter",
-              "path": "evidence/APP003/board_appointment_letter.pdf",
               "role": "primary"
             }
           ],
@@ -334,7 +326,6 @@
           "evidence": [
             {
               "doc_type": "suitability_declaration",
-              "path": "evidence/APP003/suitability_declaration.pdf",
               "role": "primary"
             }
           ],
@@ -346,5 +337,52 @@
         }
       ]
     }
-  ]
+  ],
+  "cv_verification": {
+    "doc_type": "curriculum_vitae",
+    "mandatory": true,
+    "evidence": [
+      {
+        "doc_type": "curriculum_vitae",
+        "path": "evidence/APP003/curriculum_vitae.pdf",
+        "role": "primary"
+      }
+    ],
+    "checks_to_perform": [
+      "Document_Check",
+      "Name_Check"
+    ],
+    "reference_inputs": {
+      "authenticated_qualification": {
+        "from_qid": "Q1"
+      },
+      "authenticated_experience": {
+        "from_qid": "Q3"
+      },
+      "authenticated_directorships": {
+        "from_qid": "CoI2"
+      },
+      "proposed_role": {
+        "from_field": "applicant.proposed_role"
+      }
+    },
+    "analysis_prompt": "You are reviewing a CV submitted as part of a fit and proper application. You have the CV document (cv_document) and three values already established from the applicant's primary evidence: authenticated_qualification, authenticated_experience, and authenticated_directorships. You also have the role being applied for (proposed_role).\n\nRead the CV and extract: the qualifications claimed, the employment history with employer, title, and start/end dates for each position, and any directorships, board memberships, or significant ownership positions mentioned.\n\nProduce two lists.\n\nconsistency_findings — one entry per comparison below. For each, state the verdict CONSISTENT or EVIDENCE_CONFLICT and a one-sentence detail citing the specific figures that agree or disagree. If the CV does not mention a given point at all, treat it as CONSISTENT: silence is not a conflict, only a stated disagreement is.\n  1. qualification — compare the CV's stated qualification, institution and year against authenticated_qualification.\n  2. experience — compare the CV's stated current and recent employer, title, and dates against authenticated_experience.\n  3. directorships — compare the CV's stated directorships or board positions against authenticated_directorships in both directions: note anything the CV claims that the authenticated record does not show, and anything material the authenticated record shows that the CV omits.\n\nsuitability_findings — one entry per judgment below. For each, state the verdict NO_CONCERN or SUITABILITY_FLAG and a one or two sentence rationale grounded only in what the CV states. These are judgments for a human reviewer, not authentication failures — do not treat a SUITABILITY_FLAG as evidence of dishonesty.\n  1. sector_relevance — is the applicant's professional background in a sector relevant to banking or financial services, given proposed_role?\n  2. seniority_level — has the applicant operated at a level of seniority or scope (executive committee, board, head-office strategic responsibility) consistent with a director-level appointment, or only at a regional or operational level?\n  3. career_gaps — are there unexplained gaps of a year or more in the employment timeline?\n\nReturn only the two lists in the structured output format. Do not include any finding not grounded in the CV text or the supplied reference values.",
+    "output_schema": {
+      "consistency_findings": [
+        {
+          "aspect": "string — qualification | experience | directorships",
+          "verdict": "CONSISTENT | EVIDENCE_CONFLICT",
+          "detail": "string"
+        }
+      ],
+      "suitability_findings": [
+        {
+          "aspect": "string — sector_relevance | seniority_level | career_gaps",
+          "verdict": "NO_CONCERN | SUITABILITY_FLAG",
+          "detail": "string"
+        }
+      ]
+    },
+    "scoring_impact": "none — reviewer-facing only; does not affect the fit and proper score or reopen the correction loop"
+  }
 }

@@ -3,21 +3,21 @@
   "parentApplication": {
     "reference": "BL-2026-0398",
     "department": "Banking Licence",
-    "entity": "Windhoek Commercial Bank Limited",
-    "positionAppliedFor": "Chief Financial Officer"
+    "entity": "Oshakati Microfinance Bank Limited",
+    "positionAppliedFor": "Executive Director"
   },
   "applicant": {
     "id": "APP004",
     "fullName": "Maria L. van Wyk",
-    "email": "m.vanwyk@example.na"
+    "email": "m.vanwyk@example.com"
   },
-  "status": "AUTH_COMPLETE_ISSUES",
-  "submittedAt": "2026-09-28T09:14:02Z",
-  "authenticatedAt": "2026-09-28T09:14:11Z",
-  "engineVersion": "auth-0.5.0",
+  "status": "AUTH_COMPLETE_KNOCKOUT",
+  "submittedAt": "2026-08-09T09:14:02Z",
+  "authenticatedAt": "2026-08-09T09:14:11Z",
+  "engineVersion": "auth-0.4.0",
   "summary": {
     "isClean": false,
-    "overallConfidence": 0.8853846153846155,
+    "overallConfidence": 0.8853846153846153,
     "checksRun": 46,
     "questionsWithIssues": 1
   },
@@ -51,7 +51,7 @@
               "label": "Age derived from document",
               "status": "pass",
               "confidence": 0.96,
-              "note": "Date of birth read from the national identity card; the age at the reference date falls as the answer states."
+              "note": "Date of birth read from the national identity card as 1972-01-27; the age at the reference date (54) falls in the band the answer states."
             }
           ],
           "confidence": 0.96,
@@ -97,7 +97,7 @@
               "label": "Qualification relevant to the role",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The qualification shown is relevant to the oversight and executive responsibilities of the proposed role."
+              "note": "The Chartered Accountant (CA(NAM)) (Institute of Chartered Accountants of Namibia, 2001) is relevant to the oversight and executive responsibilities of the proposed role."
             }
           ],
           "confidence": 0.96,
@@ -128,14 +128,14 @@
               "label": "Length of relevant service",
               "status": "pass",
               "confidence": 0.96,
-              "note": "Relevant service computed from the dates on the certificate of service or employment letter meets the ten year threshold."
+              "note": "Continuous service at Windhoek Commercial Bank Limited (2010–2026) totals 16 years 3 months, meeting the ten year threshold."
             },
             {
               "name": "Experience_Relevance_Check",
               "label": "Experience relevant to the role",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The experience shown is relevant to the proposed role on both seniority and sector."
+              "note": "The role of Chief Financial Officer is relevant to the proposed appointment on both seniority and sector."
             }
           ],
           "confidence": 0.96,
@@ -254,14 +254,14 @@
               "label": "Supporting document agrees with the primary",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The figures on the supporting document reconcile with the bank reference letter with facility conduct history, so the field-level checks ran against a value both documents agree on."
+              "note": "The figures on the supporting credit bureau report reconcile with the bank reference letter, so the field-level checks ran against a value both documents agree on."
             },
             {
               "name": "Facility_Status_Check",
               "label": "Facility restructured, written off or forgiven",
               "status": "caution",
               "confidence": 0.76,
-              "note": "The letter confirms the facility was restructured but explicitly not written off or forgiven. The question is disjunctive, so Yes is correct."
+              "note": "The letter confirms a facility was restructured in 2020 but explicitly not written off or forgiven. The question is disjunctive, so Yes is correct."
             }
           ],
           "confidence": 0.76,
@@ -292,14 +292,14 @@
               "label": "Supporting document agrees with the primary",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The figures on the supporting document reconcile with the bank reference letter with aggregate exposure, so the field-level checks ran against a value both documents agree on."
+              "note": "The figures on the supporting credit bureau report reconcile with the bank reference letter, so the field-level checks ran against a value both documents agree on."
             },
             {
               "name": "Indebtedness_Amount_Check",
               "label": "Aggregate indebtedness against the threshold",
               "status": "pass",
               "confidence": 0.96,
-              "note": "Aggregate indebtedness shown on the bank reference letter with aggregate exposure was reconciled against the threshold in the question."
+              "note": "Aggregate indebtedness of N$4,200,000 shown on the bank reference letter was reconciled against the threshold in the question."
             }
           ],
           "confidence": 0.96,
@@ -336,14 +336,14 @@
               "label": "Directorship recorded",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The applicant is recorded on the company registry extract as a director, with dates."
+              "note": "The applicant is recorded on the registry extract as a director of Windhoek Commercial Bank Limited since 2015."
             },
             {
               "name": "Entity_Activity_Check",
               "label": "Entity engaged in financial services",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The entity's principal activity falls within the definition of financial services the question refers to."
+              "note": "The entity's principal activity (commercial banking) falls within the definition of financial services the question refers to."
             }
           ],
           "confidence": 0.96,
@@ -374,14 +374,14 @@
               "label": "Beneficial interest held",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The company registry extract with shareholding shows the beneficial interest held by the applicant, directly or through another arrangement."
+              "note": "The registry extract shows a 62% beneficial interest held by the applicant in Van Wyk Family Holdings (Pty) Ltd."
             },
             {
               "name": "Controlling_Interest_Threshold_Check",
               "label": "Controlling interest threshold",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The holding shown was compared against the 20% voting-share test and the board-control test."
+              "note": "The holding shown was compared against the 20% voting-share test and the board-control test; it meets the threshold."
             }
           ],
           "confidence": 0.96,
@@ -418,7 +418,7 @@
               "label": "Time commitment stated",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The appointment letter states a time commitment consistent with the answer given."
+              "note": "The appointment letter states an expected time commitment of 40 hours per week, consistent with the answer given."
             }
           ],
           "confidence": 0.96,
@@ -449,7 +449,7 @@
               "label": "Executive responsibility stated",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The board appointment letter states whether the appointment carries executive responsibility for managing the institution."
+              "note": "The board appointment letter states the appointment carries executive responsibility for managing the institution."
             }
           ],
           "confidence": 0.96,
@@ -486,7 +486,7 @@
               "label": "Shares of the Licensee held",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The share certificate shows the shares of the Licensee held by the person named."
+              "note": "The share certificate shows 25,000 ordinary shares of the Licensee held by the person named."
             }
           ],
           "confidence": 0.96,
@@ -525,7 +525,7 @@
               "label": "Declaration signed and witnessed",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The declaration is signed and witnessed as required."
+              "note": "The declaration is signed and witnessed by a commissioner of oaths."
             },
             {
               "name": "Declaration_Content_Check",

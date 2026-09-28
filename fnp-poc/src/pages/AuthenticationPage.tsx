@@ -7,6 +7,7 @@ import { statusFor } from "../state/submissionStore";
 import { displaySection } from "../domain/sectionLabels";
 import AssessmentNotFound from "../components/AssessmentNotFound";
 import OutcomeTabs from "../components/OutcomeTabs";
+import CvVerificationCard from "../components/CvVerificationCard";
 import {
   AlertTriangleIcon,
   ArrowLeftIcon,
@@ -192,6 +193,8 @@ export default function AuthenticationPage() {
           </div>
         </section>
       ))}
+
+      {outcome.cvVerification && <CvVerificationCard result={outcome.cvVerification} />}
 
       <footer className="actionbar">
         <button className="btn btn-ghost" onClick={() => navigate(`/apply/${id}/status`)}>

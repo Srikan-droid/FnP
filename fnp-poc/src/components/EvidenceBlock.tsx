@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   acceptsSupportingEvidence,
   defaultOptionCodeFor,
+  evidenceFileName,
   evidenceOptionsFor,
   findOption,
   formatHint,
@@ -32,7 +33,7 @@ function AttachedRow({
   showRole: boolean;
   onRemove: () => void;
 }) {
-  const fileName = file.path.split("/").pop() ?? file.path;
+  const fileName = evidenceFileName(file);
   const isSupporting = file.role === "supporting";
   return (
     <div className="evidence">

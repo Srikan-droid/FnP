@@ -1,25 +1,25 @@
 {
-  "assessmentId": "FNP-2026-0398",
+  "assessmentId": "FNP-2026-0395",
   "parentApplication": {
-    "reference": "BL-2026-0398",
+    "reference": "BL-2026-0395",
     "department": "Banking Licence",
-    "entity": "Windhoek Commercial Bank Limited",
-    "positionAppliedFor": "Chief Financial Officer"
+    "entity": "Oshakati Microfinance Bank Limited",
+    "positionAppliedFor": "Non-Executive Director"
   },
   "applicant": {
-    "id": "APP004",
-    "fullName": "Maria L. van Wyk",
-    "email": "m.vanwyk@example.na"
+    "id": "APP001",
+    "fullName": "Johanna N. Amutenya",
+    "email": "j.amutenya@example.com"
   },
-  "status": "AUTH_COMPLETE_ISSUES",
-  "submittedAt": "2026-09-28T09:14:02Z",
-  "authenticatedAt": "2026-09-28T09:14:11Z",
-  "engineVersion": "auth-0.5.0",
+  "status": "AUTH_COMPLETE_CLEAN",
+  "submittedAt": "2026-08-25T10:15:00Z",
+  "authenticatedAt": "2026-08-25T10:15:09Z",
+  "engineVersion": "auth-0.4.0",
   "summary": {
-    "isClean": false,
-    "overallConfidence": 0.8853846153846155,
-    "checksRun": 46,
-    "questionsWithIssues": 1
+    "isClean": true,
+    "overallConfidence": 0.96,
+    "checksRun": 28,
+    "questionsWithIssues": 0
   },
   "sections": [
     {
@@ -51,7 +51,7 @@
               "label": "Age derived from document",
               "status": "pass",
               "confidence": 0.96,
-              "note": "Date of birth read from the national identity card; the age at the reference date falls as the answer states."
+              "note": "Date of birth read from the national identity card as 1974-06-18; the age at the reference date (52) falls in the band the answer states."
             }
           ],
           "confidence": 0.96,
@@ -97,7 +97,7 @@
               "label": "Qualification relevant to the role",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The qualification shown is relevant to the oversight and executive responsibilities of the proposed role."
+              "note": "The Bachelor of Commerce (Accounting) (University of Namibia, 1997) is relevant to the oversight and executive responsibilities of the proposed role."
             }
           ],
           "confidence": 0.96,
@@ -128,14 +128,14 @@
               "label": "Length of relevant service",
               "status": "pass",
               "confidence": 0.96,
-              "note": "Relevant service computed from the dates on the certificate of service or employment letter meets the ten year threshold."
+              "note": "Continuous service at Standard Trust Bank Limited (2009–2024) totals 15 years 10 months, meeting the ten year threshold."
             },
             {
               "name": "Experience_Relevance_Check",
               "label": "Experience relevant to the role",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The experience shown is relevant to the proposed role on both seniority and sector."
+              "note": "The role of Head of Credit Risk is relevant to the proposed appointment on both seniority and sector."
             }
           ],
           "confidence": 0.96,
@@ -145,13 +145,13 @@
     },
     {
       "section": "Professional Conduct /Reputation/Integrity",
-      "issueCount": 1,
+      "issueCount": 0,
       "questions": [
         {
           "qid": "PC1",
           "question": "Have you at any time been charged with or convicted of any offence or otherwise found liable by a Civil, Criminal or Military Court (excluding minor road traffic offences), in any jurisdiction?",
           "answer": "No",
-          "status": "issue",
+          "status": "authenticated",
           "checks": [
             {
               "name": "Document_Check",
@@ -170,9 +170,9 @@
             {
               "name": "Record_Check",
               "label": "Conviction or civil finding",
-              "status": "fail",
-              "confidence": 0.19,
-              "note": "The clearance certificate records a 2013 conviction under section 34 of the Companies Act (Annexure A), not expunged. The answer derived from the evidence is Yes."
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The clearance certificate records no conviction, pending charge, civil finding of liability, or military tribunal finding."
             },
             {
               "name": "Scope_Check",
@@ -182,8 +182,8 @@
               "note": "The search stated on the document covers the period and the jurisdictions the question asks about."
             }
           ],
-          "confidence": 0.19,
-          "summary": "1 check could not be satisfied by the evidence."
+          "confidence": 0.96,
+          "summary": "Every check passed against the attached document."
         },
         {
           "qid": "PC19",
@@ -232,78 +232,20 @@
         {
           "qid": "FC5",
           "question": "Has any loan or credit facility (or part thereof) extended to you by any financial institution, been restructured, renegotiated, provided against or been the subject of a write-off or debt forgiveness for reasons of non-payment by you?",
-          "answer": "Yes",
-          "status": "authenticated",
-          "checks": [
-            {
-              "name": "Document_Check",
-              "label": "Document type",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The uploaded file reads as a bank reference letter with facility conduct history, matching the document type selected."
-            },
-            {
-              "name": "Name_Check",
-              "label": "Document belongs to applicant",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The name on the document matches the applicant record."
-            },
-            {
-              "name": "Consistency_Check",
-              "label": "Supporting document agrees with the primary",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The figures on the supporting document reconcile with the bank reference letter with facility conduct history, so the field-level checks ran against a value both documents agree on."
-            },
-            {
-              "name": "Facility_Status_Check",
-              "label": "Facility restructured, written off or forgiven",
-              "status": "caution",
-              "confidence": 0.76,
-              "note": "The letter confirms the facility was restructured but explicitly not written off or forgiven. The question is disjunctive, so Yes is correct."
-            }
-          ],
-          "confidence": 0.76,
-          "summary": "Authenticated, with 1 check the engine had to work for."
+          "answer": "No",
+          "status": "not_checked",
+          "checks": [],
+          "confidence": null,
+          "summary": "No supporting document was required for this answer."
         },
         {
           "qid": "FC7",
           "question": "Do you (in your personal capacity), or through any legal person or arrangement controlled by you and/or any immediate relative have outstanding any loans or other forms of indebtedness (including guarantees) in excess of N$2.5mn?",
-          "answer": "Yes",
-          "status": "authenticated",
-          "checks": [
-            {
-              "name": "Document_Check",
-              "label": "Document type",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The uploaded file reads as a bank reference letter with aggregate exposure, matching the document type selected."
-            },
-            {
-              "name": "Name_Check",
-              "label": "Document belongs to applicant",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The name on the document matches the applicant record."
-            },
-            {
-              "name": "Consistency_Check",
-              "label": "Supporting document agrees with the primary",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The figures on the supporting document reconcile with the bank reference letter with aggregate exposure, so the field-level checks ran against a value both documents agree on."
-            },
-            {
-              "name": "Indebtedness_Amount_Check",
-              "label": "Aggregate indebtedness against the threshold",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "Aggregate indebtedness shown on the bank reference letter with aggregate exposure was reconciled against the threshold in the question."
-            }
-          ],
-          "confidence": 0.96,
-          "summary": "Every check passed against the attached document."
+          "answer": "No",
+          "status": "not_checked",
+          "checks": [],
+          "confidence": null,
+          "summary": "No supporting document was required for this answer."
         }
       ]
     },
@@ -336,14 +278,14 @@
               "label": "Directorship recorded",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The applicant is recorded on the company registry extract as a director, with dates."
+              "note": "The applicant is recorded on the registry extract as a director of Kavango Financial Services (Pty) Ltd since 2016."
             },
             {
               "name": "Entity_Activity_Check",
               "label": "Entity engaged in financial services",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The entity's principal activity falls within the definition of financial services the question refers to."
+              "note": "The entity's principal activity (deposit taking and microlending) falls within the definition of financial services the question refers to."
             }
           ],
           "confidence": 0.96,
@@ -352,40 +294,11 @@
         {
           "qid": "CoI6",
           "question": "Are you a beneficial owner of a controlling interest (20% or more of the voting shares, or the ability to appoint or remove a majority of the board) in any financial institution, partnerships, societies, or trust corporations or other body, organization or entity whether for business, benevolent or other purposes?",
-          "answer": "Yes",
-          "status": "authenticated",
-          "checks": [
-            {
-              "name": "Document_Check",
-              "label": "Document type",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The uploaded file reads as a company registry extract with shareholding, matching the document type selected."
-            },
-            {
-              "name": "Name_Check",
-              "label": "Document belongs to applicant",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The name on the document matches the applicant record."
-            },
-            {
-              "name": "Beneficial_Ownership_Check",
-              "label": "Beneficial interest held",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The company registry extract with shareholding shows the beneficial interest held by the applicant, directly or through another arrangement."
-            },
-            {
-              "name": "Controlling_Interest_Threshold_Check",
-              "label": "Controlling interest threshold",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The holding shown was compared against the 20% voting-share test and the board-control test."
-            }
-          ],
-          "confidence": 0.96,
-          "summary": "Every check passed against the attached document."
+          "answer": "No",
+          "status": "not_checked",
+          "checks": [],
+          "confidence": null,
+          "summary": "No supporting document was required for this answer."
         }
       ]
     },
@@ -396,7 +309,7 @@
         {
           "qid": "T1",
           "question": "Will you be actively engaged in the business of the Licensee to which this application relates and devote the major portion of your time thereto?",
-          "answer": "Yes",
+          "answer": "No",
           "status": "authenticated",
           "checks": [
             {
@@ -418,7 +331,7 @@
               "label": "Time commitment stated",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The appointment letter states a time commitment consistent with the answer given."
+              "note": "The appointment letter states an expected time commitment of 12 hours per week, consistent with the answer given."
             }
           ],
           "confidence": 0.96,
@@ -427,33 +340,11 @@
         {
           "qid": "T2",
           "question": "If you are completing this form in the capacity of director or proposed director, please indicate whether you have or will have any executive responsibility for the management of the institution's business",
-          "answer": "Yes",
-          "status": "authenticated",
-          "checks": [
-            {
-              "name": "Document_Check",
-              "label": "Document type",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The uploaded file reads as a board appointment letter, matching the document type selected."
-            },
-            {
-              "name": "Name_Check",
-              "label": "Document belongs to applicant",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The name on the document matches the applicant record."
-            },
-            {
-              "name": "Executive_Responsibility_Check",
-              "label": "Executive responsibility stated",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The board appointment letter states whether the appointment carries executive responsibility for managing the institution."
-            }
-          ],
-          "confidence": 0.96,
-          "summary": "Every check passed against the attached document."
+          "answer": "N/A",
+          "status": "not_applicable",
+          "checks": [],
+          "confidence": null,
+          "summary": "Non-executive appointment. The question addresses executive responsibility for the management of the institution and does not apply to this role."
         }
       ]
     },
@@ -464,33 +355,11 @@
         {
           "qid": "CoL1",
           "question": "Are any shares of the Licensee registered in your name?",
-          "answer": "Yes",
-          "status": "authenticated",
-          "checks": [
-            {
-              "name": "Document_Check",
-              "label": "Document type",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The uploaded file reads as a share certificate, matching the document type selected."
-            },
-            {
-              "name": "Name_Check",
-              "label": "Document belongs to applicant",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The name on the document matches the applicant record."
-            },
-            {
-              "name": "Shareholding_Check",
-              "label": "Shares of the Licensee held",
-              "status": "pass",
-              "confidence": 0.96,
-              "note": "The share certificate shows the shares of the Licensee held by the person named."
-            }
-          ],
-          "confidence": 0.96,
-          "summary": "Every check passed against the attached document."
+          "answer": "No",
+          "status": "not_checked",
+          "checks": [],
+          "confidence": null,
+          "summary": "No supporting document was required for this answer."
         },
         {
           "qid": "CoL3",
@@ -525,7 +394,7 @@
               "label": "Declaration signed and witnessed",
               "status": "pass",
               "confidence": 0.96,
-              "note": "The declaration is signed and witnessed as required."
+              "note": "The declaration is signed and witnessed by a commissioner of oaths."
             },
             {
               "name": "Declaration_Content_Check",
@@ -565,19 +434,19 @@
         "aspect": "qualification",
         "verdict": "CONSISTENT",
         "confidence": 0.95,
-        "detail": "CV states Chartered Accountant (CA(NAM)), Institute of Chartered Accountants of Namibia, 2001 — matches the authenticated membership certificate."
+        "detail": "CV states Bachelor of Commerce (Accounting), University of Namibia, 1997 — matches the authenticated degree certificate exactly."
       },
       {
         "aspect": "experience",
         "verdict": "CONSISTENT",
         "confidence": 0.95,
-        "detail": "CV states Chief Financial Officer, Windhoek Commercial Bank Limited, 2022–present, with prior positions back to 2010 — matches the authenticated employment letter."
+        "detail": "CV states Head of Credit Risk, Standard Trust Bank Limited, 2009–2024 — matches the authenticated employment letter."
       },
       {
         "aspect": "directorships",
         "verdict": "CONSISTENT",
         "confidence": 0.95,
-        "detail": "CV lists Executive Director, Windhoek Commercial Bank Limited, since 2015 — matches the authenticated registry extract. The CV does not mention Van Wyk Family Holdings (Pty) Ltd; a personal investment holding of this kind is commonly omitted from a CV and is not treated as a conflict."
+        "detail": "CV lists Non-Executive Director, Kavango Financial Services (Pty) Ltd, since 2016 — matches the authenticated registry extract."
       }
     ],
     "suitabilityFindings": [
@@ -585,19 +454,19 @@
         "aspect": "sector_relevance",
         "verdict": "NO_CONCERN",
         "confidence": 0.92,
-        "detail": "Sixteen years in commercial banking finance, directly relevant to the proposed role."
+        "detail": "Entire career in banking and credit risk, directly relevant to a microfinance bank board seat."
       },
       {
         "aspect": "seniority_level",
         "verdict": "NO_CONCERN",
         "confidence": 0.92,
-        "detail": "Chief Financial Officer and Executive Committee member, consistent with an executive director appointment."
+        "detail": "Held a senior risk-management role reporting to the Chief Risk Officer, consistent with a director-level appointment."
       },
       {
         "aspect": "career_gaps",
         "verdict": "NO_CONCERN",
         "confidence": 0.92,
-        "detail": "Continuous employment 2010–2026, no gaps."
+        "detail": "Continuous employment 2009–2024, no gaps."
       }
     ],
     "flagCount": 0,

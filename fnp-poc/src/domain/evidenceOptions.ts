@@ -1,3 +1,6 @@
+/** Pseudo-question id for the CV, which has a dropdown but is not one of the 15 questions. */
+export const CV_QID = "CV";
+
 export interface EvidenceOption {
   code: string;
   label: string;
@@ -218,6 +221,12 @@ const OPTIONS_BY_QID: Record<string, EvidenceOption[]> = {
       docType: "relative_share_certificate",
     },
   ],
+  // The CV sits outside the 15 questions, but reuses the same picker, so it is keyed here
+  // under its own pseudo-question id. PDF only — a CV is read as a document, not a workbook.
+  [CV_QID]: [
+    { code: "CURRICULUM_VITAE", label: "Curriculum vitae (CV)", docType: "curriculum_vitae" },
+    { code: "RESUME", label: "Resume", docType: "curriculum_vitae" },
+  ],
   CS4: [
     {
       code: "SIGNED_DECLARATION",
@@ -268,6 +277,20 @@ export function acceptedFormats(option: EvidenceOption): string[] {
 /** File name the simulated upload produces — the format the test pack actually ships. */
 export function fileNameFor(option: EvidenceOption): string {
   return `${option.docType}.${acceptedFormats(option)[0]}`;
+}
+
+const ALL_OPTIONS = Object.values(OPTIONS_BY_QID).flat();
+
+/**
+ * File name for an attached document. `path` is optional in the test set — the newer files drop
+ * it because it is fully derivable: every document is stored as its own doc_type, and the
+ * format is a property of the document type, not of the submission.
+ */
+export function evidenceFileName(ref: { doc_type: string; path?: string }): string {
+  if (ref.path) return ref.path.split("/").pop() ?? ref.path;
+  const option = ALL_OPTIONS.find((o) => o.docType === ref.doc_type);
+  const format = option ? acceptedFormats(option)[0] : DEFAULT_ACCEPTS[0];
+  return `${ref.doc_type}.${format}`;
 }
 
 /** "PDF", or "XLSX, CSV or PDF" — shown next to the picker so the filer knows what is allowed. */

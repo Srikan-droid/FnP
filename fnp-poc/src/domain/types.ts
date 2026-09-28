@@ -8,7 +8,8 @@ export type EvidenceRole = "primary" | "supporting";
 
 export interface EvidenceRef {
   doc_type: string;
-  path: string;
+  /** Optional: derivable from doc_type, and the newer test set files omit it. */
+  path?: string;
   /** Absent on drafts seeded before roles existed; treat as "primary". */
   role?: EvidenceRole;
   /** Dropdown option the filer picked. Absent on drafts seeded from the source test set. */
@@ -28,6 +29,41 @@ export interface ResponseItem {
   checks_to_perform: string[];
 }
 
+/**
+ * The CV is a supplementary artifact: mandatory for every applicant, but outside the 15
+ * questions and the 8 sections, unweighted, and carrying no knockout.
+ */
+export interface CvSubmission {
+  doc_type: string;
+  mandatory: boolean;
+  evidence: EvidenceRef[];
+  checks_to_perform: string[];
+}
+
+export type CvConsistencyVerdict = "CONSISTENT" | "EVIDENCE_CONFLICT";
+export type CvSuitabilityVerdict = "NO_CONCERN" | "SUITABILITY_FLAG";
+export type CvVerdict = CvConsistencyVerdict | CvSuitabilityVerdict;
+
+export interface CvFinding {
+  /** qualification | experience | directorships, or sector_relevance | seniority_level | career_gaps */
+  aspect: string;
+  verdict: CvVerdict;
+  confidence: number;
+  detail: string;
+}
+
+export interface CvVerificationResult {
+  docType: string;
+  /** "analyzed" once the CV has been read; "not_submitted" when none is attached. */
+  status: "analyzed" | "not_submitted";
+  /** Document_Check and Name_Check, run before the analysis the same as any other question. */
+  gateChecks: CheckResult[];
+  consistencyFindings: CvFinding[];
+  suitabilityFindings: CvFinding[];
+  flagCount: number;
+  scoringImpact: string;
+}
+
 export interface ApplicationForm {
   application_id: string;
   licensee: string;
@@ -39,6 +75,7 @@ export interface ApplicationForm {
   };
   submitted_at: string;
   responses: ResponseItem[];
+  cv_verification?: CvSubmission;
 }
 
 export type CheckStatus = "pass" | "caution" | "fail";
@@ -76,7 +113,12 @@ export interface AuthenticationOutcome {
   sections: SectionAuthResult[];
   isClean: boolean;
   overallConfidence: number | null;
+  /**
+   * The 15-question checks only. CV checks are excluded deliberately: the CV is reviewer-facing
+   * and must not move any authentication figure.
+   */
   checksRun: number;
+  cvVerification: CvVerificationResult | null;
 }
 
 export interface SectionScoreLine {

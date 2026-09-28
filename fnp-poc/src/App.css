@@ -2361,3 +2361,154 @@
   gap: 0.25rem;
   align-items: flex-start;
 }
+
+/* ---- Curriculum vitae: supplementary, reviewer-facing ---- */
+
+.qhint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+/* .section-body carries no padding of its own — question cards supply theirs, so the CV body
+   has to match that rhythm itself. */
+.cv-body {
+  padding: 1.1rem 1.25rem;
+}
+
+.cv-scope {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.cv-scope svg {
+  flex: none;
+  margin-top: 0.12rem;
+  color: var(--ink-3);
+}
+
+.cv-group + .cv-group {
+  margin-top: 1.1rem;
+}
+
+.cv-group-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.cv-finding-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cv-finding {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.cv-finding.is-flagged {
+  border-color: var(--warning);
+  background: var(--warning-wash);
+}
+
+.cv-finding-icon {
+  flex: none;
+  margin-top: 0.1rem;
+  color: var(--good);
+}
+
+.cv-finding.is-flagged .cv-finding-icon {
+  color: var(--warning);
+}
+
+.cv-finding-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.cv-finding-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.cv-finding-aspect {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-1);
+}
+
+.cv-finding-source {
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+.cv-finding-head .check-confidence {
+  margin-left: auto;
+}
+
+.cv-gate {
+  margin-top: 1.1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.cv-gate-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.cv-gate-toggle[aria-expanded="true"] .auth-chevron {
+  transform: rotate(180deg);
+}
+
+.cv-gate .check-list {
+  margin-top: 0.6rem;
+}
+
+.review-cv {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 1.15rem;
+}
+
+.review-cv-text {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--ink-1);
+}

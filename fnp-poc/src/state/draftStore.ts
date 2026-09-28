@@ -6,7 +6,7 @@ import type { ApplicationForm } from "../domain/types";
 
 // Versioned: each test set revision changes question wording, evidence options or required
 // flags, so drafts saved by an earlier build are discarded and rebuilt from the fixture.
-const storageKey = (assignmentId: string) => `fnp-draft-v4-${assignmentId}`;
+const storageKey = (assignmentId: string) => `fnp-draft-v5-${assignmentId}`;
 
 /** Entity and position always come from the parent application, never from the draft. */
 function withParentDetails(form: ApplicationForm, assignment: Assignment): ApplicationForm {
@@ -39,6 +39,13 @@ function blankForm(assignment: Assignment): ApplicationForm {
       evidence: [],
       checks_to_perform: [],
     })),
+    // Mandatory for every applicant, and empty until the filer attaches one.
+    cv_verification: {
+      doc_type: "curriculum_vitae",
+      mandatory: true,
+      evidence: [],
+      checks_to_perform: ["Document_Check", "Name_Check"],
+    },
   };
 }
 

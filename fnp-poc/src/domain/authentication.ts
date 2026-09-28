@@ -1,4 +1,5 @@
 import { acceptsSupportingEvidence, labelForDocType } from "./evidenceOptions";
+import { verifyCv } from "./cvVerification";
 import type {
   ApplicationForm,
   AuthenticationOutcome,
@@ -107,6 +108,13 @@ const OVERRIDES: Record<string, Record<string, CheckOverride>> = {
       status: "fail",
       confidence: 0.24,
       note: "The letter records 2018-03-01 to 2026-04-30 — 8 years 2 months — and states there was no prior service with this employer. The evidence cannot support a claim of ten years or more.",
+    },
+  },
+  "APP003:PC19": {
+    Compliance_History_Check: {
+      status: "fail",
+      confidence: 0.22,
+      note: "The certificate records the 2019/2020 return filed 231 days late, with a N$14,200 penalty. A period of non-compliance exists, so the answer derived from the evidence is Yes.",
     },
   },
   "APP004:PC1": {
@@ -276,7 +284,10 @@ export function authenticate(
       scored.length > 0
         ? scored.reduce((sum, q) => sum + (q.confidence ?? 0), 0) / scored.length
         : null,
+    // 15-question checks only. The CV runs its own checks and findings, but they are
+    // reviewer-facing and must not move overall confidence, the issue count or this total.
     checksRun: questions.reduce((total, q) => total + q.checks.length, 0),
+    cvVerification: verifyCv(applicantId, form.cv_verification),
   };
 }
 

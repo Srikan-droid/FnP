@@ -12,6 +12,7 @@ import {
 } from "../components/icons";
 import { evidenceUrl, hasEvidenceFile } from "../data/fixtures";
 import { hasMissingMandatoryEvidence } from "../domain/evidenceRules";
+import { evidenceFileName } from "../domain/evidenceOptions";
 import { recordSubmission } from "../state/submissionStore";
 import { displaySection } from "../domain/sectionLabels";
 
@@ -26,6 +27,10 @@ export default function ReviewPage() {
   const form = getForm(assignment);
   const sections = Array.from(new Set(form.responses.map((r) => r.section)));
   const missing = form.responses.filter(hasMissingMandatoryEvidence);
+  const cv = form.cv_verification;
+  const cvFile = cv?.evidence[0];
+  const cvMissing = Boolean(cv?.mandatory) && !cvFile;
+  const missingTotal = missing.length + (cvMissing ? 1 : 0);
 
   return (
     <div className="page">
@@ -99,7 +104,7 @@ export default function ReviewPage() {
                         ) : r.evidence.length > 0 ? (
                           <span className="review-evidence-cell">
                             {r.evidence.map((file) => {
-                              const fileName = file.path.split("/").pop() ?? file.path;
+                              const fileName = evidenceFileName(file);
                               const label =
                                 file.role === "supporting" ? "Supporting" : "Attached";
                               // The test pack ships a document only for each question's primary
@@ -148,14 +153,51 @@ export default function ReviewPage() {
         </div>
       </section>
 
-      {missing.length > 0 ? (
+      {cv && (
+        <section className="card">
+          <div className="section-head section-head-static">
+            <span className="section-title">Curriculum vitae</span>
+            <span className="section-count">Supplementary</span>
+          </div>
+          <div className="review-cv">
+            <span className="qid">CV</span>
+            <span className="review-cv-text">Curriculum vitae</span>
+            {cvFile ? (
+              hasEvidenceFile(assignment.applicantId, cvFile.doc_type) ? (
+                <a
+                  className="review-evidence-link"
+                  href={evidenceUrl(assignment.applicantId, evidenceFileName(cvFile))}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <FileTextIcon size={13} />
+                  Attached
+                  <ExternalLinkIcon size={11} />
+                </a>
+              ) : (
+                <span className="review-evidence-none">
+                  <FileTextIcon size={13} />
+                  Attached
+                </span>
+              )
+            ) : (
+              <span className="review-evidence-missing">
+                <AlertTriangleIcon size={13} />
+                Missing
+              </span>
+            )}
+          </div>
+        </section>
+      )}
+
+      {missingTotal > 0 ? (
         <div className="notice notice-warning">
           <AlertTriangleIcon size={17} />
           <div>
             <strong>
-              {missing.length} mandatory document{missing.length > 1 ? "s" : ""} not attached
+              {missingTotal} mandatory document{missingTotal > 1 ? "s" : ""} not attached
             </strong>{" "}
-            ({missing.map((r) => r.qid).join(", ")}). Submitting is allowed in this proof of
+            ({[...missing.map((r) => r.qid), ...(cvMissing ? ["CV"] : [])].join(", ")}). Submitting is allowed in this proof of
             concept — the engine returns an <code>EVIDENCE_MISSING</code> verdict during
             authentication.
           </div>

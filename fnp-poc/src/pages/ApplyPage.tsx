@@ -3,17 +3,19 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../state/AssessmentContext";
 import { getAssignment, departmentFor } from "../data/assignments";
 import QuestionCard from "../components/QuestionCard";
+import EvidenceBlock from "../components/EvidenceBlock";
 import AssessmentNotFound from "../components/AssessmentNotFound";
 import { ArrowRightIcon, AlertTriangleIcon, ChevronDownIcon } from "../components/icons";
 import { hasMissingMandatoryEvidence } from "../domain/evidenceRules";
-import { fileNameFor, findOption } from "../domain/evidenceOptions";
+import { CV_QID, fileNameFor, findOption } from "../domain/evidenceOptions";
 import { displaySection } from "../domain/sectionLabels";
 import type { Answer, EvidenceRole } from "../domain/types";
 
 export default function ApplyPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const { getForm, updateAnswer, attachEvidence, removeEvidence } = useAssessment();
+  const { getForm, updateAnswer, attachEvidence, removeEvidence, attachCvEvidence, removeCvEvidence } =
+    useAssessment();
   // Only sections the filer has explicitly toggled appear here; the rest fall back to the
   // default of opening the first section and leaving the others collapsed.
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
@@ -25,9 +27,27 @@ export default function ApplyPage() {
   const sections = Array.from(new Set(form.responses.map((r) => r.section)));
   const required = form.responses.filter((r) => r.evidence_required);
   const missing = required.filter(hasMissingMandatoryEvidence);
+  // The CV is mandatory but sits outside the 15 questions, so it is counted alongside them
+  // rather than through the question list.
+  const cv = form.cv_verification;
+  const cvMissing = Boolean(cv?.mandatory) && (cv?.evidence.length ?? 0) === 0;
+  const requiredTotal = required.length + (cv?.mandatory ? 1 : 0);
+  const missingTotal = missing.length + (cvMissing ? 1 : 0);
 
   const toggleSection = (section: string, isOpen: boolean) =>
     setOpenSections((prev) => ({ ...prev, [section]: !isOpen }));
+
+  const handleAttachCv = (optionCode: string, _role: EvidenceRole, description?: string) => {
+    const option = findOption(CV_QID, optionCode);
+    if (!option) return;
+    attachCvEvidence(assignment, {
+      doc_type: option.docType,
+      path: `evidence/${assignment.applicantId}/${fileNameFor(option)}`,
+      role: "primary",
+      option_code: option.code,
+      description,
+    });
+  };
 
   const handleAttachEvidence = (
     qid: string,
@@ -126,22 +146,63 @@ export default function ApplyPage() {
         );
       })}
 
-      {missing.length > 0 && (
+      {cv && (
+        <section className="card section">
+          <h2 className="section-head-wrap">
+            <div className="section-head section-head-static">
+              <span className="section-title">Curriculum vitae</span>
+              {cvMissing && (
+                <span className="section-flag">
+                  <AlertTriangleIcon size={12} />1 missing
+                </span>
+              )}
+              <span className="section-count">Supplementary</span>
+            </div>
+          </h2>
+          <div className="section-body">
+            <article className="qcard">
+              <div className="qcard-main">
+                <div className="qcard-prompt">
+                  <span className="qid">CV</span>
+                  <p className="qtext">
+                    Attach the applicant's curriculum vitae.
+                    <span className="required-mark" aria-hidden="true">
+                      *
+                    </span>
+                    <span className="qhint">
+                      Checked against the qualification, experience and directorships established
+                      by the documents above. Reviewer-facing only — it does not affect the score.
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <EvidenceBlock
+                qid={CV_QID}
+                evidence={cv.evidence}
+                onAttach={handleAttachCv}
+                onRemove={() => removeCvEvidence(assignment)}
+              />
+            </article>
+          </div>
+        </section>
+      )}
+
+      {missingTotal > 0 && (
         <div className="notice notice-warning">
           <AlertTriangleIcon size={17} />
           <div>
             <strong>
-              {missing.length} required document{missing.length > 1 ? "s" : ""} not attached
+              {missingTotal} required document{missingTotal > 1 ? "s" : ""} not attached
             </strong>{" "}
-            ({missing.map((r) => r.qid).join(", ")}). You can still submit — the engine will flag
-            this during authentication.
+            ({[...missing.map((r) => r.qid), ...(cvMissing ? ["CV"] : [])].join(", ")}). You can
+            still submit — the engine will flag this during authentication.
           </div>
         </div>
       )}
 
       <footer className="actionbar">
         <span className="actionbar-note">
-          {required.length - missing.length} of {required.length} required documents attached
+          {requiredTotal - missingTotal} of {requiredTotal} required documents attached
         </span>
         <button
           className="btn btn-primary"
