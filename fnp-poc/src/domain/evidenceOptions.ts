@@ -2,6 +2,12 @@ export interface EvidenceOption {
   code: string;
   label: string;
   docType: string;
+  /**
+   * File formats this document may be uploaded in, first one being what the test pack ships.
+   * Most instruments arrive as a scanned PDF, but a credit bureau report is issued as a
+   * workbook, so the accepted set is per document type rather than one global rule.
+   */
+  accepts?: string[];
 }
 
 export const OTHER_OPTION: EvidenceOption = {
@@ -108,7 +114,12 @@ const OPTIONS_BY_QID: Record<string, EvidenceOption[]> = {
       label: "Bank reference letter with facility conduct history",
       docType: "bank_reference_letter",
     },
-    { code: "CREDIT_BUREAU_REPORT", label: "Credit bureau report", docType: "credit_bureau_report" },
+    {
+      code: "CREDIT_BUREAU_REPORT",
+      label: "Credit bureau report",
+      docType: "credit_bureau_report",
+      accepts: ["xlsx", "csv", "pdf"],
+    },
     {
       code: "LOAN_STATEMENT",
       label: "Statement of account or loan statement",
@@ -121,7 +132,12 @@ const OPTIONS_BY_QID: Record<string, EvidenceOption[]> = {
       label: "Bank reference letter with aggregate exposure",
       docType: "bank_reference_letter",
     },
-    { code: "CREDIT_BUREAU_REPORT", label: "Credit bureau report", docType: "credit_bureau_report" },
+    {
+      code: "CREDIT_BUREAU_REPORT",
+      label: "Credit bureau report",
+      docType: "credit_bureau_report",
+      accepts: ["xlsx", "csv", "pdf"],
+    },
     {
       code: "STATEMENT_OF_FACILITIES",
       label: "Statement of facilities across lenders",
@@ -218,6 +234,47 @@ const OPTIONS_BY_QID: Record<string, EvidenceOption[]> = {
 
 export function evidenceOptionsFor(qid: string): EvidenceOption[] {
   return [...(OPTIONS_BY_QID[qid] ?? []), OTHER_OPTION];
+}
+
+/**
+ * The two questions that accept an optional second document. Both ask for a figure that a
+ * single lender's letter can only partly evidence, so the v7 test set lets the filer add a
+ * credit bureau report and has Consistency_Check reconcile the two.
+ */
+const SUPPORTING_EVIDENCE_QIDS = new Set(["FC5", "FC7"]);
+
+export function acceptsSupportingEvidence(qid: string): boolean {
+  return SUPPORTING_EVIDENCE_QIDS.has(qid);
+}
+
+/**
+ * Options offered for the supporting slot: the question's own list minus whatever is already
+ * attached, so the same document cannot be filed twice against one question.
+ */
+export function supportingOptionsFor(qid: string, usedDocTypes: string[]): EvidenceOption[] {
+  if (!acceptsSupportingEvidence(qid)) return [];
+  const used = new Set(usedDocTypes);
+  return evidenceOptionsFor(qid).filter(
+    (o) => o.code === OTHER_OPTION.code || !used.has(o.docType)
+  );
+}
+
+const DEFAULT_ACCEPTS = ["pdf"];
+
+export function acceptedFormats(option: EvidenceOption): string[] {
+  return option.accepts ?? DEFAULT_ACCEPTS;
+}
+
+/** File name the simulated upload produces — the format the test pack actually ships. */
+export function fileNameFor(option: EvidenceOption): string {
+  return `${option.docType}.${acceptedFormats(option)[0]}`;
+}
+
+/** "PDF", or "XLSX, CSV or PDF" — shown next to the picker so the filer knows what is allowed. */
+export function formatHint(option: EvidenceOption): string {
+  const formats = acceptedFormats(option).map((f) => f.toUpperCase());
+  if (formats.length === 1) return formats[0];
+  return `${formats.slice(0, -1).join(", ")} or ${formats[formats.length - 1]}`;
 }
 
 /** A question with a single real document type can pre-select it; a real choice must be made. */

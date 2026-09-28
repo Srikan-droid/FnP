@@ -6,7 +6,7 @@ import type { ApplicationForm } from "../domain/types";
 
 // Versioned: each test set revision changes question wording, evidence options or required
 // flags, so drafts saved by an earlier build are discarded and rebuilt from the fixture.
-const storageKey = (assignmentId: string) => `fnp-draft-v3-${assignmentId}`;
+const storageKey = (assignmentId: string) => `fnp-draft-v4-${assignmentId}`;
 
 /** Entity and position always come from the parent application, never from the draft. */
 function withParentDetails(form: ApplicationForm, assignment: Assignment): ApplicationForm {

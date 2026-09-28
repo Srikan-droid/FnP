@@ -2322,3 +2322,42 @@
     display: none;
   }
 }
+
+/* Role badge on an attachment, for the questions that accept a second document. */
+.evidence-role {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--r-xs);
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: 0.08em;
+}
+
+.evidence-role.is-supporting {
+  background: var(--surface-sunken);
+  color: var(--ink-3);
+}
+
+/* The supporting slot is optional, so it reads as a quiet invitation rather than a warning. */
+.evidence-pending.is-supporting {
+  border-color: var(--hairline);
+  background: var(--surface-sunken);
+}
+
+.evidence-formats {
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+/* A question may carry a primary and a supporting document; stack them in the review cell. */
+.review-evidence-cell {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}

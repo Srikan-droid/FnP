@@ -1,7 +1,7 @@
 import AnswerToggle from "./AnswerToggle";
 import EvidenceBlock from "./EvidenceBlock";
 import { answerOptionsFor } from "../domain/questions";
-import type { Answer, ResponseItem } from "../domain/types";
+import type { Answer, EvidenceRole, ResponseItem } from "../domain/types";
 
 export default function QuestionCard({
   response,
@@ -11,7 +11,12 @@ export default function QuestionCard({
 }: {
   response: ResponseItem;
   onAnswerChange: (qid: string, answer: Answer) => void;
-  onAttachEvidence: (qid: string, optionCode: string, description?: string) => void;
+  onAttachEvidence: (
+    qid: string,
+    optionCode: string,
+    role: EvidenceRole,
+    description?: string
+  ) => void;
   onRemoveEvidence: (qid: string, docType: string) => void;
 }) {
   const labelId = `q-${response.qid}-label`;
@@ -40,8 +45,8 @@ export default function QuestionCard({
         <EvidenceBlock
           qid={response.qid}
           evidence={response.evidence}
-          onAttach={(optionCode, description) =>
-            onAttachEvidence(response.qid, optionCode, description)
+          onAttach={(optionCode, role, description) =>
+            onAttachEvidence(response.qid, optionCode, role, description)
           }
           onRemove={(docType) => onRemoveEvidence(response.qid, docType)}
         />

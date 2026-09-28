@@ -1,4 +1,4 @@
-import { labelForDocType } from "./evidenceOptions";
+import { acceptsSupportingEvidence, labelForDocType } from "./evidenceOptions";
 import type {
   ApplicationForm,
   AuthenticationOutcome,
@@ -34,12 +34,14 @@ const CHECK_LABELS: Record<string, string> = {
   Relationship_Check: "Relationship stated on the document",
   Signature_Check: "Declaration signed and witnessed",
   Declaration_Content_Check: "Declaration wording covers the attestation",
+  Consistency_Check: "Supporting document agrees with the primary",
 };
 
 /**
- * From the "Checks" sheet of fnp_authentication_testset_v5.xlsx, which defines checks for all
- * 15 questions. Read from here rather than the payload's `checks_to_perform`, which the v5
- * generator populates for A1 and A4 only and leaves empty for the other thirteen.
+ * From the "Checks" sheet of fnp_authentication_testset_v7.xlsx, which defines checks for all
+ * 15 questions. The payload's `checks_to_perform` now agrees with this table, but the engine
+ * keeps its own copy: a blank "New application" draft has no payload to read, and which checks
+ * run is the engine's decision rather than something a submission declares.
  *
  * Note the two questions that do not run Name_Check: CS4 verifies the signature instead, and
  * CoL3 is about a relative rather than the applicant.
@@ -56,8 +58,8 @@ const CHECKS_BY_QID: Record<string, string[]> = {
   ],
   PC1: ["Document_Check", "Name_Check", "Record_Check", "Scope_Check"],
   PC19: ["Document_Check", "Name_Check", "Compliance_History_Check", "Period_Coverage_Check"],
-  FC5: ["Document_Check", "Name_Check", "Facility_Status_Check"],
-  FC7: ["Document_Check", "Name_Check", "Indebtedness_Amount_Check"],
+  FC5: ["Document_Check", "Name_Check", "Facility_Status_Check", "Consistency_Check"],
+  FC7: ["Document_Check", "Name_Check", "Indebtedness_Amount_Check", "Consistency_Check"],
   CoI2: ["Document_Check", "Name_Check", "Directorship_Check", "Entity_Activity_Check"],
   CoI6: [
     "Document_Check",
@@ -73,7 +75,19 @@ const CHECKS_BY_QID: Record<string, string[]> = {
 };
 
 function checksFor(response: ResponseItem): string[] {
-  return CHECKS_BY_QID[response.qid] ?? ["Document_Check", "Name_Check"];
+  const checks = CHECKS_BY_QID[response.qid] ?? ["Document_Check", "Name_Check"];
+  if (!acceptsSupportingEvidence(response.qid)) return checks;
+
+  // Consistency_Check exists only to reconcile a supporting document against the primary, so
+  // it is skipped entirely when the filer attached no supporting document. It is placed ahead
+  // of the field-level check because a conflict between the two documents has to be settled
+  // before either can be read for a value — the Checks sheet lists it last but describes it as
+  // running first.
+  const hasSupporting = response.evidence.some((e) => e.role === "supporting");
+  if (!hasSupporting) return checks.filter((c) => c !== "Consistency_Check");
+  const fieldLevel = checks.filter((c) => c !== "Consistency_Check");
+  const shared = fieldLevel.slice(0, 2);
+  return [...shared, "Consistency_Check", ...fieldLevel.slice(2)];
 }
 
 interface CheckOverride {
@@ -169,10 +183,13 @@ const PASSING_NOTES: Record<string, string> = {
   Signature_Check: "The declaration is signed and witnessed as required.",
   Declaration_Content_Check:
     "The declaration's wording covers the specific attestation the question requires.",
+  Consistency_Check:
+    "The figures on the supporting document reconcile with the {doc}, so the field-level checks ran against a value both documents agree on.",
 };
 
 function passingNote(checkName: string, response: ResponseItem): string {
-  const docType = response.evidence[0]?.doc_type ?? "document";
+  const primary = response.evidence.find((e) => e.role !== "supporting") ?? response.evidence[0];
+  const docType = primary?.doc_type ?? "document";
   const docLabel = labelForDocType(docType, response.qid).toLowerCase();
   const template =
     PASSING_NOTES[checkName] ?? `The {doc} supports the answer of "${response.answer}".`;

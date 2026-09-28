@@ -1,8 +1,16 @@
 export type Answer = "Yes" | "No" | "N/A";
 
+/**
+ * "supporting" is the optional second document FC5 and FC7 accept. It exists only to be
+ * reconciled against the primary by Consistency_Check, so it never stands on its own.
+ */
+export type EvidenceRole = "primary" | "supporting";
+
 export interface EvidenceRef {
   doc_type: string;
   path: string;
+  /** Absent on drafts seeded before roles existed; treat as "primary". */
+  role?: EvidenceRole;
   /** Dropdown option the filer picked. Absent on drafts seeded from the source test set. */
   option_code?: string;
   /** What the filer typed when they picked "Other — please specify". */

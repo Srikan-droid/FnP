@@ -97,34 +97,42 @@ export default function ReviewPage() {
                         {!r.evidence_required ? (
                           <span className="review-evidence-none">Not required</span>
                         ) : r.evidence.length > 0 ? (
-                          (() => {
-                            const file = r.evidence[0];
-                            const fileName = file.path.split("/").pop() ?? file.path;
-                            // The test pack ships a document only for each question's primary
-                            // option, so anything else has nothing to open.
-                            if (!hasEvidenceFile(assignment.applicantId, file.doc_type)) {
+                          <span className="review-evidence-cell">
+                            {r.evidence.map((file) => {
+                              const fileName = file.path.split("/").pop() ?? file.path;
+                              const label =
+                                file.role === "supporting" ? "Supporting" : "Attached";
+                              // The test pack ships a document only for each question's primary
+                              // option, so anything else has nothing to open.
+                              if (!hasEvidenceFile(assignment.applicantId, file.doc_type)) {
+                                return (
+                                  <span
+                                    className="review-evidence-none"
+                                    key={file.doc_type}
+                                    title={fileName}
+                                  >
+                                    <FileTextIcon size={13} />
+                                    {label}
+                                  </span>
+                                );
+                              }
                               return (
-                                <span className="review-evidence-none" title={fileName}>
+                                <a
+                                  className="review-evidence-link"
+                                  key={file.doc_type}
+                                  href={evidenceUrl(assignment.applicantId, fileName)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title={fileName}
+                                  aria-label={`View ${fileName}`}
+                                >
                                   <FileTextIcon size={13} />
-                                  Attached
-                                </span>
+                                  {label}
+                                  <ExternalLinkIcon size={11} />
+                                </a>
                               );
-                            }
-                            return (
-                              <a
-                                className="review-evidence-link"
-                                href={evidenceUrl(assignment.applicantId, fileName)}
-                                target="_blank"
-                                rel="noreferrer"
-                                title={fileName}
-                                aria-label={`View ${fileName}`}
-                              >
-                                <FileTextIcon size={13} />
-                                Attached
-                                <ExternalLinkIcon size={11} />
-                              </a>
-                            );
-                          })()
+                            })}
+                          </span>
                         ) : (
                           <span className="review-evidence-missing">
                             <AlertTriangleIcon size={13} />

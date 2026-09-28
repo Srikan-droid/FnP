@@ -112,9 +112,17 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       const base = currentForm(assignment);
       const next: ApplicationForm = {
         ...base,
-        responses: base.responses.map((r) =>
-          r.qid === qid ? { ...r, evidence: r.evidence.filter((e) => e.doc_type !== docType) } : r
-        ),
+        responses: base.responses.map((r) => {
+          if (r.qid !== qid) return r;
+          const removed = r.evidence.find((e) => e.doc_type === docType);
+          // A supporting document only exists to be reconciled against the primary, so pulling
+          // the primary takes the supporting with it rather than leaving it orphaned.
+          const drop =
+            removed?.role === "supporting"
+              ? (e: EvidenceRef) => e.doc_type === docType
+              : () => true;
+          return { ...r, evidence: r.evidence.filter((e) => !drop(e)) };
+        }),
       };
       persist(assignment.id, next);
     },

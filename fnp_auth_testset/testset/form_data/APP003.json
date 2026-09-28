@@ -25,7 +25,8 @@
           "evidence": [
             {
               "doc_type": "national_id",
-              "path": "evidence/APP003/national_id.pdf"
+              "path": "evidence/APP003/national_id.pdf",
+              "role": "primary"
             }
           ],
           "checks_to_perform": [
@@ -45,7 +46,8 @@
           "evidence": [
             {
               "doc_type": "naturalisation_certificate",
-              "path": "evidence/APP003/naturalisation_certificate.pdf"
+              "path": "evidence/APP003/naturalisation_certificate.pdf",
+              "role": "primary"
             }
           ],
           "checks_to_perform": [
@@ -71,10 +73,15 @@
           "evidence": [
             {
               "doc_type": "degree_certificate",
-              "path": "evidence/APP003/degree_certificate.pdf"
+              "path": "evidence/APP003/degree_certificate.pdf",
+              "role": "primary"
             }
           ],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Qualification_Relevance_Check"
+          ]
         },
         {
           "qid": "Q3",
@@ -87,10 +94,16 @@
           "evidence": [
             {
               "doc_type": "employment_letter",
-              "path": "evidence/APP003/employment_letter.pdf"
+              "path": "evidence/APP003/employment_letter.pdf",
+              "role": "primary"
             }
           ],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Experience_Duration_Check",
+            "Experience_Relevance_Check"
+          ]
         }
       ]
     },
@@ -100,7 +113,7 @@
       "questions": [
         {
           "qid": "PC1",
-          "question": "Have you at any time been charged with or convicted of any offence or otherwise found liable by a Civil, Criminal or Military Court (excluding minor road traffic offences) whether in Jamaica or elsewhere?",
+          "question": "Have you at any time been charged with or convicted of any offence or otherwise found liable by a Civil, Criminal or Military Court (excluding minor road traffic offences), in any jurisdiction?",
           "question_weight": 18,
           "polarity": "Negative",
           "knockout": 1,
@@ -109,10 +122,16 @@
           "evidence": [
             {
               "doc_type": "police_clearance",
-              "path": "evidence/APP003/police_clearance.pdf"
+              "path": "evidence/APP003/police_clearance.pdf",
+              "role": "primary"
             }
           ],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Record_Check",
+            "Scope_Check"
+          ]
         },
         {
           "qid": "PC19",
@@ -122,8 +141,19 @@
           "knockout": 0,
           "answer": "No",
           "evidence_required": true,
-          "evidence": [],
-          "checks_to_perform": []
+          "evidence": [
+            {
+              "doc_type": "tax_compliance_certificate",
+              "path": "evidence/APP003/tax_compliance_certificate.pdf",
+              "role": "primary"
+            }
+          ],
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Compliance_History_Check",
+            "Period_Coverage_Check"
+          ]
         }
       ]
     },
@@ -140,18 +170,28 @@
           "answer": "No",
           "evidence_required": false,
           "evidence": [],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Facility_Status_Check",
+            "Consistency_Check"
+          ]
         },
         {
           "qid": "FC7",
-          "question": "Do you (in your personal capacity), or through any legal person or arrangement controlled by you and/or any immediate relative have outstanding any loans or other forms of indebtedness (including guarantees) in excess of J$2.5mn?",
+          "question": "Do you (in your personal capacity), or through any legal person or arrangement controlled by you and/or any immediate relative have outstanding any loans or other forms of indebtedness (including guarantees) in excess of N$2.5mn?",
           "question_weight": 6,
           "polarity": "Negative",
           "knockout": 0,
           "answer": "No",
           "evidence_required": false,
           "evidence": [],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Indebtedness_Amount_Check",
+            "Consistency_Check"
+          ]
         }
       ]
     },
@@ -170,21 +210,32 @@
           "evidence": [
             {
               "doc_type": "company_registry_extract",
-              "path": "evidence/APP003/company_registry_extract.pdf"
+              "path": "evidence/APP003/company_registry_extract.pdf",
+              "role": "primary"
             }
           ],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Directorship_Check",
+            "Entity_Activity_Check"
+          ]
         },
         {
           "qid": "CoI6",
-          "question": "Are you a beneficial owner of any controlling interest in any financial institution, partnerships, societies, or trust corporations or other body, organization or entity whether for business, benevolent or other purposes?",
+          "question": "Are you a beneficial owner of a controlling interest (20% or more of the voting shares, or the ability to appoint or remove a majority of the board) in any financial institution, partnerships, societies, or trust corporations or other body, organization or entity whether for business, benevolent or other purposes?",
           "question_weight": 9,
           "polarity": "Negative",
           "knockout": 0,
           "answer": "No",
           "evidence_required": false,
           "evidence": [],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Beneficial_Ownership_Check",
+            "Controlling_Interest_Threshold_Check"
+          ]
         }
       ]
     },
@@ -203,10 +254,15 @@
           "evidence": [
             {
               "doc_type": "board_appointment_letter",
-              "path": "evidence/APP003/board_appointment_letter.pdf"
+              "path": "evidence/APP003/board_appointment_letter.pdf",
+              "role": "primary"
             }
           ],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Time_Commitment_Check"
+          ]
         },
         {
           "qid": "T2",
@@ -218,7 +274,11 @@
           "not_applicable_reason": "Non-executive appointment. The question addresses executive responsibility for the management of the institution and does not apply to this role.",
           "evidence_required": false,
           "evidence": [],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Executive_Responsibility_Check"
+          ]
         }
       ]
     },
@@ -235,7 +295,11 @@
           "answer": "No",
           "evidence_required": false,
           "evidence": [],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Name_Check",
+            "Shareholding_Check"
+          ]
         },
         {
           "qid": "CoL3",
@@ -246,7 +310,12 @@
           "answer": "No",
           "evidence_required": false,
           "evidence": [],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Relative_Name_Check",
+            "Relationship_Check",
+            "Shareholding_Check"
+          ]
         }
       ]
     },
@@ -265,10 +334,15 @@
           "evidence": [
             {
               "doc_type": "suitability_declaration",
-              "path": "evidence/APP003/suitability_declaration.pdf"
+              "path": "evidence/APP003/suitability_declaration.pdf",
+              "role": "primary"
             }
           ],
-          "checks_to_perform": []
+          "checks_to_perform": [
+            "Document_Check",
+            "Signature_Check",
+            "Declaration_Content_Check"
+          ]
         }
       ]
     }

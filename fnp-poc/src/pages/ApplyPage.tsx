@@ -6,9 +6,9 @@ import QuestionCard from "../components/QuestionCard";
 import AssessmentNotFound from "../components/AssessmentNotFound";
 import { ArrowRightIcon, AlertTriangleIcon, ChevronDownIcon } from "../components/icons";
 import { hasMissingMandatoryEvidence } from "../domain/evidenceRules";
-import { findOption } from "../domain/evidenceOptions";
+import { fileNameFor, findOption } from "../domain/evidenceOptions";
 import { displaySection } from "../domain/sectionLabels";
-import type { Answer } from "../domain/types";
+import type { Answer, EvidenceRole } from "../domain/types";
 
 export default function ApplyPage() {
   const { id = "" } = useParams();
@@ -29,12 +29,18 @@ export default function ApplyPage() {
   const toggleSection = (section: string, isOpen: boolean) =>
     setOpenSections((prev) => ({ ...prev, [section]: !isOpen }));
 
-  const handleAttachEvidence = (qid: string, optionCode: string, description?: string) => {
+  const handleAttachEvidence = (
+    qid: string,
+    optionCode: string,
+    role: EvidenceRole,
+    description?: string
+  ) => {
     const option = findOption(qid, optionCode);
     if (!option) return;
     attachEvidence(assignment, qid, {
       doc_type: option.docType,
-      path: `evidence/${assignment.applicantId}/${option.docType}.pdf`,
+      path: `evidence/${assignment.applicantId}/${fileNameFor(option)}`,
+      role,
       option_code: option.code,
       description,
     });

@@ -12,13 +12,13 @@
     "email": "m.vanwyk@example.na"
   },
   "status": "AUTH_COMPLETE_ISSUES",
-  "submittedAt": "2026-09-24T09:14:02Z",
-  "authenticatedAt": "2026-09-24T09:14:11Z",
-  "engineVersion": "auth-0.3.0",
+  "submittedAt": "2026-09-28T09:14:02Z",
+  "authenticatedAt": "2026-09-28T09:14:11Z",
+  "engineVersion": "auth-0.4.0",
   "summary": {
     "isClean": false,
     "overallConfidence": 0.8853846153846155,
-    "checksRun": 44,
+    "checksRun": 46,
     "questionsWithIssues": 1
   },
   "sections": [
@@ -250,6 +250,13 @@
               "note": "The name on the document matches the applicant record."
             },
             {
+              "name": "Consistency_Check",
+              "label": "Supporting document agrees with the primary",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The figures on the supporting document reconcile with the bank reference letter with facility conduct history, so the field-level checks ran against a value both documents agree on."
+            },
+            {
               "name": "Facility_Status_Check",
               "label": "Facility restructured, written off or forgiven",
               "status": "caution",
@@ -279,6 +286,13 @@
               "status": "pass",
               "confidence": 0.96,
               "note": "The name on the document matches the applicant record."
+            },
+            {
+              "name": "Consistency_Check",
+              "label": "Supporting document agrees with the primary",
+              "status": "pass",
+              "confidence": 0.96,
+              "note": "The figures on the supporting document reconcile with the bank reference letter with aggregate exposure, so the field-level checks ran against a value both documents agree on."
             },
             {
               "name": "Indebtedness_Amount_Check",

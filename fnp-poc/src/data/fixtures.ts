@@ -22,9 +22,9 @@ interface V5File {
 /**
  * The app works with one flat question list; the section stays on each question.
  *
- * Question wording comes from the QUESTIONS table rather than the payload: the v5 workbook
- * reworded PC1, FC7 and CoI6, but the generated JSON still carries the older text. Reading it
- * from one place keeps a seeded draft and a blank form showing the same question.
+ * Question wording comes from the QUESTIONS table rather than the payload. The two now agree,
+ * but a blank "New application" form can only get its wording from that table, so reading it
+ * from one place is what keeps a seeded draft and a blank form showing the same question.
  */
 function flatten(file: V5File): ApplicationForm {
   return {
@@ -70,7 +70,12 @@ const EVIDENCE_FILES: Record<string, Set<string>> = {
   APP001: new Set(SHARED_DOCS),
   APP002: new Set(SHARED_DOCS),
   APP003: new Set([...SHARED_DOCS, "naturalisation_certificate"]),
-  APP004: new Set([...SHARED_DOCS, "bank_reference_letter", "share_certificate"]),
+  APP004: new Set([
+    ...SHARED_DOCS,
+    "bank_reference_letter",
+    "credit_bureau_report",
+    "share_certificate",
+  ]),
   APP005: new Set([...SHARED_DOCS, "share_register_extract"]),
 };
 
