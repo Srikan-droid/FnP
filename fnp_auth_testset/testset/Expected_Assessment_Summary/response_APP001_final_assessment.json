@@ -1,0 +1,78 @@
+{
+	"application_id": "APP001",
+	"request_id": "35499870b5",
+	"applicant": {
+		"full_name": "Johanna N. Amutenya",
+		"proposed_role": "Non-Executive Director"
+	},
+	"licensee": "Oshakati Microfinance Bank Limited",
+	"determination": {
+		"verdict": "CONDITIONAL",
+		"recommendation": "Approve with conditions or monitoring",
+		"risk_score": 10.31,
+		"risk_band": "Moderate",
+		"weighted_risk": "10 of 97",
+		"knock_out_triggered": false
+	},
+	"executive_summary": "The applicant is proposed as a non‑executive director and presents a clean criminal record, 15 years 10 months of senior banking risk experience and a self‑declared absence of personal credit impairments. The assessment is driven by two moderate risk indicators: an existing directorship at Kavango Financial Services (deposit‑taking and microlending) and a stipulated 12‑hour weekly non‑executive commitment. The Bank should impose conditions or monitoring to mitigate conflicts of interest and ensure adequate board engagement.",
+	"concerns": [
+		{
+			"qid": "CoI2",
+			"section": "Conflict of interest. (Entity/Enterprise based)",
+			"severity": "Minor",
+			"risk_type": "Entity conflict",
+			"statement": "A company registry extract records the applicant as a current Non‑Executive Director of Kavango Financial Services, whose principal activity is deposit‑taking and microlending, which may give rise to conflicts of interest with the licensee.",
+			"condition_id": "COND-001",
+			"condition": "Require the applicant to submit a Bank‑approved conflict mitigation plan including full written disclosures of interests, board recusal protocols for matters affecting Kavango and annual attestations to the Bank.",
+			"quote": "The appointment of Johanna N. Amutenya as a Non-Executive Director took effect on 12 May 2016 and was notified to the registry on form CM29 on 25 May 2016.",
+			"evidence_url": "http://127.0.0.1:8000/authentication/evidence-highlight/35499870b5/CoI2_company_registry_extract_p2.pdf#page=2"
+		},
+		{
+			"qid": "T1",
+			"section": "Time Commitment",
+			"severity": "Minor",
+			"risk_type": "Time commitment",
+			"statement": "The appointment letter states the applicant will not devote the major portion of her working time to the licensee and expects a 12‑hour per week commitment, which may limit capacity to provide effective oversight.",
+			"condition_id": "COND-002",
+			"condition": "Require quarterly declarations of attendance and engagement, a minimum attendance threshold for board and committee meetings and immediate notification to the Bank of any material change to external commitments.",
+			"quote": "you will not devote the major portion of your working time to the Licensee.",
+			"evidence_url": "http://127.0.0.1:8000/authentication/evidence-highlight/35499870b5/T1_board_appointment_letter_p2.pdf#page=2"
+		}
+	],
+	"strengths": [
+		{
+			"qid": "PC1",
+			"statement": "A national police clearance certificate records no convictions, charges or civil or military findings against the applicant from age 18 to 2026-07-28."
+		},
+		{
+			"qid": "Q3",
+			"statement": "An employment certificate records total continuous service of 15 years 10 months in senior banking risk roles."
+		},
+		{
+			"qid": "FC5",
+			"statement": "The applicant declared no loan restructurings, renegotiations, write-offs or debt forgiveness in respect of personal credit, a self-declaration relevant to financial soundness."
+		}
+	],
+	"for_supervisor": [
+		"Does the applicant's directorship at Kavango Financial Services materially conflict with or compete against the licensee's business?",
+		"Are disclosure, recusal and annual attestation measures sufficient to mitigate the identified conflict given the licensee's business model and risk profile?",
+		"Is a 12‑hour per week commitment adequate for the non‑executive duties expected of a director of this licensee or should the Bank require a higher engagement threshold?"
+	],
+	"questions": {
+		"passed": "A1, A4, Q1, Q3, PC1, PC19, FC5, FC7, CoI6, CoL1, CoL3, CS4",
+		"conditional": "CoI2, T1",
+		"not_applicable": "T2"
+	},
+	"evidence": {
+		"documents_read": 8,
+		"questions_verified": 8,
+		"questions_self_declared": 7
+	},
+	"assessment": {
+		"version": "2.0.0",
+		"generated_at": "2026-09-29T09:52:41",
+		"inputs_digest": "sha256:e42a707a5d01c4704ba89805dc708b9b",
+		"rules_version": "1.0.0",
+		"narrative_generated": true
+	}
+}

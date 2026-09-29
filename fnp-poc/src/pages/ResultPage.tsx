@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../state/AssessmentContext";
 import { getAssignment, departmentFor } from "../data/assignments";
@@ -8,12 +8,15 @@ import { statusFor } from "../state/submissionStore";
 import ReportView from "../components/ReportView";
 import OutcomeTabs from "../components/OutcomeTabs";
 import AssessmentNotFound from "../components/AssessmentNotFound";
-import { ArrowLeftIcon } from "../components/icons";
+import AssessmentSummaryPane from "../components/AssessmentSummaryPane";
+import { finalAssessmentFor } from "../domain/finalAssessment";
+import { ArrowLeftIcon, FileTextIcon } from "../components/icons";
 
 export default function ResultPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const { getForm } = useAssessment();
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   const assignment = getAssignment(id);
   const form = assignment ? getForm(assignment) : null;
@@ -60,14 +63,26 @@ export default function ResultPage() {
 
       <OutcomeTabs assessmentId={id} active="scoring" scoringReady />
 
-      <ReportView form={form} authentication={outcome} scoreResult={scoreResult} />
+      <ReportView authentication={outcome} scoreResult={scoreResult} />
 
       <footer className="actionbar">
         <button className="btn btn-ghost" onClick={() => navigate("/assessments")}>
           <ArrowLeftIcon size={15} />
           Back to your assessments
         </button>
+        <button className="btn btn-primary" onClick={() => setSummaryOpen(true)}>
+          <FileTextIcon size={15} />
+          Assessment summary
+        </button>
       </footer>
+
+      {summaryOpen && (
+        <AssessmentSummaryPane
+          assessment={finalAssessmentFor(assignment.applicantId)}
+          applicantName={assignment.applicantName}
+          onClose={() => setSummaryOpen(false)}
+        />
+      )}
     </div>
   );
 }

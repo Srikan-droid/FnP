@@ -16,4 +16,16 @@ export function bandFor(normalisedRiskScore: number): { band: Band; action: stri
   return { band: match.band, action: match.action };
 }
 
+/**
+ * The same table as a set of zones on the 0-100 risk scale, for anything that has to draw the
+ * bands rather than look one up.
+ */
+export const BAND_ZONES: { band: Band; from: number; to: number }[] = BAND_TABLE.map(
+  (row, i) => ({
+    band: row.band,
+    from: row.lowerBound * 100,
+    to: (BAND_TABLE[i + 1]?.lowerBound ?? 1) * 100,
+  })
+);
+
 export const KNOCK_OUT_ACTION = "Recommend rejection — refer for supervisory review";

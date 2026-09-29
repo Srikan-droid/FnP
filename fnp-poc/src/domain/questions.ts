@@ -14,7 +14,7 @@ export interface QuestionDef {
 export const QUESTIONS: QuestionDef[] = [
   {
     qid: "A1",
-    section: "Age",
+    section: "Basic Details",
     sectionWeight: 4,
     question: "Is the applicant between 45–60 years of age?",
     polarity: "Positive",
@@ -23,10 +23,10 @@ export const QUESTIONS: QuestionDef[] = [
   },
   {
     qid: "A4",
-    section: "Age",
+    section: "Basic Details",
     sectionWeight: 4,
     question: "Is the applicant a naturalized citizen?",
-    polarity: "Positive",
+    polarity: "Negative",
     questionWeight: 1.5,
     isKnockOut: false,
   },

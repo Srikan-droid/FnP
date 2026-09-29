@@ -93,6 +93,16 @@ export function UploadIcon({ size = 16, className }: IconProps) {
   );
 }
 
+export function DownloadIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M12 4.75v9.75" />
+      <path d="m8.25 11 3.75 3.5 3.75-3.5" />
+      <path d="M4.75 15v2.75A1.75 1.75 0 0 0 6.5 19.5h11a1.75 1.75 0 0 0 1.75-1.75V15" />
+    </svg>
+  );
+}
+
 export function ArrowRightIcon({ size = 16, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>
