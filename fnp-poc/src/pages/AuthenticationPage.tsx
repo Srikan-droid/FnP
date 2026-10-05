@@ -3,108 +3,27 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../state/AssessmentContext";
 import { getAssignment, departmentFor } from "../data/assignments";
 import { authenticate, issuesIn } from "../domain/authentication";
-import { statusFor } from "../state/submissionStore";
-import { displaySection } from "../domain/sectionLabels";
+import { flaggedQids, rejectedFlags } from "../domain/reviewState";
+import { isScored, recordResubmission, stageFor } from "../state/caseStore";
+import { CV_QID, fileNameFor, findOption } from "../domain/evidenceOptions";
 import AssessmentNotFound from "../components/AssessmentNotFound";
 import OutcomeTabs from "../components/OutcomeTabs";
-import CvVerificationCard from "../components/CvVerificationCard";
+import AuthenticationReport from "../components/AuthenticationReport";
+import EvidenceBlock from "../components/EvidenceBlock";
 import {
   AlertTriangleIcon,
   ArrowLeftIcon,
+  ArrowRightIcon,
   CheckCircleIcon,
-  ChevronDownIcon,
-  InfoIcon,
+  MessageIcon,
 } from "../components/icons";
-import type { CheckResult, QuestionAuthResult } from "../domain/types";
-
-const percent = (value: number) => `${Math.round(value * 100)}%`;
-
-const CHECK_TONE: Record<CheckResult["status"], string> = {
-  pass: "good",
-  caution: "warning",
-  fail: "critical",
-};
-
-function CheckIconFor({ status }: { status: CheckResult["status"] }) {
-  if (status === "fail") return <AlertTriangleIcon size={14} />;
-  if (status === "caution") return <InfoIcon size={14} />;
-  return <CheckCircleIcon size={14} />;
-}
-
-function QuestionRow({ result }: { result: QuestionAuthResult }) {
-  const [open, setOpen] = useState(result.status === "issue");
-  const bodyId = `auth-${result.qid}`;
-
-  return (
-    <div className={`auth-question is-${result.status}`}>
-      <button
-        className="auth-question-head"
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="auth-chevron">
-          <ChevronDownIcon size={15} />
-        </span>
-        <span className="qid">{result.qid}</span>
-        <span className="auth-question-text">{result.question}</span>
-
-        <span className="auth-question-meta">
-          {result.confidence === null ? (
-            <span className={`chip chip-${result.status === "issue" ? "critical" : "neutral"}`}>
-              {result.status === "issue" ? "No document" : "No checks"}
-            </span>
-          ) : (
-            <>
-              <span className={`chip chip-${result.status === "issue" ? "critical" : "low"}`}>
-                {result.status === "issue" ? "Issue" : "Authenticated"}
-              </span>
-              <span className="auth-confidence">{percent(result.confidence)}</span>
-            </>
-          )}
-        </span>
-      </button>
-
-      {open && (
-        <div className="auth-question-body" id={bodyId}>
-          <p className="auth-summary">{result.summary}</p>
-
-          {result.checks.length > 0 && (
-            <ul className="check-list">
-              {result.checks.map((check) => (
-                <li key={check.name} className={`check check-${CHECK_TONE[check.status]}`}>
-                  <span className="check-icon">
-                    <CheckIconFor status={check.status} />
-                  </span>
-                  <div className="check-body">
-                    <div className="check-head">
-                      <span className="check-label">{check.label}</span>
-                      <span className="check-confidence">
-                        <span className="confidence-track">
-                          <span
-                            className="confidence-fill"
-                            style={{ width: `${check.confidence * 100}%` }}
-                          />
-                        </span>
-                        {percent(check.confidence)}
-                      </span>
-                    </div>
-                    <p className="check-note">{check.note}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+import type { EvidenceRole, QuestionAuthResult } from "../domain/types";
 
 export default function AuthenticationPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const { getForm } = useAssessment();
+  const { getForm, attachEvidence, removeEvidence } = useAssessment();
+  const [resubmitted, setResubmitted] = useState(false);
 
   const assignment = getAssignment(id);
   const form = assignment ? getForm(assignment) : null;
@@ -114,10 +33,95 @@ export default function AuthenticationPage() {
     [assignment, form]
   );
 
-  if (!assignment || !outcome) return <AssessmentNotFound />;
+  if (!assignment || !form || !outcome) return <AssessmentNotFound />;
 
-  const status = statusFor(id, outcome.isClean);
+  const flagged = flaggedQids(outcome);
+  const stage = stageFor(id, flagged);
+  const rejected = rejectedFlags(id, outcome);
   const issues = issuesIn(outcome);
+  // Only a rejection puts the ball back in the applicant's court.
+  const mustResubmit = stage === "AWAITING_APPLICANT";
+  const rejectedQids = new Set(rejected.map((r) => r.result.qid));
+
+  const handleAttach = (qid: string, optionCode: string, role: EvidenceRole, description?: string) => {
+    const option = findOption(qid, optionCode);
+    if (!option) return;
+    attachEvidence(assignment, qid, {
+      doc_type: option.docType,
+      path: `evidence/${assignment.applicantId}/${fileNameFor(option)}`,
+      role,
+      option_code: option.code,
+      description,
+    });
+  };
+
+  const resubmit = () => {
+    recordResubmission(id);
+    setResubmitted(true);
+    navigate(`/apply/${id}/status`);
+  };
+
+  const questionFooter = (result: QuestionAuthResult) => {
+    if (!mustResubmit || !rejectedQids.has(result.qid)) return null;
+    const ruling = rejected.find((r) => r.result.qid === result.qid)?.ruling;
+    const response = form.responses.find((r) => r.qid === result.qid);
+
+    return (
+      <div className="resubmit-block">
+        {ruling && (
+          <div className="reviewer-note">
+            <MessageIcon size={14} />
+            <div>
+              <span className="reviewer-note-label">Reviewer</span>
+              <p>{ruling.comment}</p>
+            </div>
+          </div>
+        )}
+        {response && result.qid !== CV_QID && (
+          <EvidenceBlock
+            qid={result.qid}
+            evidence={response.evidence}
+            onAttach={(code, role, description) => handleAttach(result.qid, code, role, description)}
+            onRemove={(docType) => removeEvidence(assignment, result.qid, docType)}
+          />
+        )}
+      </div>
+    );
+  };
+
+  const notice = mustResubmit ? (
+    <div className="notice notice-warning">
+      <AlertTriangleIcon size={17} />
+      <div>
+        <strong>
+          The reviewer rejected {rejected.length} answer{rejected.length > 1 ? "s" : ""}
+        </strong>{" "}
+        ({rejected.map((r) => r.result.qid).join(", ")}). Attach the evidence they asked for below,
+        then resubmit. The assessment goes back for authentication.
+      </div>
+    </div>
+  ) : issues.length > 0 ? (
+    <div className="notice notice-critical">
+      <AlertTriangleIcon size={17} />
+      <div>
+        <strong>
+          {issues.length} question{issues.length > 1 ? "s" : ""} could not be authenticated
+        </strong>{" "}
+        ({issues.map((q) => q.qid).join(", ")}).{" "}
+        {stage === "REVIEW_PENDING"
+          ? "A reviewer is looking at these now. You will be told if any answer needs new evidence."
+          : "Scoring does not run until these are resolved."}
+      </div>
+    </div>
+  ) : (
+    <div className="notice notice-good">
+      <CheckCircleIcon size={17} />
+      <div>
+        <strong>Every answer was authenticated against its evidence.</strong> The submission passed
+        to scoring.
+      </div>
+    </div>
+  );
 
   return (
     <div className="page">
@@ -125,85 +129,30 @@ export default function AuthenticationPage() {
         <div className="page-head-text">
           <h1>Authentication result</h1>
           <p className="page-sub">
-            Each answer is checked against the document attached to it. {departmentFor(assignment).name} ·{" "}
-            {assignment.reference}
+            Each answer is checked against the document attached to it.{" "}
+            {departmentFor(assignment).name} · {assignment.reference}
           </p>
         </div>
       </header>
 
-      <OutcomeTabs assessmentId={id} active="authentication" scoringReady={status === "COMPLETED"} />
+      <OutcomeTabs assessmentId={id} active="authentication" scoringReady={isScored(stage)} />
 
-      <section className="card auth-summary-card">
-        <div className="auth-stat">
-          <span className="auth-stat-label">Overall confidence</span>
-          <span className="auth-stat-value">
-            {outcome.overallConfidence === null ? "—" : percent(outcome.overallConfidence)}
-          </span>
-        </div>
-        <div className="auth-stat">
-          <span className="auth-stat-label">Checks run</span>
-          <span className="auth-stat-value">{outcome.checksRun}</span>
-        </div>
-        <div className="auth-stat">
-          <span className="auth-stat-label">Questions with issues</span>
-          <span className={`auth-stat-value${issues.length > 0 ? " is-critical" : ""}`}>
-            {issues.length}
-          </span>
-        </div>
-      </section>
-
-      {issues.length > 0 ? (
-        <div className="notice notice-critical">
-          <AlertTriangleIcon size={17} />
-          <div>
-            <strong>
-              {issues.length} question{issues.length > 1 ? "s" : ""} could not be authenticated
-            </strong>{" "}
-            ({issues.map((q) => q.qid).join(", ")}). Scoring does not run until these are resolved.
-          </div>
-        </div>
-      ) : (
-        <div className="notice notice-good">
-          <CheckCircleIcon size={17} />
-          <div>
-            <strong>Every answer was authenticated against its evidence.</strong> The submission
-            passed to scoring.
-          </div>
-        </div>
-      )}
-
-      {outcome.sections.map((section) => (
-        <section className="card section" key={section.section}>
-          <div className="section-head section-head-static">
-            <span className="section-title">{displaySection(section.section)}</span>
-            {section.issueCount > 0 && (
-              <span className="section-flag">
-                <AlertTriangleIcon size={12} />
-                {section.issueCount} issue{section.issueCount > 1 ? "s" : ""}
-              </span>
-            )}
-            <span className="section-count">
-              {section.questions.length} question{section.questions.length > 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="section-body">
-            {section.questions.map((q) => (
-              <QuestionRow key={q.qid} result={q} />
-            ))}
-          </div>
-        </section>
-      ))}
-
-      {outcome.cvVerification && <CvVerificationCard result={outcome.cvVerification} />}
+      <AuthenticationReport
+        assessmentId={id}
+        outcome={outcome}
+        notice={notice}
+        questionFooter={questionFooter}
+      />
 
       <footer className="actionbar">
         <button className="btn btn-ghost" onClick={() => navigate(`/apply/${id}/status`)}>
           <ArrowLeftIcon size={15} />
           Back to status
         </button>
-        {status === "AUTH_ISSUES" && (
-          <button className="btn btn-primary" onClick={() => navigate(`/apply/${id}`)}>
-            Correct the form
+        {mustResubmit && (
+          <button className="btn btn-primary" disabled={resubmitted} onClick={resubmit}>
+            Resubmit for authentication
+            <ArrowRightIcon size={15} />
           </button>
         )}
       </footer>

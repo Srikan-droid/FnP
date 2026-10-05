@@ -1,14 +1,14 @@
 {
-  "application_id": "APP004",
+  "application_id": "APP006",
   "licensee": "Oshakati Microfinance Bank Limited",
   "group_id": "G01",
   "applicant": {
-    "full_name": "Maria L. van Wyk",
-    "proposed_role": "Executive Director",
-    "date_of_birth": "1972-01-27",
+    "full_name": "Srikant Mishra",
+    "proposed_role": "Non-Executive Director",
+    "date_of_birth": "1978-04-16",
     "town": "Windhoek"
   },
-  "submitted_at": "2026-08-25T10:15:00",
+  "submitted_at": "2026-08-25T16:40:00",
   "sections": [
     {
       "section": "Basic Details",
@@ -25,6 +25,7 @@
           "evidence": [
             {
               "doc_type": "national_id",
+              "path": "evidence/APP006/national_id.pdf",
               "role": "primary"
             }
           ],
@@ -40,9 +41,15 @@
           "question_weight": 1.5,
           "polarity": "Negative",
           "knockout": 0,
-          "answer": "No",
-          "evidence_required": false,
-          "evidence": [],
+          "answer": "Yes",
+          "evidence_required": true,
+          "evidence": [
+            {
+              "doc_type": "naturalisation_certificate",
+              "path": "evidence/APP006/naturalisation_certificate.pdf",
+              "role": "primary"
+            }
+          ],
           "checks_to_perform": [
             "Document_Check",
             "Name_Check",
@@ -66,6 +73,7 @@
           "evidence": [
             {
               "doc_type": "degree_certificate",
+              "path": "evidence/APP006/degree_certificate.pdf",
               "role": "primary"
             }
           ],
@@ -86,6 +94,7 @@
           "evidence": [
             {
               "doc_type": "employment_letter",
+              "path": "evidence/APP006/employment_letter.pdf",
               "role": "primary"
             }
           ],
@@ -113,6 +122,7 @@
           "evidence": [
             {
               "doc_type": "police_clearance",
+              "path": "evidence/APP006/police_clearance.pdf",
               "role": "primary"
             }
           ],
@@ -134,6 +144,7 @@
           "evidence": [
             {
               "doc_type": "tax_compliance_certificate",
+              "path": "evidence/APP006/tax_compliance_certificate.pdf",
               "role": "primary"
             }
           ],
@@ -156,18 +167,9 @@
           "question_weight": 10,
           "polarity": "Negative",
           "knockout": 0,
-          "answer": "Yes",
-          "evidence_required": true,
-          "evidence": [
-            {
-              "doc_type": "bank_reference_letter",
-              "role": "primary"
-            },
-            {
-              "doc_type": "credit_bureau_report",
-              "role": "supporting"
-            }
-          ],
+          "answer": "No",
+          "evidence_required": false,
+          "evidence": [],
           "checks_to_perform": [
             "Document_Check",
             "Name_Check",
@@ -181,18 +183,9 @@
           "question_weight": 6,
           "polarity": "Negative",
           "knockout": 0,
-          "answer": "Yes",
-          "evidence_required": true,
-          "evidence": [
-            {
-              "doc_type": "bank_reference_letter",
-              "role": "primary"
-            },
-            {
-              "doc_type": "credit_bureau_report",
-              "role": "supporting"
-            }
-          ],
+          "answer": "No",
+          "evidence_required": false,
+          "evidence": [],
           "checks_to_perform": [
             "Document_Check",
             "Name_Check",
@@ -217,6 +210,7 @@
           "evidence": [
             {
               "doc_type": "company_registry_extract",
+              "path": "evidence/APP006/company_registry_extract.pdf",
               "role": "primary"
             }
           ],
@@ -233,14 +227,9 @@
           "question_weight": 9,
           "polarity": "Negative",
           "knockout": 0,
-          "answer": "Yes",
-          "evidence_required": true,
-          "evidence": [
-            {
-              "doc_type": "company_registry_extract",
-              "role": "primary"
-            }
-          ],
+          "answer": "No",
+          "evidence_required": false,
+          "evidence": [],
           "checks_to_perform": [
             "Document_Check",
             "Name_Check",
@@ -260,11 +249,12 @@
           "question_weight": 5,
           "polarity": "Positive",
           "knockout": 0,
-          "answer": "Yes",
+          "answer": "No",
           "evidence_required": true,
           "evidence": [
             {
               "doc_type": "board_appointment_letter",
+              "path": "evidence/APP006/board_appointment_letter.pdf",
               "role": "primary"
             }
           ],
@@ -280,14 +270,10 @@
           "question_weight": 3,
           "polarity": "Positive",
           "knockout": 0,
-          "answer": "Yes",
-          "evidence_required": true,
-          "evidence": [
-            {
-              "doc_type": "board_appointment_letter",
-              "role": "primary"
-            }
-          ],
+          "answer": "N/A",
+          "not_applicable_reason": "Non-executive appointment. The question addresses executive responsibility for the management of the institution and does not apply to this role.",
+          "evidence_required": false,
+          "evidence": [],
           "checks_to_perform": [
             "Document_Check",
             "Name_Check",
@@ -306,14 +292,9 @@
           "question_weight": 5,
           "polarity": "Negative",
           "knockout": 0,
-          "answer": "Yes",
-          "evidence_required": true,
-          "evidence": [
-            {
-              "doc_type": "share_certificate",
-              "role": "primary"
-            }
-          ],
+          "answer": "No",
+          "evidence_required": false,
+          "evidence": [],
           "checks_to_perform": [
             "Document_Check",
             "Name_Check",
@@ -353,6 +334,7 @@
           "evidence": [
             {
               "doc_type": "suitability_declaration",
+              "path": "evidence/APP006/suitability_declaration.pdf",
               "role": "primary"
             }
           ],
@@ -366,21 +348,21 @@
     }
   ],
   "profile_review": {
-    "mode": "linkedin_search",
-    "prompt_ref": "profile_review.linkedin_search.v1",
+    "mode": "linkedin_provided",
+    "prompt_ref": "profile_review.linkedin_provided.v1",
     "cv": {
       "doc_type": "curriculum_vitae",
       "mandatory": true,
-      "path": "evidence/APP004/curriculum_vitae.pdf",
+      "path": "evidence/APP006/curriculum_vitae.pdf",
       "gate_checks": [
         "Document_Check",
         "Name_Check"
       ]
     },
     "linkedin": {
-      "provided": false,
-      "linkedin_id": null,
-      "profile_url": null,
+      "provided": true,
+      "linkedin_id": "srikant-mishra-74a949a7",
+      "profile_url": "https://www.linkedin.com/in/srikant-mishra-74a949a7/",
       "mandatory": false
     },
     "reference_inputs": {

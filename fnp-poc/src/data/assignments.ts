@@ -20,6 +20,12 @@ export interface Assignment {
   applicantName: string;
   /** True when the department's filer has already started a draft (demo seed). */
   seededDraft: boolean;
+  /**
+   * Decorative only. Every assessment that actually runs belongs to Banking Licence, since the
+   * POC has a single reviewer; these extra cards exist so an applicant's list looks like a real
+   * queue, and they are not clickable.
+   */
+  isDummy?: boolean;
 }
 
 export const DEPARTMENTS: Record<string, Department> = {
@@ -55,7 +61,8 @@ export const DEPARTMENTS: Record<string, Department> = {
   },
 };
 
-export const ASSIGNMENTS: Assignment[] = [
+/** The five assessments that actually run — one per applicant, all Banking Licence. */
+const LIVE_ASSIGNMENTS: Assignment[] = [
   {
     id: "FNP-2026-0412",
     email: "j.amutenya@example.na",
@@ -75,96 +82,78 @@ export const ASSIGNMENTS: Assignment[] = [
     entity: "Erongo Building Society",
     position: "Executive Director",
     reference: "BL-2026-0455",
-    initiatedOn: "2026-08-11",
+    initiatedOn: "2026-08-19",
     applicantId: "APP002",
     applicantName: "Petrus K. Shivute",
     seededDraft: true,
-  },
-  {
-    id: "FNP-2026-0098",
-    email: "p.shivute@example.na",
-    departmentKey: "payments",
-    entity: "Namib Pay Solutions (Pty) Ltd",
-    position: "Board Chairperson",
-    reference: "PS-2026-0098",
-    initiatedOn: "2026-09-02",
-    applicantId: "APP002",
-    applicantName: "Petrus K. Shivute",
-    seededDraft: false,
   },
   {
     id: "FNP-2026-0233",
     email: "e.haufiku@example.na",
-    departmentKey: "education",
-    entity: "Namib Institute of Financial Studies",
-    position: "Governing Board Member",
-    reference: "ED-2026-0233",
-    initiatedOn: "2026-08-19",
+    departmentKey: "banking",
+    entity: "Namib Trust Bank Limited",
+    position: "Non-Executive Director",
+    reference: "BL-2026-0233",
+    initiatedOn: "2026-08-11",
     applicantId: "APP003",
     applicantName: "Elias T. Haufiku",
     seededDraft: true,
-  },
-  {
-    id: "FNP-2026-0187",
-    email: "e.haufiku@example.na",
-    departmentKey: "insurance",
-    entity: "Etosha Life Assurance Limited",
-    position: "Non-Executive Director",
-    reference: "IS-2026-0187",
-    initiatedOn: "2026-09-04",
-    applicantId: "APP003",
-    applicantName: "Elias T. Haufiku",
-    seededDraft: false,
-  },
-  {
-    id: "FNP-2026-0341",
-    email: "e.haufiku@example.na",
-    departmentKey: "microfinance",
-    entity: "Kunene Micro Credit CC",
-    position: "Principal Officer",
-    reference: "MF-2026-0341",
-    initiatedOn: "2026-09-09",
-    applicantId: "APP003",
-    applicantName: "Elias T. Haufiku",
-    seededDraft: false,
   },
   {
     id: "FNP-2026-0398",
     email: "m.vanwyk@example.na",
     departmentKey: "banking",
-    entity: "Windhoek Commercial Bank Limited",
-    position: "Chief Financial Officer",
+    entity: "Oshakati Microfinance Bank Limited",
+    position: "Executive Director",
     reference: "BL-2026-0398",
-    initiatedOn: "2026-08-09",
+    initiatedOn: "2026-08-25",
     applicantId: "APP004",
     applicantName: "Maria L. van Wyk",
     seededDraft: true,
   },
   {
-    id: "FNP-2026-0076",
-    email: "m.vanwyk@example.na",
-    departmentKey: "markets",
-    entity: "Van Wyk Securities (Pty) Ltd",
-    position: "Managing Director",
-    reference: "CM-2026-0076",
-    initiatedOn: "2026-09-12",
-    applicantId: "APP004",
-    applicantName: "Maria L. van Wyk",
-    seededDraft: false,
-  },
-  {
     id: "FNP-2026-0289",
     email: "m.kaapanda@example.na",
-    departmentKey: "microfinance",
-    entity: "Kaapanda Investments CC",
+    departmentKey: "banking",
+    entity: "Kavango Financial Services",
     position: "Non-Executive Director",
-    reference: "MF-2026-0289",
+    reference: "BL-2026-0289",
     initiatedOn: "2026-08-21",
     applicantId: "APP005",
     applicantName: "Margaret Kaapanda",
     seededDraft: true,
   },
 ];
+
+/** Two inert cards per applicant, so the list reads like a real queue rather than one row. */
+const DUMMY_SPECS: { departmentKey: string; prefix: string; position: string }[] = [
+  { departmentKey: "insurance", prefix: "IS", position: "Principal Officer" },
+  { departmentKey: "markets", prefix: "CM", position: "Compliance Officer" },
+];
+
+const DUMMY_ASSIGNMENTS: Assignment[] = LIVE_ASSIGNMENTS.flatMap((live, applicantIndex) =>
+  DUMMY_SPECS.map((spec, specIndex) => {
+    const serial = 600 + applicantIndex * 10 + specIndex;
+    return {
+      id: `FNP-2026-0${serial}`,
+      email: live.email,
+      departmentKey: spec.departmentKey,
+      entity: live.entity,
+      position: spec.position,
+      reference: `${spec.prefix}-2026-0${serial}`,
+      initiatedOn: live.initiatedOn,
+      applicantId: live.applicantId,
+      applicantName: live.applicantName,
+      seededDraft: false,
+      isDummy: true,
+    };
+  })
+);
+
+export const ASSIGNMENTS: Assignment[] = [...LIVE_ASSIGNMENTS, ...DUMMY_ASSIGNMENTS];
+
+/** The assessments the reviewer works: the live ones, newest first. */
+export const REVIEWABLE_ASSIGNMENTS: Assignment[] = LIVE_ASSIGNMENTS;
 
 export function assignmentsForEmail(email: string): Assignment[] {
   const normalized = email.trim().toLowerCase();

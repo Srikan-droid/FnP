@@ -13,7 +13,8 @@ import {
 import { evidenceUrl, hasEvidenceFile } from "../data/fixtures";
 import { hasMissingMandatoryEvidence } from "../domain/evidenceRules";
 import { evidenceFileName } from "../domain/evidenceOptions";
-import { recordSubmission } from "../state/submissionStore";
+import { recordSubmission } from "../state/caseStore";
+import { readConfig } from "../state/questionConfigStore";
 import { displaySection } from "../domain/sectionLabels";
 
 export default function ReviewPage() {
@@ -220,7 +221,12 @@ export default function ReviewPage() {
         <button
           className="btn btn-primary"
           onClick={() => {
-            recordSubmission(assignment.id);
+            recordSubmission(
+              assignment.id,
+              Object.fromEntries(
+                Object.entries(readConfig()).map(([qid, c]) => [qid, c.questionWeight])
+              )
+            );
             navigate(`/apply/${assignment.id}/status`);
           }}
         >

@@ -1,0 +1,628 @@
+{
+  "config_version": "1.0.0",
+  "note": "Engine-level prompts and output schemas for the layers that run AFTER authentication completes. These are not carried in the applicant JSON: the applicant file supplies only the inputs and the routing flag. Keeping the prompt text here means a wording change is made once, not in every applicant file.",
+  "layers": {
+    "profile_review": {
+      "trigger": "Runs once per applicant after all 15 questions reach an authenticated state.",
+      "routing": {
+        "flag": "profile_review.mode in the applicant JSON",
+        "linkedin_provided": "Applicant supplied a LinkedIn identifier. Runs profile_review.linkedin_provided.v1 against that profile, retrieved at assessment time.",
+        "linkedin_search": "Applicant supplied no identifier. Runs profile_review.linkedin_search.v1, which searches for the profile and uses the CV and the authenticated values to identify it before analysing it.",
+        "fallback": "A supplied link that cannot be retrieved does NOT switch to the search prompt. It stays on linkedin_provided.v1 with profile_status UNAVAILABLE, so 'gave a link we could not read' stays distinguishable from 'gave no link'.",
+        "identity_guard": "In search mode the profile is only analysed at status DISCOVERED, which requires a match on employer plus at least one of title, dates or education. AMBIGUOUS and NOT_FOUND return the CV analysis with linkedin_findings empty. Attributing a wrongly matched profile would generate undisclosed-position findings against the wrong person, so the prompt is instructed not to choose between plausible candidates."
+      },
+      "scoring_impact": "none — reviewer-facing only; does not affect the fit and proper score or reopen the correction loop",
+      "prompts": {
+        "profile_review.linkedin_search.v1": {
+          "inputs": [
+            "cv_document",
+            "linkedin_search_results",
+            "authenticated_qualification",
+            "authenticated_experience",
+            "authenticated_directorships",
+            "proposed_role"
+          ],
+          "prompt": "You are reviewing a CV as part of a fit and proper application, and locating the applicant's LinkedIn profile. The applicant did not supply a profile link, so you must find it. The 15 questionnaire answers have already been authenticated; you are not re-authenticating them.\n\nInputs: the CV document (cv_document); search results for the applicant's name (linkedin_search_results); three values already established from the applicant's primary evidence (authenticated_qualification, authenticated_experience, authenticated_directorships); and the role applied for (proposed_role).\n\nSTEP 1 — IDENTIFY THE PROFILE.\nApplicant names are frequently shared. Matching the wrong profile would attribute another person's employment and affiliations to this applicant, so identification must be conservative.\nFor each candidate profile in the search results, compare against the CV and the authenticated values on: current or recent employer, job title, employment dates, education institution and qualification, and location. A shared name is never sufficient.\nSet profile_status to:\n  DISCOVERED — exactly one candidate matches on employer AND at least one of title, dates or education. State every detail the match rests on.\n  AMBIGUOUS — more than one candidate is a plausible match, or one candidate matches on name and location only. Do not pick between them.\n  NOT_FOUND — no candidate matches, or the search returned nothing.\nWhere the status is AMBIGUOUS or NOT_FOUND, leave linkedin_findings empty and complete the CV analysis as normal. Do not analyse a profile you have not confidently identified, and do not speculate about what an unfound profile might contain. An absent profile is not a finding about the applicant.\n\nSTEP 2 — ANALYSE.\nProduce three lists.\n\nconsistency_findings — exactly three entries (qualification, experience, directorships), comparing the CV against the authenticated values. Give a verdict and a one-sentence detail citing the specific values compared. If the CV is silent on a point, return CONSISTENT: silence is not a conflict. For directorships, return UNDISCLOSED_POSITION for any position in a financial services entity that appears on the CV but not on the authenticated record; name the entity and the role.\n\nsuitability_findings — exactly three entries. Give a verdict and a one or two sentence rationale grounded only in what the documents state. These are judgments for a human reviewer; a SUITABILITY_FLAG is not evidence of dishonesty and must not be described as one.\n  sector_relevance — is the background in a sector relevant to banking or financial services, given proposed_role?\n  seniority_level — has the applicant operated at a seniority or scope (executive committee, board, head-office strategic responsibility) consistent with a director-level appointment, or only at a regional or operational level?\n  career_gaps — are there unexplained gaps of a year or more in the employment timeline?\n\nlinkedin_findings — exactly four entries, present only when profile_status is DISCOVERED.\n  qualification — profile education against authenticated_qualification.\n  experience — profile positions and dates against authenticated_experience.\n  directorships — profile board seats, advisory roles and directorships against authenticated_directorships AND against the directorships stated on the CV. Return UNDISCLOSED_POSITION for any position in a financial services entity that appears on the profile but on neither the authenticated record nor the CV; name the entity, the role and the dates shown.\n  cv_alignment — any position, title or date that the profile and the CV state differently.\n\nA profile located by search is weaker evidence than one the applicant supplied, and weaker still than the CV or the primary documents. It is a lead for the reviewer, never authority to overturn an authenticated value. Where a discovered profile and an authenticated document disagree, the authenticated document stands and the finding records the disagreement.\n\nDo not infer anything from profile metadata such as connection count, endorsements, posting activity or photograph. Restrict findings to stated employment, education and affiliation history.\n\nReturn only the structured output. Include no finding not grounded in the CV, an identified profile, or the supplied reference values.",
+          "output_schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mode",
+              "profile_status",
+              "profile_discovery",
+              "consistency_findings",
+              "suitability_findings",
+              "linkedin_findings",
+              "flag_count"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "linkedin_search"
+              },
+              "profile_status": {
+                "type": "string",
+                "enum": [
+                  "DISCOVERED",
+                  "AMBIGUOUS",
+                  "NOT_FOUND",
+                  "SEARCH_UNAVAILABLE"
+                ],
+                "description": "DISCOVERED only when exactly one candidate matches on employer and at least one of title, dates or education."
+              },
+              "profile_url_reviewed": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Set only when DISCOVERED."
+              },
+              "profile_discovery": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "candidates_returned",
+                  "candidates"
+                ],
+                "properties": {
+                  "search_terms_used": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "candidates_returned": {
+                    "type": "integer"
+                  },
+                  "candidates": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "profile_url",
+                        "matched_on",
+                        "excluded_on",
+                        "outcome"
+                      ],
+                      "properties": {
+                        "profile_url": {
+                          "type": "string"
+                        },
+                        "headline": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "matched_on": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Details supporting this candidate, e.g. employer, title, dates, education."
+                        },
+                        "excluded_on": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Details ruling this candidate out."
+                        },
+                        "outcome": {
+                          "type": "string",
+                          "enum": [
+                            "SELECTED",
+                            "REJECTED",
+                            "PLAUSIBLE_NOT_SELECTED"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "consistency_findings": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "aspect",
+                    "verdict",
+                    "detail",
+                    "confidence"
+                  ],
+                  "properties": {
+                    "aspect": {
+                      "type": "string",
+                      "enum": [
+                        "qualification",
+                        "experience",
+                        "directorships"
+                      ]
+                    },
+                    "verdict": {
+                      "type": "string",
+                      "enum": [
+                        "CONSISTENT",
+                        "EVIDENCE_CONFLICT",
+                        "UNDISCLOSED_POSITION"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string",
+                      "description": "One or two sentences citing the specific values compared."
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                }
+              },
+              "suitability_findings": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "aspect",
+                    "verdict",
+                    "detail",
+                    "confidence"
+                  ],
+                  "properties": {
+                    "aspect": {
+                      "type": "string",
+                      "enum": [
+                        "sector_relevance",
+                        "seniority_level",
+                        "career_gaps"
+                      ]
+                    },
+                    "verdict": {
+                      "type": "string",
+                      "enum": [
+                        "NO_CONCERN",
+                        "SUITABILITY_FLAG"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string",
+                      "description": "One or two sentences citing the specific values compared."
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                }
+              },
+              "linkedin_findings": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 4,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "aspect",
+                    "verdict",
+                    "detail",
+                    "confidence"
+                  ],
+                  "properties": {
+                    "aspect": {
+                      "type": "string",
+                      "enum": [
+                        "qualification",
+                        "experience",
+                        "directorships",
+                        "cv_alignment"
+                      ]
+                    },
+                    "verdict": {
+                      "type": "string",
+                      "enum": [
+                        "CONSISTENT",
+                        "EVIDENCE_CONFLICT",
+                        "UNDISCLOSED_POSITION"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string",
+                      "description": "One or two sentences citing the specific values compared."
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "entity": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Entity named, when the verdict is UNDISCLOSED_POSITION."
+                    }
+                  }
+                },
+                "description": "Exactly 4 entries when profile_status is DISCOVERED; empty otherwise."
+              },
+              "flag_count": {
+                "type": "integer",
+                "description": "Count across all lists of verdicts that are not CONSISTENT or NO_CONCERN."
+              }
+            }
+          }
+        },
+        "profile_review.linkedin_provided.v1": {
+          "inputs": [
+            "cv_document",
+            "linkedin_profile",
+            "authenticated_qualification",
+            "authenticated_experience",
+            "authenticated_directorships",
+            "proposed_role"
+          ],
+          "prompt": "You are reviewing a CV and a LinkedIn profile submitted as part of a fit and proper application. The 15 questionnaire answers have already been authenticated against their primary evidence; you are not re-authenticating them.\n\nInputs: the CV document (cv_document); the LinkedIn profile as retrieved at assessment time (linkedin_profile); three values already established from the applicant's primary evidence (authenticated_qualification, authenticated_experience, authenticated_directorships); and the role applied for (proposed_role).\n\nIf the profile could not be retrieved — the link is dead, the profile is private, or retrieval failed — set profile_status to UNAVAILABLE, leave linkedin_findings empty, and complete the CV analysis as normal. Do not speculate about the contents of a profile you could not read.\n\nRead both documents. Extract from each the qualifications claimed, the employment history with employer, title and start/end dates, and any directorships, board seats, advisory roles or significant affiliations.\n\nProduce three lists.\n\nconsistency_findings — exactly three entries (qualification, experience, directorships), comparing the CV against the authenticated values, as described for the CV-only review. Silence in the CV is CONSISTENT.\n\nsuitability_findings — exactly three entries (sector_relevance, seniority_level, career_gaps), judged on the CV and the profile together. These are judgments for a human reviewer; a SUITABILITY_FLAG is not evidence of dishonesty.\n\nlinkedin_findings — exactly four entries, one per aspect below, present only when profile_status is RETRIEVED.\n  qualification — profile education against authenticated_qualification.\n  experience — profile positions and dates against authenticated_experience.\n  directorships — profile board seats, advisory roles and directorships against authenticated_directorships AND against the directorships stated on the CV. Return UNDISCLOSED_POSITION for any position in a financial services entity that appears on the profile but on neither the authenticated record nor the CV; name the entity, the role and the dates shown.\n  cv_alignment — any position, title or date that the profile and the CV state differently.\n\nA LinkedIn profile is self-published and unverified, and sits below both the CV and the primary documents in evidentiary weight. It is a lead for the reviewer, never authority to overturn an authenticated value. Where the profile and an authenticated document disagree, the authenticated document stands. Where the profile is silent on a point, return CONSISTENT.\n\nDo not infer anything about the applicant from profile metadata such as connection count, endorsements, posting activity or profile photograph. Restrict findings to stated employment, education and affiliation history.\n\nReturn only the structured output. Include no finding not grounded in the CV, the profile, or the supplied reference values.",
+          "output_schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mode",
+              "profile_status",
+              "consistency_findings",
+              "suitability_findings",
+              "linkedin_findings",
+              "flag_count"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "linkedin_provided"
+              },
+              "profile_status": {
+                "type": "string",
+                "enum": [
+                  "RETRIEVED",
+                  "UNAVAILABLE"
+                ],
+                "description": "UNAVAILABLE when the link is dead, the profile is private, or retrieval failed."
+              },
+              "profile_url_reviewed": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "consistency_findings": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "aspect",
+                    "verdict",
+                    "detail",
+                    "confidence"
+                  ],
+                  "properties": {
+                    "aspect": {
+                      "type": "string",
+                      "enum": [
+                        "qualification",
+                        "experience",
+                        "directorships"
+                      ]
+                    },
+                    "verdict": {
+                      "type": "string",
+                      "enum": [
+                        "CONSISTENT",
+                        "EVIDENCE_CONFLICT",
+                        "UNDISCLOSED_POSITION"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string",
+                      "description": "One or two sentences citing the specific values compared."
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                }
+              },
+              "suitability_findings": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "aspect",
+                    "verdict",
+                    "detail",
+                    "confidence"
+                  ],
+                  "properties": {
+                    "aspect": {
+                      "type": "string",
+                      "enum": [
+                        "sector_relevance",
+                        "seniority_level",
+                        "career_gaps"
+                      ]
+                    },
+                    "verdict": {
+                      "type": "string",
+                      "enum": [
+                        "NO_CONCERN",
+                        "SUITABILITY_FLAG"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string",
+                      "description": "One or two sentences citing the specific values compared."
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                }
+              },
+              "linkedin_findings": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 4,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "aspect",
+                    "verdict",
+                    "detail",
+                    "confidence"
+                  ],
+                  "properties": {
+                    "aspect": {
+                      "type": "string",
+                      "enum": [
+                        "qualification",
+                        "experience",
+                        "directorships",
+                        "cv_alignment"
+                      ]
+                    },
+                    "verdict": {
+                      "type": "string",
+                      "enum": [
+                        "CONSISTENT",
+                        "EVIDENCE_CONFLICT",
+                        "UNDISCLOSED_POSITION"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string",
+                      "description": "One or two sentences citing the specific values compared."
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "entity": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Entity named, when the verdict is UNDISCLOSED_POSITION."
+                    }
+                  }
+                },
+                "description": "Exactly 4 entries when profile_status is RETRIEVED; empty when UNAVAILABLE."
+              },
+              "flag_count": {
+                "type": "integer",
+                "description": "Count across all three lists of verdicts that are not CONSISTENT or NO_CONCERN."
+              }
+            }
+          }
+        }
+      }
+    },
+    "adverse_media_screening": {
+      "trigger": "Runs once per applicant after all 15 questions reach an authenticated state. Not referenced in the applicant JSON; the engine initiates it and supplies its own inputs.",
+      "scoring_impact": "none — reviewer-facing only; does not affect the fit and proper score or reopen the correction loop",
+      "prompts": {
+        "adverse_media_screening.v1": {
+          "inputs": [
+            "media_screening_results",
+            "authenticated_identity",
+            "authenticated_experience",
+            "authenticated_directorships"
+          ],
+          "prompt": "You are reviewing adverse media screening results for a fit and proper applicant. This runs after authentication is complete; the applicant's identifying details are already established and are not in question.\n\nInputs: the screening results retrieved at assessment time (media_screening_results); and the applicant's authenticated details — authenticated_identity (full name, date of birth, place of birth), authenticated_experience (employers with dates), and authenticated_directorships.\n\nApplicant names are frequently shared by other people, and screening on a name alone will return hits about people who are not the applicant. Your first task on every hit is identity resolution. Sentiment is assessed only after identity is settled.\n\nFor each hit, produce one entry with:\n  identity_verdict — IS_THE_SUBJECT, NOT_THE_SUBJECT or INDETERMINATE. Resolve on the discriminating details available: reported age or date of birth, occupation and sector, employer, and location, each compared against the authenticated values. A shared name alone is never sufficient to conclude IS_THE_SUBJECT. Where the available details neither confirm nor exclude the applicant, return INDETERMINATE rather than guessing in either direction.\n  sentiment — adverse, neutral or positive, as reported in the source.\n  matched_on and excluded_on — the specific details that supported or ruled out the match. Name them; do not assert a conclusion without stating what it rests on.\n  detail — one or two sentences explaining the resolution.\n\nThen produce an overall assessment with:\n  adverse_findings_on_subject — count of hits both adverse AND resolved IS_THE_SUBJECT.\n  indeterminate_adverse_count — count of adverse hits resolved INDETERMINATE, which a reviewer must clear manually.\n  watchlist_status — as reported: sanctions, politically exposed person, and regulatory enforcement.\n  overall_verdict — NO_ADVERSE_MEDIA where no adverse hit resolves to the subject and none is indeterminate; REVIEW_REQUIRED where any adverse hit is indeterminate; ADVERSE_MEDIA_FOUND where an adverse hit resolves to the subject; SCREENING_UNAVAILABLE where the search could not be completed.\n\nNever state or imply that the applicant is connected to conduct reported about a different person of the same name. A NOT_THE_SUBJECT hit is not a finding against the applicant, must not be counted as one, and must not be summarised in language that associates the applicant with it. An absence of adverse media is not evidence of good character; report only what the search returned.\n\nReturn only the structured output. Include no finding not grounded in the screening results or the supplied reference values.",
+          "output_schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "hit_findings",
+              "overall"
+            ],
+            "properties": {
+              "hit_findings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "hit_id",
+                    "identity_verdict",
+                    "sentiment",
+                    "matched_on",
+                    "excluded_on",
+                    "detail",
+                    "confidence"
+                  ],
+                  "properties": {
+                    "hit_id": {
+                      "type": "string"
+                    },
+                    "headline": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "publication": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "published": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date"
+                    },
+                    "identity_verdict": {
+                      "type": "string",
+                      "enum": [
+                        "IS_THE_SUBJECT",
+                        "NOT_THE_SUBJECT",
+                        "INDETERMINATE"
+                      ]
+                    },
+                    "sentiment": {
+                      "type": "string",
+                      "enum": [
+                        "adverse",
+                        "neutral",
+                        "positive"
+                      ]
+                    },
+                    "matched_on": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Details supporting the match. Empty for NOT_THE_SUBJECT."
+                    },
+                    "excluded_on": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Details ruling out the match. Empty for IS_THE_SUBJECT."
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                }
+              },
+              "overall": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "adverse_findings_on_subject",
+                  "indeterminate_adverse_count",
+                  "watchlist_status",
+                  "overall_verdict"
+                ],
+                "properties": {
+                  "hits_returned": {
+                    "type": "integer"
+                  },
+                  "adverse_findings_on_subject": {
+                    "type": "integer"
+                  },
+                  "indeterminate_adverse_count": {
+                    "type": "integer"
+                  },
+                  "watchlist_status": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "sanctions",
+                      "politically_exposed_person",
+                      "regulatory_enforcement"
+                    ],
+                    "properties": {
+                      "sanctions": {
+                        "type": "string",
+                        "enum": [
+                          "NO_MATCH",
+                          "MATCH",
+                          "UNAVAILABLE"
+                        ]
+                      },
+                      "politically_exposed_person": {
+                        "type": "string",
+                        "enum": [
+                          "NO_MATCH",
+                          "MATCH",
+                          "UNAVAILABLE"
+                        ]
+                      },
+                      "regulatory_enforcement": {
+                        "type": "string",
+                        "enum": [
+                          "NO_MATCH",
+                          "MATCH",
+                          "UNAVAILABLE"
+                        ]
+                      }
+                    }
+                  },
+                  "sources_searched": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "searched_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "overall_verdict": {
+                    "type": "string",
+                    "enum": [
+                      "NO_ADVERSE_MEDIA",
+                      "REVIEW_REQUIRED",
+                      "ADVERSE_MEDIA_FOUND",
+                      "SCREENING_UNAVAILABLE"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

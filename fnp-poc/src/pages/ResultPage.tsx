@@ -4,7 +4,8 @@ import { useAssessment } from "../state/AssessmentContext";
 import { getAssignment, departmentFor } from "../data/assignments";
 import { authenticate } from "../domain/authentication";
 import { score } from "../domain/engine";
-import { statusFor } from "../state/submissionStore";
+import { isScored, readCase, stageFor } from "../state/caseStore";
+import { flaggedQids, unresolvedFlags } from "../domain/reviewState";
 import ReportView from "../components/ReportView";
 import OutcomeTabs from "../components/OutcomeTabs";
 import AssessmentNotFound from "../components/AssessmentNotFound";
@@ -25,16 +26,21 @@ export default function ResultPage() {
     () => (assignment && form ? authenticate(assignment.id, assignment.applicantId, form) : null),
     [assignment, form]
   );
-  const scoreResult = useMemo(
-    () => (outcome?.isClean && form ? score(form) : null),
-    [outcome, form]
-  );
+  // A flag the reviewer has overridden no longer blocks scoring, so the gate is "nothing
+  // unresolved" rather than "the engine found nothing".
+  const scoreResult = useMemo(() => {
+    if (!outcome || !form) return null;
+    if (unresolvedFlags(id, outcome).length > 0) return null;
+    // Scored against the weights in force when it was submitted, not whatever the
+    // reviewer has configured since.
+    return score(form, readCase(id).weightSnapshot);
+  }, [id, outcome, form]);
 
   if (!assignment || !form || !outcome) return <AssessmentNotFound />;
 
   // Scoring only exists once authentication has cleared and the engine has finished.
-  const status = statusFor(id, outcome.isClean);
-  if (status !== "COMPLETED" || !scoreResult) {
+  const stage = stageFor(id, flaggedQids(outcome));
+  if (!isScored(stage) || !scoreResult) {
     return <Navigate to={`/apply/${id}/status`} replace />;
   }
 

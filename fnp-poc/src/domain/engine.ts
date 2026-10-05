@@ -2,7 +2,12 @@ import { QUESTIONS, QUESTION_BY_QID } from "./questions";
 import { bandFor } from "./bands";
 import type { Answer, ApplicationForm, ScoreResult, SectionScoreLine } from "./types";
 
-export function score(form: ApplicationForm): ScoreResult {
+/**
+ * `weights` lets a caller score against a weight set other than the published model — the
+ * reviewer can reconfigure weights, and an assessment is scored against whatever was in force
+ * when it was submitted rather than whatever is current.
+ */
+export function score(form: ApplicationForm, weights?: Record<string, number>): ScoreResult {
   const lines: SectionScoreLine[] = [];
   let totalApplicableWeight = 0;
   let totalWeightedRisk = 0;
@@ -14,7 +19,8 @@ export function score(form: ApplicationForm): ScoreResult {
     if (!def) continue;
 
     const answer: Answer = response.answer;
-    const applicableWeight = answer === "N/A" ? 0 : def.questionWeight;
+    const questionWeight = weights?.[def.qid] ?? def.questionWeight;
+    const applicableWeight = answer === "N/A" ? 0 : questionWeight;
 
     // Risk flag: for Positive-polarity questions, "No" carries risk; for Negative-polarity, "Yes" does.
     let riskFlag: 0 | 1 = 0;
@@ -38,7 +44,7 @@ export function score(form: ApplicationForm): ScoreResult {
       question: def.question,
       answer,
       polarity: def.polarity,
-      questionWeight: def.questionWeight,
+      questionWeight,
       riskFlag,
       applicableWeight,
       weightedRisk,

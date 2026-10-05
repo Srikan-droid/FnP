@@ -2,6 +2,11 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAssessment } from "../state/AssessmentContext";
 import { hasDraft } from "../state/draftStore";
+import { authenticate } from "../domain/authentication";
+import { flaggedQids } from "../domain/reviewState";
+import { stageFor } from "../state/caseStore";
+import { STAGE_LABELS } from "../domain/caseLabels";
+import type { CaseStage } from "../state/caseStore";
 import { assignmentsForEmail, departmentFor, formatDate } from "../data/assignments";
 import type { Assignment } from "../data/assignments";
 import {
@@ -29,9 +34,32 @@ const DEPARTMENT_ICON: Record<string, typeof BankIcon> = {
 
 type ModalStep = "choose" | "confirm";
 
+/**
+ * Where the second choice goes, given where the case actually stands. Only an unsubmitted form
+ * is still editable: once it is with the reviewer, dropping the filer back into data collection
+ * would let them change answers out from under a review that is already under way.
+ */
+function resumeFor(stage: CaseStage | null): { suffix: string; title: string; sub: string } {
+  if (stage === "AWAITING_APPLICANT") {
+    return {
+      suffix: "/authentication",
+      title: "Resubmit evidence",
+      sub: "The reviewer asked for new documents",
+    };
+  }
+  if (stage && stage !== "NOT_SUBMITTED") {
+    return {
+      suffix: "/status",
+      title: "View this submission",
+      sub: "Already submitted — track its progress",
+    };
+  }
+  return { suffix: "", title: "Edit previous draft", sub: "Continue where you left off" };
+}
+
 export default function AssessmentsPage() {
   const navigate = useNavigate();
-  const { email, startNewApplication } = useAssessment();
+  const { email, getForm, startNewApplication } = useAssessment();
   const [selected, setSelected] = useState<Assignment | null>(null);
   const [step, setStep] = useState<ModalStep>("choose");
 
@@ -39,7 +67,20 @@ export default function AssessmentsPage() {
 
   const assignments = assignmentsForEmail(email);
 
+  /** The stage each card shows, read from the shared case state. */
+  const stageOf = (assignment: Assignment) => {
+    if (assignment.isDummy) return null;
+    const outcome = authenticate(
+      assignment.id,
+      assignment.applicantId,
+      getForm(assignment)
+    );
+    return stageFor(assignment.id, flaggedQids(outcome));
+  };
+
   const open = (assignment: Assignment) => {
+    // Decorative cards carry no assessment, so there is nothing to open.
+    if (assignment.isDummy) return;
     setSelected(assignment);
     setStep("choose");
   };
@@ -94,15 +135,28 @@ export default function AssessmentsPage() {
             const department = departmentFor(assignment);
             const Icon = DEPARTMENT_ICON[assignment.departmentKey] ?? BankIcon;
             const started = hasDraft(assignment);
+            const stage = stageOf(assignment);
+            // A live card reports where its assessment actually stands; the decorative ones
+            // only ever show that nothing has been started.
+            const badge =
+              stage && stage !== "NOT_SUBMITTED"
+                ? { label: STAGE_LABELS[stage].applicant, tone: STAGE_LABELS[stage].tone }
+                : {
+                    label: started ? "Draft saved" : "Not started",
+                    tone: started ? "info" : "neutral",
+                  };
             return (
-              <button className="tile" key={assignment.id} onClick={() => open(assignment)}>
+              <button
+                className={`tile${assignment.isDummy ? " is-inert" : ""}`}
+                key={assignment.id}
+                onClick={() => open(assignment)}
+                aria-disabled={assignment.isDummy}
+              >
                 <span className="tile-head">
                   <span className="tile-icon">
                     <Icon size={19} />
                   </span>
-                  <span className={`chip ${started ? "chip-info" : "chip-neutral"}`}>
-                    {started ? "Draft saved" : "Not started"}
-                  </span>
+                  <span className={`chip chip-${badge.tone}`}>{badge.label}</span>
                 </span>
 
                 <span className="tile-dept">{department.name}</span>
@@ -165,22 +219,28 @@ export default function AssessmentsPage() {
                   <ArrowRightIcon size={15} className="choice-arrow" />
                 </button>
 
-                <button
-                  className={`choice${hasDraft(selected) ? "" : " is-disabled"}`}
-                  disabled={!hasDraft(selected)}
-                  onClick={() => navigate(`/apply/${selected.id}`)}
-                >
-                  <span className="choice-icon">
-                    <PencilIcon size={17} />
-                  </span>
-                  <span className="choice-text">
-                    <span className="choice-title">Edit previous draft</span>
-                    <span className="choice-sub">
-                      {hasDraft(selected) ? "Continue where you left off" : "No saved draft yet"}
-                    </span>
-                  </span>
-                  <ArrowRightIcon size={15} className="choice-arrow" />
-                </button>
+                {(() => {
+                  const resume = resumeFor(stageOf(selected));
+                  const available = hasDraft(selected);
+                  return (
+                    <button
+                      className={`choice${available ? "" : " is-disabled"}`}
+                      disabled={!available}
+                      onClick={() => navigate(`/apply/${selected.id}${resume.suffix}`)}
+                    >
+                      <span className="choice-icon">
+                        <PencilIcon size={17} />
+                      </span>
+                      <span className="choice-text">
+                        <span className="choice-title">{resume.title}</span>
+                        <span className="choice-sub">
+                          {available ? resume.sub : "No saved draft yet"}
+                        </span>
+                      </span>
+                      <ArrowRightIcon size={15} className="choice-arrow" />
+                    </button>
+                  );
+                })()}
 
                 <div className="modal-actions">
                   <button className="btn btn-ghost" onClick={close}>

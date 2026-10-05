@@ -8,7 +8,6 @@ import {
   formatHint,
   labelForDocType,
   OTHER_OPTION,
-  supportingOptionsFor,
 } from "../domain/evidenceOptions";
 import { FileTextIcon, UploadIcon, XIcon } from "./icons";
 import type { EvidenceOption } from "../domain/evidenceOptions";
@@ -75,11 +74,13 @@ function Picker({
   qid,
   role,
   options,
+  fileTypes,
   onAttach,
 }: {
   qid: string;
   role: EvidenceRole;
   options: EvidenceOption[];
+  fileTypes?: string[];
   onAttach: (optionCode: string, description?: string) => void;
 }) {
   const isSupporting = role === "supporting";
@@ -141,7 +142,9 @@ function Picker({
           />
         )}
 
-        {selected && <span className="evidence-formats">Accepts {formatHint(selected)}</span>}
+        {selected && (
+          <span className="evidence-formats">Accepts {formatHint(selected, fileTypes)}</span>
+        )}
       </div>
 
       <button type="button" className="btn btn-ghost btn-sm" disabled={!canAttach} onClick={attach}>
@@ -154,15 +157,21 @@ function Picker({
 export default function EvidenceBlock({
   qid,
   evidence,
+  fileTypes,
+  allowSupporting,
   onAttach,
   onRemove,
 }: {
   qid: string;
   evidence: EvidenceRef[];
+  /** Reviewer-configured formats. Omitted where configuration does not apply. */
+  fileTypes?: string[];
+  /** Reviewer-configured second slot. Falls back to the published rule for the question. */
+  allowSupporting?: boolean;
   onAttach: (optionCode: string, role: EvidenceRole, description?: string) => void;
   onRemove: (docType: string) => void;
 }) {
-  const allowsSupporting = acceptsSupportingEvidence(qid);
+  const allowsSupporting = allowSupporting ?? acceptsSupportingEvidence(qid);
   // Drafts seeded before roles existed carry no role, and are the primary document.
   const primary = evidence.filter((e) => e.role !== "supporting");
   const supporting = evidence.filter((e) => e.role === "supporting");
@@ -173,15 +182,17 @@ export default function EvidenceBlock({
         qid={qid}
         role="primary"
         options={evidenceOptionsFor(qid)}
+        fileTypes={fileTypes}
         onAttach={(code, description) => onAttach(code, "primary", description)}
       />
     );
   }
 
-  const remaining = supportingOptionsFor(
-    qid,
-    evidence.map((e) => e.doc_type)
-  );
+  const remaining = allowsSupporting
+    ? evidenceOptionsFor(qid).filter(
+        (o) => o.code === OTHER_OPTION.code || !evidence.some((e) => e.doc_type === o.docType)
+      )
+    : [];
 
   return (
     <div className="evidence-list">
@@ -200,6 +211,7 @@ export default function EvidenceBlock({
           qid={qid}
           role="supporting"
           options={remaining}
+          fileTypes={fileTypes}
           onAttach={(code, description) => onAttach(code, "supporting", description)}
         />
       )}

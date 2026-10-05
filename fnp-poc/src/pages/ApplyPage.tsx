@@ -9,6 +9,8 @@ import { ArrowRightIcon, AlertTriangleIcon, ChevronDownIcon } from "../component
 import { hasMissingMandatoryEvidence } from "../domain/evidenceRules";
 import { CV_QID, fileNameFor, findOption } from "../domain/evidenceOptions";
 import { displaySection } from "../domain/sectionLabels";
+import { readConfig } from "../state/questionConfigStore";
+import { stageFor } from "../state/caseStore";
 import type { Answer, EvidenceRole } from "../domain/types";
 
 export default function ApplyPage() {
@@ -22,6 +24,11 @@ export default function ApplyPage() {
   const assignment = getAssignment(id);
 
   if (!assignment) return <AssessmentNotFound />;
+
+  // Reviewer configuration reaches a filer only before they submit; afterwards the assessment
+  // keeps the rules it was authenticated and scored against.
+  const configApplies = stageFor(assignment.id, []) === "NOT_SUBMITTED";
+  const config = configApplies ? readConfig() : null;
 
   const form = getForm(assignment);
   const sections = Array.from(new Set(form.responses.map((r) => r.section)));
@@ -59,7 +66,7 @@ export default function ApplyPage() {
     if (!option) return;
     attachEvidence(assignment, qid, {
       doc_type: option.docType,
-      path: `evidence/${assignment.applicantId}/${fileNameFor(option)}`,
+      path: `evidence/${assignment.applicantId}/${fileNameFor(option, config?.[qid]?.fileTypes)}`,
       role,
       option_code: option.code,
       description,
@@ -131,6 +138,7 @@ export default function ApplyPage() {
                   <QuestionCard
                     key={r.qid}
                     response={r}
+                    config={config?.[r.qid]}
                     onAnswerChange={(qid: string, answer: Answer) =>
                       updateAnswer(assignment, qid, answer)
                     }

@@ -1,14 +1,25 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { getDraft, saveDraft, resetDraft } from "./draftStore";
+import { clearCase } from "./caseStore";
 import { isEvidenceRequired } from "../domain/evidenceRules";
 import type { Assignment } from "../data/assignments";
 import type { Answer, ApplicationForm, EvidenceRef } from "../domain/types";
 
 const SESSION_KEY = "fnp-session-email";
 
+export type Role = "applicant" | "reviewer";
+
+/** The one reviewer account in the POC. Signing in as this name opens the reviewer portal. */
+export const REVIEWER_USERNAME = "admin";
+
+export function roleFor(email: string | null): Role {
+  return email?.trim().toLowerCase() === REVIEWER_USERNAME ? "reviewer" : "applicant";
+}
+
 interface AssessmentContextValue {
   email: string | null;
+  role: Role;
   signIn: (email: string) => void;
   signOut: () => void;
   getForm: (assignment: Assignment) => ApplicationForm;
@@ -159,6 +170,9 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
 
   const startNewApplication = useCallback(
     (assignment: Assignment) => {
+      // Starting over also clears the case: the old submission, its rulings and any decision
+      // belong to the form that has just been discarded.
+      clearCase(assignment.id);
       const fresh = resetDraft(assignment);
       formsRef.current = { ...formsRef.current, [assignment.id]: fresh };
       setForms(formsRef.current);
@@ -169,6 +183,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       email,
+      role: roleFor(email),
       signIn,
       signOut,
       getForm,

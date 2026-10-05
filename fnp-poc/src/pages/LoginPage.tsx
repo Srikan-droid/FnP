@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAssessment } from "../state/AssessmentContext";
+import { REVIEWER_USERNAME, useAssessment } from "../state/AssessmentContext";
 import { ArrowRightIcon, ShieldCheckIcon } from "../components/icons";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -14,13 +14,14 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const value = emailInput.trim();
-    if (!EMAIL_PATTERN.test(value)) {
-      setError("Enter a valid email address.");
+    const isReviewer = value.toLowerCase() === REVIEWER_USERNAME;
+    if (!isReviewer && !EMAIL_PATTERN.test(value)) {
+      setError("Enter a valid email address, or Admin for the reviewer portal.");
       return;
     }
     setError("");
     signIn(value);
-    navigate("/assessments");
+    navigate(isReviewer ? "/reviewer" : "/assessments");
   };
 
   return (
@@ -37,16 +38,16 @@ export default function LoginPage() {
         <form className="hero-form" onSubmit={handleSubmit}>
           <div className="field">
             <label className="field-label" htmlFor="email-input">
-              Email address
+              Email address or username
             </label>
             <input
               id="email-input"
               className="input"
-              type="email"
+              type="text"
               placeholder="you@example.na"
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
-              autoComplete="email"
+              autoComplete="username"
               autoFocus
             />
             {error && <p className="field-error">{error}</p>}
@@ -57,6 +58,7 @@ export default function LoginPage() {
           </button>
           <p className="hero-hint">
             Assessments appear here once a department initiates one against your application.
+            Reviewers sign in as <code>Admin</code>.
           </p>
         </form>
       </section>

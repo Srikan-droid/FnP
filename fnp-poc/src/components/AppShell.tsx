@@ -25,7 +25,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { email, signOut } = useAssessment();
 
-  const isPortal = pathname.startsWith("/assessments");
+  const isReviewer = pathname.startsWith("/reviewer");
+  const isPortal = pathname.startsWith("/assessments") || isReviewer;
   const { assignmentId, stepIndex } = readRoute(pathname);
   const assignment = assignmentId ? getAssignment(assignmentId) : undefined;
 
@@ -40,14 +41,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <>
       <header className="topbar">
         <div className="topbar-inner">
-          <Link className="brand" to="/assessments">
+          <Link className="brand" to={isReviewer ? "/reviewer" : "/assessments"}>
             <span className="brand-mark">
               <ShieldCheckIcon size={18} />
             </span>
             <span className="brand-text">
               <span className="brand-title">Fit and Proper Assessment</span>
               <span className="brand-sub">
-                {assignment ? departmentFor(assignment).name : "Applicant portal"}
+                {isReviewer
+                  ? "Reviewer portal · Banking Licence"
+                  : assignment
+                    ? departmentFor(assignment).name
+                    : "Applicant portal"}
               </span>
             </span>
           </Link>
@@ -64,7 +69,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
 
-        {stepIndex !== null && (
+        {stepIndex !== null && !isReviewer && (
           <nav className="stepper" aria-label="Application progress">
             <ol>
               {STEPS.map((label, i) => {

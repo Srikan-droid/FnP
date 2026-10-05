@@ -167,8 +167,18 @@ export const QUESTION_BY_QID: Record<string, QuestionDef> = Object.fromEntries(
 // appointment genuinely has no executive responsibility to declare either way.
 const NA_ELIGIBLE_QIDS = new Set(["T2"]);
 
-export function answerOptionsFor(qid: string, currentAnswer?: Answer): Answer[] {
-  const options: Answer[] = ["Yes", "No"];
-  if (NA_ELIGIBLE_QIDS.has(qid) || currentAnswer === "N/A") options.push("N/A");
+/**
+ * `allowed` is the reviewer's configured answer set for this question. An answer already saved
+ * on the draft is always kept, so a configuration change can never leave a form showing an
+ * answer the filer cannot re-select.
+ */
+export function answerOptionsFor(
+  qid: string,
+  currentAnswer?: Answer,
+  allowed?: Answer[]
+): Answer[] {
+  const base: Answer[] = allowed ?? ["Yes", "No", ...(NA_ELIGIBLE_QIDS.has(qid) ? ["N/A" as Answer] : [])];
+  const options = base.filter((a) => a === "Yes" || a === "No" || a === "N/A");
+  if (currentAnswer && !options.includes(currentAnswer)) options.push(currentAnswer);
   return options;
 }

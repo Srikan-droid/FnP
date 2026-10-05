@@ -93,6 +93,27 @@ export function UploadIcon({ size = 16, className }: IconProps) {
   );
 }
 
+export function SlidersIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M4.75 7.25h6" />
+      <path d="M14.75 7.25h4.5" />
+      <path d="M4.75 16.75h4.5" />
+      <path d="M13.25 16.75h6" />
+      <circle cx="12.5" cy="7.25" r="2" />
+      <circle cx="11" cy="16.75" r="2" />
+    </svg>
+  );
+}
+
+export function MessageIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M19.25 12.5a6.75 6.75 0 0 1-9.9 5.97L5 19.25l.86-3.9A6.75 6.75 0 1 1 19.25 12.5Z" />
+    </svg>
+  );
+}
+
 export function DownloadIcon({ size = 16, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>

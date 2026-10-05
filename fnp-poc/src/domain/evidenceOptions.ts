@@ -256,27 +256,27 @@ export function acceptsSupportingEvidence(qid: string): boolean {
   return SUPPORTING_EVIDENCE_QIDS.has(qid);
 }
 
-/**
- * Options offered for the supporting slot: the question's own list minus whatever is already
- * attached, so the same document cannot be filed twice against one question.
- */
-export function supportingOptionsFor(qid: string, usedDocTypes: string[]): EvidenceOption[] {
-  if (!acceptsSupportingEvidence(qid)) return [];
-  const used = new Set(usedDocTypes);
-  return evidenceOptionsFor(qid).filter(
-    (o) => o.code === OTHER_OPTION.code || !used.has(o.docType)
-  );
-}
-
 const DEFAULT_ACCEPTS = ["pdf"];
 
-export function acceptedFormats(option: EvidenceOption): string[] {
+/**
+ * `allowed` is the reviewer's configured list for the question, and it is authoritative: the
+ * reviewer can widen a question to accept a photograph as well as a scan, or narrow it. The
+ * document type's own list is only the default when nothing is configured.
+ */
+export function acceptedFormats(option: EvidenceOption, allowed?: string[]): string[] {
+  if (allowed && allowed.length > 0) return allowed;
   return option.accepts ?? DEFAULT_ACCEPTS;
 }
 
-/** File name the simulated upload produces — the format the test pack actually ships. */
-export function fileNameFor(option: EvidenceOption): string {
-  return `${option.docType}.${acceptedFormats(option)[0]}`;
+/**
+ * Which format the simulated upload produces. The document type's own preference wins while it
+ * is still permitted — a credit bureau report is issued as a workbook, so it stays an xlsx even
+ * on a question that also takes pdf — otherwise the first permitted format is used.
+ */
+export function fileNameFor(option: EvidenceOption, allowed?: string[]): string {
+  const permitted = acceptedFormats(option, allowed);
+  const preferred = (option.accepts ?? DEFAULT_ACCEPTS).find((f) => permitted.includes(f));
+  return `${option.docType}.${preferred ?? permitted[0]}`;
 }
 
 const ALL_OPTIONS = Object.values(OPTIONS_BY_QID).flat();
@@ -294,8 +294,8 @@ export function evidenceFileName(ref: { doc_type: string; path?: string }): stri
 }
 
 /** "PDF", or "XLSX, CSV or PDF" — shown next to the picker so the filer knows what is allowed. */
-export function formatHint(option: EvidenceOption): string {
-  const formats = acceptedFormats(option).map((f) => f.toUpperCase());
+export function formatHint(option: EvidenceOption, allowed?: string[]): string {
+  const formats = acceptedFormats(option, allowed).map((f) => f.toUpperCase());
   if (formats.length === 1) return formats[0];
   return `${formats.slice(0, -1).join(", ")} or ${formats[formats.length - 1]}`;
 }
