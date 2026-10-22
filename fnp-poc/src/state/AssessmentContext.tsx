@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import type { ReactNode } from "react";
 import { getDraft, saveDraft, resetDraft } from "./draftStore";
 import { clearCase } from "./caseStore";
+import { clearUploads } from "./uploadStore";
 import { isEvidenceRequired } from "../domain/evidenceRules";
 import type { Assignment } from "../data/assignments";
 import type { Answer, ApplicationForm, EvidenceRef } from "../domain/types";
@@ -110,7 +111,14 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
           r.qid === qid
             ? {
                 ...r,
-                evidence: [...r.evidence.filter((e) => e.doc_type !== evidence.doc_type), evidence],
+                // A question holds at most one document per role, so attaching replaces the
+                // one already in that slot — whatever document type it happened to be.
+                evidence: [
+                  ...r.evidence.filter(
+                    (e) => (e.role ?? "primary") !== (evidence.role ?? "primary")
+                  ),
+                  evidence,
+                ],
               }
             : r
         ),
@@ -173,6 +181,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       // Starting over also clears the case: the old submission, its rulings and any decision
       // belong to the form that has just been discarded.
       clearCase(assignment.id);
+      void clearUploads(assignment.id);
       const fresh = resetDraft(assignment);
       formsRef.current = { ...formsRef.current, [assignment.id]: fresh };
       setForms(formsRef.current);

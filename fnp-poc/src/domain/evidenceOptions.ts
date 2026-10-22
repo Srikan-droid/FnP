@@ -286,7 +286,12 @@ const ALL_OPTIONS = Object.values(OPTIONS_BY_QID).flat();
  * it because it is fully derivable: every document is stored as its own doc_type, and the
  * format is a property of the document type, not of the submission.
  */
-export function evidenceFileName(ref: { doc_type: string; path?: string }): string {
+export function evidenceFileName(ref: {
+  doc_type: string;
+  path?: string;
+  file_name?: string;
+}): string {
+  if (ref.file_name) return ref.file_name;
   if (ref.path) return ref.path.split("/").pop() ?? ref.path;
   const option = ALL_OPTIONS.find((o) => o.docType === ref.doc_type);
   const format = option ? acceptedFormats(option)[0] : DEFAULT_ACCEPTS[0];
@@ -304,6 +309,17 @@ export function formatHint(option: EvidenceOption, allowed?: string[]): string {
 export function defaultOptionCodeFor(qid: string): string {
   const options = evidenceOptionsFor(qid);
   return options.length === 2 ? options[0].code : "";
+}
+
+/**
+ * Which dropdown option a dropped file should be filed under. The test pack names each document
+ * after its own type, so `police_clearance.pdf` lands on "Police clearance certificate" without
+ * the filer having to pick; anything unrecognised falls back to the question's primary option.
+ */
+export function optionForUpload(qid: string, fileName: string): EvidenceOption | undefined {
+  const options = evidenceOptionsFor(qid);
+  const stem = fileName.replace(/\.[^.]+$/, "").toLowerCase();
+  return options.find((o) => o.docType === stem) ?? options[0];
 }
 
 export function findOption(qid: string, code: string): EvidenceOption | undefined {

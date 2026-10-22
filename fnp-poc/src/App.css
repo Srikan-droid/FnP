@@ -3481,3 +3481,429 @@ button.sbar-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ---- Evidence bundle: a docked pane beside the form ---- */
+
+/* The form widens on this page to make room for the rail; the page itself stays centred. */
+.page-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.page-main {
+  min-width: 0;
+}
+
+.page-rail {
+  position: sticky;
+  /* Clears the sticky top bar and its stepper. */
+  top: 5.5rem;
+  min-width: 0;
+}
+
+.tray {
+  display: flex;
+  flex-direction: column;
+  /* Leaves room for the sticky top bar above and the sticky action bar below. */
+  max-height: calc(100vh - 11rem);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: visible;
+}
+
+.tray-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.tray-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  border-radius: var(--r-sm);
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.tray-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.tray-title {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.tray-sub {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+.tray-collapse {
+  display: inline-flex;
+  flex: none;
+  padding: 0.2rem;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: transform 0.18s ease;
+}
+
+.tray-collapse[aria-expanded="true"] {
+  transform: rotate(180deg);
+}
+
+.tray-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.75rem 0.8rem 0.85rem;
+  overflow-y: auto;
+}
+
+.tray-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+  padding: 1rem 0.7rem;
+  border: 1px dashed var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* Once files are listed the drop target gives up most of its height to them. */
+.tray-drop.is-compact {
+  padding: 0.5rem;
+}
+
+.tray-drop.is-over {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+}
+
+.tray-drop p {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.tray-drop-hint {
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+.linkish {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.linkish:disabled {
+  color: var(--ink-3);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.tray-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.3rem;
+  flex: none;
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+.tray-note.is-good {
+  color: var(--good-ink);
+}
+
+.tray-note.is-error {
+  color: var(--critical);
+}
+
+.tray-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tray-file {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: grab;
+}
+
+.tray-file:active {
+  cursor: grabbing;
+}
+
+.tray-file.is-unusable {
+  opacity: 0.6;
+  cursor: default;
+  background: var(--surface-sunken);
+}
+
+.tray-file-top {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tray-file-icon {
+  flex: none;
+  color: var(--ink-3);
+}
+
+.tray-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.tray-file-sub {
+  display: block;
+  font-size: 0.625rem;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+.tray-file-used {
+  color: var(--good-ink);
+  font-weight: 600;
+}
+
+.tray-file-blocked {
+  color: var(--warning-ink);
+}
+
+.tray-file-drag {
+  color: var(--ink-3);
+}
+
+.tray-file-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.15rem;
+  font-size: 0.6875rem;
+}
+
+.tray-clear {
+  align-self: flex-start;
+  flex: none;
+  margin-top: 0.6rem;
+  font-size: 0.6875rem;
+}
+
+@media (max-width: 1080px) {
+  /* Not enough width for a rail: the pane goes back above the questions. */
+  .page-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page-rail {
+    position: static;
+    order: -1;
+  }
+
+  .tray {
+    max-height: none;
+  }
+}
+
+/* ---- Choosing a document type by dropping on it ---- */
+
+.droptype {
+  margin-top: 0.85rem;
+  padding: 0.7rem 0.75rem 0.6rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+  background: var(--accent-wash);
+}
+
+.droptype-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--accent-ink);
+}
+
+.droptype-head strong {
+  overflow-wrap: anywhere;
+}
+
+.droptype-role {
+  padding: 0.05rem 0.35rem;
+  border-radius: var(--r-xs);
+  background: var(--surface);
+  color: var(--ink-3);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.droptype-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.droptype-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px dashed var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+  /* The row itself must receive the drag events, not its text. */
+  pointer-events: auto;
+}
+
+.droptype-option > * {
+  pointer-events: none;
+}
+
+.droptype-option.is-suggested {
+  border-color: var(--accent);
+}
+
+.droptype-option.is-over {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  transform: translateX(2px);
+}
+
+.droptype-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.droptype-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.droptype-suggested {
+  padding: 0.05rem 0.35rem;
+  border-radius: var(--r-xs);
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.droptype-option.is-over .droptype-suggested {
+  background: rgb(255 255 255 / 0.22);
+  color: #fff;
+}
+
+.droptype-formats {
+  font-size: 0.625rem;
+  color: var(--ink-3);
+}
+
+.droptype-option.is-over .droptype-formats {
+  color: rgb(255 255 255 / 0.8);
+}
+
+.droptype-hint {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.625rem;
+  color: var(--accent-ink);
+  opacity: 0.75;
+}
+
+/* ---- Question drop target ---- */
+
+.evidence-dropzone {
+  position: relative;
+  border-radius: var(--r-md);
+  transition: box-shadow 0.14s ease;
+}
+
+.dropzone-hint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+.evidence-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.evidence-link:hover {
+  text-decoration: underline;
+}

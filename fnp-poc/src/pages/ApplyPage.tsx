@@ -4,12 +4,21 @@ import { useAssessment } from "../state/AssessmentContext";
 import { getAssignment, departmentFor } from "../data/assignments";
 import QuestionCard from "../components/QuestionCard";
 import EvidenceBlock from "../components/EvidenceBlock";
+import EvidenceTray from "../components/EvidenceTray";
+import { useUploads } from "../state/useUploads";
+import type { AssignTarget } from "../components/EvidenceTray";
+import type { UploadedFileMeta } from "../state/uploadStore";
 import AssessmentNotFound from "../components/AssessmentNotFound";
 import { ArrowRightIcon, AlertTriangleIcon, ChevronDownIcon } from "../components/icons";
 import { hasMissingMandatoryEvidence } from "../domain/evidenceRules";
-import { CV_QID, fileNameFor, findOption } from "../domain/evidenceOptions";
+import {
+  CV_QID,
+  fileNameFor,
+  findOption,
+  OTHER_OPTION,
+} from "../domain/evidenceOptions";
 import { displaySection } from "../domain/sectionLabels";
-import { readConfig } from "../state/questionConfigStore";
+import { defaultConfig, readConfig } from "../state/questionConfigStore";
 import { stageFor } from "../state/caseStore";
 import type { Answer, EvidenceRole } from "../domain/types";
 
@@ -22,6 +31,11 @@ export default function ApplyPage() {
   // default of opening the first section and leaving the others collapsed.
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const assignment = getAssignment(id);
+  // Called unconditionally, before the guard below, so the hook order never changes.
+  const uploads = useUploads(id);
+  // The file currently being dragged out of the evidence bundle, shared with every question so
+  // each can show its document types as drop targets.
+  const [draggingFile, setDraggingFile] = useState<UploadedFileMeta | null>(null);
 
   if (!assignment) return <AssessmentNotFound />;
 
@@ -29,6 +43,10 @@ export default function ApplyPage() {
   // keeps the rules it was authenticated and scored against.
   const configApplies = stageFor(assignment.id, []) === "NOT_SUBMITTED";
   const config = configApplies ? readConfig() : null;
+  // What each question actually accepts. A submitted assessment keeps the published rules
+  // rather than the reviewer's current ones, but it still has real rules — falling back to a
+  // single format here would wrongly report usable documents as unusable.
+  const effectiveRules = config ?? defaultConfig();
 
   const form = getForm(assignment);
   const sections = Array.from(new Set(form.responses.map((r) => r.section)));
@@ -40,6 +58,62 @@ export default function ApplyPage() {
   const cvMissing = Boolean(cv?.mandatory) && (cv?.evidence.length ?? 0) === 0;
   const requiredTotal = required.length + (cv?.mandatory ? 1 : 0);
   const missingTotal = missing.length + (cvMissing ? 1 : 0);
+
+  // Questions a tray file can be dropped on, with the formats each one accepts.
+  const assignTargets: AssignTarget[] = form.responses
+    .filter((r) => r.evidence_required)
+    .map((r) => ({
+      qid: r.qid,
+      section: r.section,
+      question: r.question,
+      fileTypes: effectiveRules[r.qid]?.fileTypes ?? ["pdf"],
+      attached: r.evidence.length > 0,
+    }));
+  if (form.cv_verification) {
+    assignTargets.push({
+      qid: CV_QID,
+      section: "Curriculum vitae",
+      question: "Curriculum vitae",
+      fileTypes: ["pdf"],
+      attached: form.cv_verification.evidence.length > 0,
+    });
+  }
+
+  /** How many questions each uploaded file is attached to, for the tray listing. */
+  const assignedCounts: Record<string, number> = {};
+  const countAttachment = (uploadId?: string) => {
+    if (!uploadId) return;
+    assignedCounts[uploadId] = (assignedCounts[uploadId] ?? 0) + 1;
+  };
+  form.responses.forEach((r) => r.evidence.forEach((e) => countAttachment(e.upload_id)));
+  form.cv_verification?.evidence.forEach((e) => countAttachment(e.upload_id));
+
+  /**
+   * A dropped file carries real bytes, so it is linked rather than simulated. The document
+   * type comes from the row the filer released it on, not from the file name.
+   */
+  const attachUpload = (
+    qid: string,
+    uploadId: string,
+    role: EvidenceRole,
+    optionCode: string
+  ) => {
+    const file = uploads.byId(uploadId);
+    const option = findOption(qid, optionCode);
+    if (!file || !option) return;
+    const ref = {
+      doc_type: option.docType,
+      role,
+      option_code: option.code,
+      upload_id: uploadId,
+      file_name: file.name,
+      // "Other" needs a description; the file name is the only thing a drop can supply.
+      description: option.code === OTHER_OPTION.code ? file.name : undefined,
+    };
+    if (qid === CV_QID) attachCvEvidence(assignment, ref);
+    else attachEvidence(assignment, qid, ref);
+    setDraggingFile(null);
+  };
 
   const toggleSection = (section: string, isOpen: boolean) =>
     setOpenSections((prev) => ({ ...prev, [section]: !isOpen }));
@@ -101,6 +175,8 @@ export default function ApplyPage() {
         </dl>
       </header>
 
+      <div className="page-split">
+        <div className="page-main">
       {sections.map((section, index) => {
         const items = form.responses.filter((r) => r.section === section);
         const missingHere = items.filter(hasMissingMandatoryEvidence).length;
@@ -139,6 +215,9 @@ export default function ApplyPage() {
                     key={r.qid}
                     response={r}
                     config={config?.[r.qid]}
+                    uploadUrlFor={uploads.urlFor}
+                    draggingFile={draggingFile}
+                    onDropUpload={attachUpload}
                     onAnswerChange={(qid: string, answer: Answer) =>
                       updateAnswer(assignment, qid, answer)
                     }
@@ -187,6 +266,11 @@ export default function ApplyPage() {
               <EvidenceBlock
                 qid={CV_QID}
                 evidence={cv.evidence}
+                uploadUrlFor={uploads.urlFor}
+                draggingFile={draggingFile}
+                onDropUpload={(uploadId, role, optionCode) =>
+                  attachUpload(CV_QID, uploadId, role, optionCode)
+                }
                 onAttach={handleAttachCv}
                 onRemove={() => removeCvEvidence(assignment)}
               />
@@ -207,6 +291,18 @@ export default function ApplyPage() {
           </div>
         </div>
       )}
+
+        </div>
+
+        <div className="page-rail">
+          <EvidenceTray
+            uploads={uploads}
+            targets={assignTargets}
+            assignedCounts={assignedCounts}
+            onDragStateChange={setDraggingFile}
+          />
+        </div>
+      </div>
 
       <footer className="actionbar">
         <span className="actionbar-note">

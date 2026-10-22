@@ -16,6 +16,10 @@ export interface EvidenceRef {
   option_code?: string;
   /** What the filer typed when they picked "Other — please specify". */
   description?: string;
+  /** Set when a real uploaded file backs this attachment, keyed into the upload store. */
+  upload_id?: string;
+  /** The uploaded file's own name, which is what the filer recognises. */
+  file_name?: string;
 }
 
 export interface ResponseItem {

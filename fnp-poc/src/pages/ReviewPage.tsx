@@ -13,6 +13,7 @@ import {
 import { evidenceUrl, hasEvidenceFile } from "../data/fixtures";
 import { hasMissingMandatoryEvidence } from "../domain/evidenceRules";
 import { evidenceFileName } from "../domain/evidenceOptions";
+import { useUploads } from "../state/useUploads";
 import { recordSubmission } from "../state/caseStore";
 import { readConfig } from "../state/questionConfigStore";
 import { displaySection } from "../domain/sectionLabels";
@@ -22,6 +23,9 @@ export default function ReviewPage() {
   const navigate = useNavigate();
   const { getForm } = useAssessment();
   const assignment = getAssignment(id);
+  // Uploaded documents are real files, so the review page links the actual bytes rather than a
+  // path into the shipped test pack. Called before the guard, so the hook order is stable.
+  const uploads = useUploads(id);
 
   if (!assignment) return <AssessmentNotFound />;
 
@@ -106,11 +110,14 @@ export default function ReviewPage() {
                           <span className="review-evidence-cell">
                             {r.evidence.map((file) => {
                               const fileName = evidenceFileName(file);
+                              const uploadedUrl = file.upload_id
+                                ? uploads.urlFor(file.upload_id)
+                                : null;
                               const label =
                                 file.role === "supporting" ? "Supporting" : "Attached";
                               // The test pack ships a document only for each question's primary
                               // option, so anything else has nothing to open.
-                              if (!hasEvidenceFile(assignment.applicantId, file.doc_type)) {
+                              if (!uploadedUrl && !hasEvidenceFile(assignment.applicantId, file.doc_type)) {
                                 return (
                                   <span
                                     className="review-evidence-none"
@@ -126,7 +133,7 @@ export default function ReviewPage() {
                                 <a
                                   className="review-evidence-link"
                                   key={file.doc_type}
-                                  href={evidenceUrl(assignment.applicantId, fileName)}
+                                  href={uploadedUrl ?? evidenceUrl(assignment.applicantId, fileName)}
                                   target="_blank"
                                   rel="noreferrer"
                                   title={fileName}
@@ -164,7 +171,18 @@ export default function ReviewPage() {
             <span className="qid">CV</span>
             <span className="review-cv-text">Curriculum vitae</span>
             {cvFile ? (
-              hasEvidenceFile(assignment.applicantId, cvFile.doc_type) ? (
+              cvFile.upload_id && uploads.urlFor(cvFile.upload_id) ? (
+                <a
+                  className="review-evidence-link"
+                  href={uploads.urlFor(cvFile.upload_id) ?? undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <FileTextIcon size={13} />
+                  Attached
+                  <ExternalLinkIcon size={11} />
+                </a>
+              ) : hasEvidenceFile(assignment.applicantId, cvFile.doc_type) ? (
                 <a
                   className="review-evidence-link"
                   href={evidenceUrl(assignment.applicantId, evidenceFileName(cvFile))}
