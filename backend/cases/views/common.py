@@ -9,6 +9,23 @@ class Conflict(APIException):
     default_detail = "This change is not possible in the assessment's current state."
 
 
+# The codes a 409 can carry, for the frontend to act on (rather than on the wording).
+HELD_BY_OTHER = "held_by_other"  # another admin is reviewing the case
+LOCK_HELD = "lock_held"  # someone else (or another tab) is editing the department's questions
+
+
+def coded_conflict(code: str, message: str) -> Conflict:
+    """A 409 with a machine-readable code beside the message: {"detail": ..., "code": ...}."""
+    return Conflict({"detail": message, "code": code})
+
+
+def holder_payload(assessment: Assessment) -> dict | None:
+    """Who is reviewing the case (for the reviewer side only), and since when."""
+    if assessment.reviewer_id is None:
+        return None
+    return {"email": assessment.reviewer.email, "since": assessment.claimed_at}
+
+
 class ServiceUnavailable(APIException):
     status_code = 503
     default_detail = "The authentication service is temporarily unavailable. Try again shortly."

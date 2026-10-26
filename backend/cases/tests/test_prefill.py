@@ -68,3 +68,14 @@ def test_a_prefill_never_shows_another_applicants_details(as_user):
     # Looked up by the signed-in email only: a query parameter naming someone else changes nothing.
     client = as_user(make.user("someone.else@example.na"))
     assert client.get("/api/assessments/prefill", email="j.amutenya@example.na").json() == {"prefill": None}
+
+
+def test_a_department_not_taking_applications_is_left_to_choose(as_user):
+    """Switched off, or without questions yet: the form would refuse it, so it is not filled in."""
+    from cases.models import Department
+
+    johanna = as_user(make.user("j.amutenya@example.na"))
+    Department.objects.filter(key="banking").update(is_active=False)
+    assert johanna.get("/api/assessments/prefill").json()["prefill"]["department"] == ""
+    Department.objects.filter(key="banking").update(is_active=True)
+    assert johanna.get("/api/assessments/prefill").json()["prefill"]["department"] == "banking"

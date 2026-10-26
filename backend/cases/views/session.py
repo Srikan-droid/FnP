@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from .. import audit
 from ..models import Role, User
+from ..permissions import managed_departments
 
 # DEVELOPMENT SIGN-IN. Mirrors the demo's rule: any email signs in as that applicant, and the
 # username "admin" signs in as the reviewer, with no password. It answers only where
@@ -29,8 +30,18 @@ class SignInSerializer(serializers.Serializer):
         return value
 
 
+# What each role is called in the app.
+ACCESS = {Role.APPLICANT: "user", Role.REVIEWER: "admin", Role.SUPERUSER: "superuser"}
+
+
 def _user_payload(user: User) -> dict:
-    return {"email": user.email, "role": user.role}
+    """Who is signed in. `role` is the side of the app they use (applicant or reviewer, as before);
+    `access` says which kind of reviewer: an admin of `departments`, or the super user (every
+    department, accounts and departments too)."""
+    payload = {"email": user.email, "role": "reviewer" if user.is_reviewer else "applicant", "access": ACCESS[user.role]}
+    if user.is_reviewer:
+        payload["departments"] = [{"key": d.key, "name": d.name} for d in managed_departments(user)]
+    return payload
 
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
@@ -60,12 +71,12 @@ class SessionView(APIView):
         data.is_valid(raise_exception=True)
         email = data.validated_data["email"]
         # A new email becomes an applicant. An existing account signs in with the role it has, which
-        # an administrator may have changed at /admin/ (applicant to reviewer or back); "admin" is
-        # always the reviewer.
-        role = Role.REVIEWER if email == REVIEWER_USERNAME else Role.APPLICANT
+        # the super user may have changed (to an admin of some departments, say); "admin" is always
+        # the super user.
+        role = Role.SUPERUSER if email == REVIEWER_USERNAME else Role.APPLICANT
         user = User.objects.get_or_create_for_email(email, role)
         refused = not user.is_active or (
-            user.role != Role.REVIEWER if email == REVIEWER_USERNAME
+            user.role != Role.SUPERUSER if email == REVIEWER_USERNAME
             # Staff accounts sign in to the admin site with their password, never here without one.
             else user.is_staff
         )

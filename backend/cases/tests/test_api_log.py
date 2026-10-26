@@ -42,3 +42,12 @@ def test_secrets_are_masked_and_the_log_is_off_by_default(applicant, opened, log
     logged.clear()
     applicant.get(f"/api/assessments/{opened}/form")
     assert not [r for r in logged.records if r.name == "cases.api"]
+
+
+def test_the_editing_lock_token_is_masked_in_the_body_and_the_address(reviewer, logged):
+    reviewer.delete("/api/questionnaire/lock?department=banking&token=tab-secret-123")
+    entry = next(r.getMessage() for r in logged.records if "/api/questionnaire/lock" in r.getMessage())
+    assert "tab-secret-123" not in entry and "token=***" in entry and "department=banking" in entry
+    from cases.middleware import _shown
+
+    assert '"lockToken": "***"' in _shown({"department": "banking", "lockToken": "tab-secret-123"})

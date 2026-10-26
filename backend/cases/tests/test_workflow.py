@@ -325,7 +325,8 @@ def test_an_answer_withdrawn_after_it_was_saved_must_be_changed_before_submittin
     fake = FakeEngine(monkeypatch)
     assert applicant.patch(f"/api/assessments/{case}/form", {"answers": {"T2": "N/A"}}).status_code == 200
     t2 = {"allowedAnswers": ["Yes", "No"], "fileTypes": ["pdf"], "maxFiles": 1}
-    assert reviewer.put("/api/questionnaire", {"version": "v1", "questions": {"T2": t2}}).json()["version"] == "v2"
+    was = make.label()
+    assert reviewer.put("/api/questionnaire", {"department": "banking", "version": was, "questions": {"T2": t2}}).json()["version"] == make.label() != was
     response = applicant.post(f"/api/assessments/{case}/submit")
     assert response.status_code == 409 and "T2" in response.json()["detail"]
     assert stage(case) == Stage.NOT_SUBMITTED and fake.sent == [] and not Submission.objects.exists()
@@ -427,7 +428,8 @@ def test_a_rejected_document_follows_the_settings_the_case_was_submitted_under(r
     send(reviewer, case, {"verdict": "rejected", "comment": "Need the court order."})
     # Settings change after submission: PC1 would now take images only.
     pc1 = {"allowedAnswers": ["Yes", "No"], "fileTypes": ["png"], "maxFiles": 1}
-    assert reviewer.put("/api/questionnaire", {"version": "v1", "questions": {"PC1": pc1}}).json()["version"] == "v2"
+    was = make.label()
+    assert reviewer.put("/api/questionnaire", {"department": "banking", "version": was, "questions": {"PC1": pc1}}).json()["version"] == make.label() != was
 
     form = applicant.get(f"/api/assessments/{case}/form").json()
     assert next(a for a in form["answers"] if a["qid"] == "PC1")["fileTypes"] == ["pdf"]
@@ -668,7 +670,8 @@ def test_a_question_never_answered_is_checked_as_the_no_it_is_sent_as(monkeypatc
     fake = FakeEngine(monkeypatch)
     # PC19 was never answered, so it would go as No, which the settings no longer offer.
     pc19 = {"allowedAnswers": ["Yes"], "fileTypes": ["pdf"], "maxFiles": 1}
-    assert reviewer.put("/api/questionnaire", {"version": "v1", "questions": {"PC19": pc19}}).json()["version"] == "v2"
+    was = make.label()
+    assert reviewer.put("/api/questionnaire", {"department": "banking", "version": was, "questions": {"PC19": pc19}}).json()["version"] == make.label() != was
     response = applicant.post(f"/api/assessments/{case}/submit")
     assert response.status_code == 409 and "PC19" in response.json()["detail"] and fake.sent == []
 
@@ -676,7 +679,7 @@ def test_a_question_never_answered_is_checked_as_the_no_it_is_sent_as(monkeypatc
 def test_a_request_id_the_engine_already_gave_another_run_fails_the_send(monkeypatch, reviewer, applicant, case):
     fake = FakeEngine(monkeypatch)
     Submission.objects.create(
-        assessment=make.assessment(), attempt_no=1, version=catalogue.active_version(), payload={},
+        assessment=make.assessment(), attempt_no=1, version=make.version_in_force(), payload={},
         engine_request_id="req1",
     )
     response = applicant.post(f"/api/assessments/{case}/submit")  # the fake answers "req1" again
@@ -716,7 +719,8 @@ def test_every_step_is_audited(reviewer, case, flagged):
     send(reviewer, case, {"verdict": "rejected", "comment": "Need more."})
     actions = list(AuditEvent.objects.filter(assessment_ref=case).order_by("id").values_list("action", flat=True))
     assert actions[0] == "assessment.create"
-    assert actions[-4:] == ["case.submit", "case.review_pending", "case.rule", "case.returned_to_applicant"]
+    # The first ruling takes the case for the reviewer (case.claim) before it is recorded.
+    assert actions[-5:] == ["case.submit", "case.review_pending", "case.claim", "case.rule", "case.returned_to_applicant"]
 
 
 # ---- What a submission may carry ---------------------------------------------------------------
@@ -861,7 +865,8 @@ def test_documents_attached_under_older_settings_must_be_replaced_before_submitt
     fake = FakeEngine(monkeypatch)
     # Published after the draft's PDF was attached: PC1 now takes images only.
     pc1 = {"allowedAnswers": ["Yes", "No"], "fileTypes": ["png"], "maxFiles": 1}
-    assert reviewer.put("/api/questionnaire", {"version": "v1", "questions": {"PC1": pc1}}).json()["version"] == "v2"
+    was = make.label()
+    assert reviewer.put("/api/questionnaire", {"department": "banking", "version": was, "questions": {"PC1": pc1}}).json()["version"] == make.label() != was
     response = applicant.post(f"/api/assessments/{case}/submit")
     assert response.status_code == 409
     assert "PC1 (.pdf no longer accepted)" in response.json()["detail"]
@@ -1017,7 +1022,7 @@ def test_a_score_the_app_calculated_itself_is_shown_with_its_source(reviewer):
 
     assessment = make.assessment(stage=Stage.DECISION_PENDING)
     submission = Submission.objects.create(
-        assessment=assessment, attempt_no=1, version=QuestionnaireVersion.objects.get(is_active=True), payload={},
+        assessment=assessment, attempt_no=1, version=catalogue.active_version(assessment.department), payload={},
     )
     Score.objects.create(
         submission=submission, source="backend_override", risk_score=Decimal("32"), normalised=Decimal("0.32"),

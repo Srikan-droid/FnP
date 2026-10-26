@@ -2,7 +2,7 @@ import re
 from decimal import Decimal
 
 from django.conf import settings
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Count, Max
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -11,12 +11,12 @@ from rest_framework.views import APIView
 
 from engine.client import EngineUnavailable
 
-from .. import audit, catalogue
+from .. import audit, catalogue, question_locks
 from ..models import (
     Answer, AnswerType, AnswerValue, Assessment, Department, EvidenceFile, EvidenceRule, Polarity, Question,
     QuestionnaireVersion, QuestionSection, Stage,
 )
-from ..permissions import IsReviewer
+from ..permissions import IsReviewer, assessment_for, department_to_manage, managed_departments
 from .common import Conflict, ServiceUnavailable
 from .evidence import remove_files
 
@@ -58,17 +58,38 @@ def _version_payload(version: QuestionnaireVersion) -> dict:
     }
 
 
+def _catalogue_version(request) -> QuestionnaireVersion:
+    """The questions the catalogue is read for: an assessment's (?assessment=, the ones it is held
+    to) or a department's in force (?department=; for a reviewer, one they work on). Each department
+    has its own, so one of the two must be named."""
+    public_id = request.query_params.get("assessment")
+    if public_id:
+        return catalogue.version_for(assessment_for(request.user, public_id))
+    key = request.query_params.get("department")
+    if not key:
+        raise ValidationError({"detail": "Name the assessment (?assessment=) or the department (?department=)."})
+    if request.user.is_reviewer:
+        return catalogue.active_version(department_to_manage(request.user, key))
+    department = Department.objects.filter(key=key).first()
+    if department is None:
+        raise ValidationError({"department": "Unknown department."})
+    return catalogue.active_version(department)
+
+
 class CatalogueView(APIView):
-    """The active question set and the evidence options for every question and the CV."""
+    """A question set (an assessment's, or a department's in force) and the evidence options for
+    every question and the CV."""
 
     def get(self, request):
+        version = _catalogue_version(request)
         try:
-            # The engine's lists, with the types chosen for questions added here.
-            options = {**catalogue.evidence_options(), **catalogue.added_question_options()}
+            # The engine's lists, with the types this version's questions added here were given:
+            # another department's edition of a question may take others, which never apply here.
+            options = {**catalogue.evidence_options(), **catalogue.version_options(version.pk)}
         except EngineUnavailable:
             raise ServiceUnavailable() from None
         return Response({
-            **_version_payload(catalogue.active_version()),
+            **_version_payload(version),
             "cvFileTypes": catalogue.CV_FILE_TYPES,
             "evidenceOptions": options,
             # The largest document accepted, so the form can say so and refuse a bigger one at once.
@@ -78,11 +99,20 @@ class CatalogueView(APIView):
 
 class DepartmentListView(APIView):
     """The departments an assessment can be filed under, for the application form and the queue
-    filter."""
+    filter: for an applicant those taking applications (switched on, with questions), for an admin
+    the departments they work on, for the super user every one (each says whether it is switched on
+    and has questions)."""
 
     def get(self, request):
+        ready = set(catalogue.with_questions(Department.objects.all()).values_list("pk", flat=True))
+        if request.user.is_reviewer:
+            departments = managed_departments(request.user)
+        else:
+            # A department with no questions yet takes no applications.
+            departments = catalogue.with_questions(Department.objects.filter(is_active=True)).order_by("pk")
         return Response([
-            {"key": d.key, "name": d.name, "blurb": d.blurb} for d in Department.objects.order_by("pk")
+            {"key": d.key, "name": d.name, "blurb": d.blurb, "isActive": d.is_active, "hasQuestions": d.pk in ready}
+            for d in departments
         ])
 
 
@@ -118,6 +148,27 @@ def _section_weight_errors(sections, questions: dict, weights: dict) -> dict:
 _STALE = "These settings were changed by someone else. Reload them and make your changes again."
 
 
+# Every department's publishes take this lock (for the rest of their transaction), one after the
+# other: version labels and the codes of added questions are unique across every department.
+_PUBLISH_LOCK = 7_201_011
+
+
+def lock_publishing() -> None:
+    """Waits for any other publish, in any department, to finish. Inside a transaction."""
+    with connection.cursor() as cur:
+        cur.execute("SELECT pg_advisory_xact_lock(%s)", [_PUBLISH_LOCK])
+
+
+def new_version(department: Department) -> QuestionnaireVersion:
+    """A new edition of a department's questionnaire, not in force yet, labelled v<n> (labels are
+    unique across every department). Called with the publish lock held."""
+    lock_publishing()
+    number = (QuestionnaireVersion.objects.aggregate(n=Max("pk"))["n"] or 0) + 1
+    while QuestionnaireVersion.objects.filter(label=f"v{number}").exists():
+        number += 1
+    return QuestionnaireVersion.objects.create(label=f"v{number}", is_active=False, department=department)
+
+
 def _start_version(current: QuestionnaireVersion) -> QuestionnaireVersion:
     """The next version, not active yet, for the edit made from `current`. Inside the caller's
     transaction: two reviewers saving at once publish one after the other, and the second, waiting
@@ -125,8 +176,47 @@ def _start_version(current: QuestionnaireVersion) -> QuestionnaireVersion:
     locked = QuestionnaireVersion.objects.select_for_update().filter(pk=current.pk, is_active=True)
     if locked.first() is None:
         raise Conflict(_STALE)
-    next_number = QuestionnaireVersion.objects.aggregate(n=Max("pk"))["n"] + 1
-    return QuestionnaireVersion.objects.create(label=f"v{next_number}", is_active=False)
+    return new_version(current.department)
+
+
+def empty_version(department: Department) -> QuestionnaireVersion:
+    """A department's first questionnaire, in force at once, with no questions yet: its admins set
+    them up (it takes no applications until they have)."""
+    new = new_version(department)
+    QuestionnaireVersion.objects.filter(pk=new.pk).update(is_active=True)
+    new.refresh_from_db()
+    return new
+
+
+def copy_version(source: QuestionnaireVersion, department: Department) -> QuestionnaireVersion:
+    """A department's first questionnaire, in force at once: a copy of `source` (another
+    department's in force, or the published model)."""
+    new = new_version(department)
+    sections = {
+        s.pk: QuestionSection.objects.create(version=new, name=s.name, weight=s.weight, position=s.position)
+        for s in QuestionSection.objects.filter(version=source).order_by("position")
+    }
+    Question.objects.bulk_create([
+        Question(
+            version=new, section=sections[q.section_id], position=q.position,
+            **{k: v for k, v in _row_of(q).items() if k != "section"},
+        )
+        for q in Question.objects.filter(version=source).select_related("section").order_by("position")
+    ])
+    QuestionnaireVersion.objects.filter(pk=new.pk).update(is_active=True)
+    new.refresh_from_db()
+    return new
+
+
+def published_model(department: Department | None = None) -> QuestionnaireVersion:
+    """What "Restore published model" goes back to: the edition the department started from (an
+    empty one for a department that started with no questions). Without a department, or for one
+    from before departments remembered it, the questionnaire as first published."""
+    if department is not None and department.starting_version_id is not None:
+        return department.starting_version
+    return QuestionnaireVersion.objects.filter(department__isnull=True).order_by("pk").first() or (
+        QuestionnaireVersion.objects.order_by("pk").first()
+    )
 
 
 def _make_active(current: QuestionnaireVersion, new: QuestionnaireVersion) -> None:
@@ -145,7 +235,9 @@ class QuestionnaireView(APIView):
     permission_classes = [IsReviewer]
 
     def get(self, request):
-        published = QuestionnaireVersion.objects.order_by("pk").first()
+        # The department asked for (?department=), or the first one the reviewer works on.
+        department = department_to_manage(request.user, request.query_params.get("department"))
+        published = published_model(department)
         try:
             # "Other — please specify" is not one to choose: every question offers it anyway.
             choices = [
@@ -162,7 +254,13 @@ class QuestionnaireView(APIView):
             # The page still opens; only document types cannot be chosen.
             choices, engine_lists = [], {}
         return Response({
-            "current": _version_payload(catalogue.active_version()),
+            "department": {"key": department.key, "name": department.name},
+            # Who is editing these questions now, if anyone (the editor is read-only for the rest);
+            # ?token= names the asking tab, so its own lock reads as its own.
+            "lock": question_locks.lock_payload(
+                question_locks.live_lock(department), request.user, request.query_params.get("token")
+            ),
+            "current": _version_payload(catalogue.active_version(department)),
             "published": _version_payload(published),
             "configurableFileTypes": catalogue.CONFIGURABLE_FILE_TYPES,
             # The document types a new question can take (the engine's, for any question).
@@ -176,14 +274,20 @@ class QuestionnaireView(APIView):
 
     def put(self, request):
         body = request.data if isinstance(request.data, dict) else {}
+        department_key = body.get("department")
+        if not isinstance(department_key, str) or not department_key:
+            # Never publish to a department the edit did not name.
+            raise ValidationError({"department": "Name the department these settings are for."})
+        department = department_to_manage(request.user, department_key)
+        token = body.get("lockToken") if isinstance(body.get("lockToken"), str) else None
         if "sections" in body:
-            return _publish_structure(request, body)
+            return _publish_structure(request, body, department, token)
         settings_by_qid, edited_from = body.get("questions"), body.get("version")
         if not isinstance(settings_by_qid, dict):
             raise ValidationError({"questions": "Expected an object keyed by question."})
         if not isinstance(edited_from, str):
             raise ValidationError({"version": "Name the version these settings were edited from."})
-        current = catalogue.active_version()
+        current = catalogue.active_version(department)
         if current.label != edited_from:
             raise Conflict(_STALE)
         questions = catalogue.questions(current.pk)
@@ -224,6 +328,7 @@ class QuestionnaireView(APIView):
 
         with transaction.atomic():
             new = _start_version(current)
+            question_locks.check_for_publish(department, request.user, token)
             sections = {
                 s.pk: QuestionSection.objects.create(version=new, name=s.name, weight=s.weight, position=s.position)
                 for s in current_sections
@@ -244,8 +349,9 @@ class QuestionnaireView(APIView):
             _make_active(current, new)
             audit.record(
                 request.user, "questionnaire.publish", target_type="questionnaire", target_id=new.label,
-                metadata={"changed": sorted(changes)},
+                metadata={"department": department.key, "changed": sorted(changes)},
             )
+            question_locks.published(department, request.user)
         new.refresh_from_db()
         return Response(_version_payload(new))
 
@@ -259,20 +365,54 @@ class QuestionnaireImpactView(APIView):
     permission_classes = [IsReviewer]
 
     def get(self, request):
-        drafts = Assessment.objects.filter(stage=Stage.NOT_SUBMITTED)
+        # The department's forms only: a change to its questionnaire reaches no other.
+        key = request.query_params.get("department")
+        if not key:
+            raise ValidationError({"department": "Name the department."})
+        department = department_to_manage(request.user, key)
+        drafts = Assessment.objects.filter(stage=Stage.NOT_SUBMITTED, department=department)
         return Response({
             "drafts": drafts.count(),
             # One answer per question per form (a unique rule), so rows are forms.
             "answered": dict(
-                AnswerValue.objects.filter(assessment__stage=Stage.NOT_SUBMITTED)
+                AnswerValue.objects.filter(assessment__in=drafts)
                 .values_list("qid").annotate(n=Count("pk")).order_by()
             ),
             # Forms with a current document under each question.
             "documents": dict(
-                EvidenceFile.objects.filter(assessment__stage=Stage.NOT_SUBMITTED, superseded_at__isnull=True)
+                EvidenceFile.objects.filter(assessment__in=drafts, superseded_at__isnull=True)
                 .values_list("qid").annotate(n=Count("assessment", distinct=True)).order_by()
             ),
         })
+
+
+class QuestionnaireLockSerializer(serializers.Serializer):
+    department = serializers.SlugField(max_length=32)
+    token = serializers.CharField(min_length=8, max_length=64)
+    takeOver = serializers.BooleanField(default=False)
+
+
+class QuestionnaireLockView(APIView):
+    """The editing lock on a department's questions. POST takes it for this tab (or keeps it alive:
+    the editor calls again while open), `takeOver` taking it from another tab of the same admin or,
+    for the super user, from another admin. DELETE (?department=&token=) gives it back."""
+
+    permission_classes = [IsReviewer]
+
+    def post(self, request):
+        data = QuestionnaireLockSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        v = data.validated_data
+        department = department_to_manage(request.user, v["department"])
+        lock = question_locks.take(department, request.user, v["token"], v["takeOver"])
+        return Response({"lock": question_locks.lock_payload(lock, request.user, v["token"])})
+
+    def delete(self, request):
+        key, token = request.query_params.get("department"), request.query_params.get("token")
+        if not key or not token:
+            raise ValidationError({"detail": "Name the department and the token."})
+        question_locks.give_back(department_to_manage(request.user, key), request.user, token)
+        return Response(status=204)
 
 
 # ---- Editing the whole questionnaire: sections and questions added, changed or deleted --------
@@ -376,7 +516,7 @@ def _clean_checks(raw: list[str]) -> tuple[list[str], str | None]:
     return checks, None
 
 
-def _publish_structure(request, body: dict):
+def _publish_structure(request, body: dict, department: Department, token: str | None = None):
     """Publishes a new version from the whole questionnaire as edited: its sections in order, each
     with its weight and its questions. A question in the current version not sent is deleted (from
     this version on: a case already submitted keeps its own); one sent without a code is added.
@@ -393,7 +533,7 @@ def _publish_structure(request, body: dict):
     data = data.run_validation(body.get("sections")) if isinstance(body.get("sections"), list) else None
     if data is None:
         raise ValidationError({"sections": "Expected a list of sections."})
-    current = catalogue.active_version()
+    current = catalogue.active_version(department)
     if current.label != edited_from:
         raise Conflict(_STALE)
     existing = catalogue.questions(current.pk)
@@ -412,8 +552,6 @@ def _publish_structure(request, body: dict):
     seen: set[str] = set()
     # Existing questions whose answer type changes: their saved draft answers are cleared.
     retyped: list[str] = []
-    added = sum(1 for section in data for q in section["questions"] if not q.get("qid"))
-    fresh = iter(_new_qids(added))
     try:
         engine_codes = None
         rows = []
@@ -428,7 +566,7 @@ def _publish_structure(request, body: dict):
                 qid = q.get("qid") or None
                 # A question in force, or one deleted earlier and now brought back (restoring the
                 # published model does that): its latest edition.
-                before = (existing.get(qid) or _latest_edition(qid)) if qid else None
+                before = (existing.get(qid) or _latest_edition(qid, department)) if qid else None
                 label = qid or f"question {position} in {section['name']} (new)"
                 if qid and before is None:
                     errors[f"questions.{qid}"] = "Unknown question. Reload the settings and try again."
@@ -507,7 +645,8 @@ def _publish_structure(request, body: dict):
                 else:
                     checks = list(before.checks) if before else []
                 rows.append({
-                    "section": section["name"], "qid": qid or next(fresh), "text": q["text"],
+                    # A question added now gets its code when publishing, under the publish lock.
+                    "section": section["name"], "qid": qid, "text": q["text"],
                     "polarity": q["polarity"], "answer_type": q["answerType"], "weight": q["weight"],
                     "is_knockout": before.is_knockout if before else False,
                     "added_here": before.added_here if before else True,
@@ -536,10 +675,20 @@ def _publish_structure(request, body: dict):
 
     with transaction.atomic():
         new = _start_version(current)
+        # Refused while another admin (or another tab) is editing these questions.
+        question_locks.check_for_publish(department, request.user, token)
+        # Codes for the questions added, numbered on from every code ever used (in any department):
+        # with the publish lock held, no other publish can give out the same one.
+        fresh = iter(_new_qids(sum(1 for row in rows if row["qid"] is None)))
+        for row in rows:
+            if row["qid"] is None:
+                row["qid"] = next(fresh)
         # The forms not yet submitted follow the new version: they are locked first, so a save or
         # upload on one either finishes before this publish or waits for it and then checks its
         # change against the new settings (views/form.py, views/evidence.py).
-        list(Assessment.objects.select_for_update().filter(stage=Stage.NOT_SUBMITTED).values_list("pk", flat=True))
+        # Only this department's: the others follow their own questionnaires.
+        drafts = Assessment.objects.filter(stage=Stage.NOT_SUBMITTED, department=department)
+        list(drafts.select_for_update().values_list("pk", flat=True))
         sections = {
             section["name"]: QuestionSection.objects.create(
                 version=new, name=section["name"], weight=section["weight"], position=i + 1
@@ -554,35 +703,37 @@ def _publish_structure(request, body: dict):
         if retyped:
             # Forms not yet submitted follow the new version: a Yes saved for a question now answered
             # in words (or words for one now Yes/No) would not fit it.
-            AnswerValue.objects.filter(assessment__stage=Stage.NOT_SUBMITTED, qid__in=retyped).delete()
-        _drop_unneeded_draft_documents(existing, new)
-        _drop_deleted_from_drafts(set(existing) - {row["qid"] for row in rows})
+            AnswerValue.objects.filter(assessment__in=drafts, qid__in=retyped).delete()
+        _drop_unneeded_draft_documents(existing, new, drafts)
+        _drop_deleted_from_drafts(set(existing) - {row["qid"] for row in rows}, drafts)
         kept = {row["qid"] for row in rows}
         audit.record(
             request.user, "questionnaire.publish", target_type="questionnaire", target_id=new.label,
             metadata={
+                "department": department.key,
                 "added": sorted(kept - set(existing)),
                 "deleted": sorted(set(existing) - kept),
                 "retyped": sorted(retyped),
                 "sections": [section["name"] for section in data],
             },
         )
+        question_locks.published(department, request.user)
     new.refresh_from_db()
     return Response(_version_payload(new))
 
 
-def _drop_deleted_from_drafts(deleted: set[str]) -> None:
+def _drop_deleted_from_drafts(deleted: set[str], drafts) -> None:
     """A question deleted from the questionnaire is no longer on a form not yet submitted: its
     answer and documents there are taken off too, so none is left that the form cannot show or
     remove, or that would be sent with nothing to answer."""
     if not deleted:
         return
-    AnswerValue.objects.filter(assessment__stage=Stage.NOT_SUBMITTED, qid__in=deleted).delete()
-    held = EvidenceFile.objects.filter(assessment__stage=Stage.NOT_SUBMITTED, qid__in=deleted, superseded_at__isnull=True)
+    AnswerValue.objects.filter(assessment__in=drafts, qid__in=deleted).delete()
+    held = EvidenceFile.objects.filter(assessment__in=drafts, qid__in=deleted, superseded_at__isnull=True)
     remove_files(held)
 
 
-def _drop_unneeded_draft_documents(before: dict, new: QuestionnaireVersion) -> None:
+def _drop_unneeded_draft_documents(before: dict, new: QuestionnaireVersion, drafts) -> None:
     """After a question's document rule or answer type changes, a form not yet submitted can hold
     a document the question no longer asks for (one now taking none, or a Yes's document for a
     question now answered in words). Such documents are taken off, as changing the answer itself
@@ -596,12 +747,10 @@ def _drop_unneeded_draft_documents(before: dict, new: QuestionnaireVersion) -> N
     }
     if not changed:
         return
-    held = EvidenceFile.objects.filter(
-        assessment__stage=Stage.NOT_SUBMITTED, qid__in=changed, superseded_at__isnull=True
-    )
+    held = EvidenceFile.objects.filter(assessment__in=drafts, qid__in=changed, superseded_at__isnull=True)
     answers = {
         (a, q): v for a, q, v in AnswerValue.objects.filter(
-            assessment__stage=Stage.NOT_SUBMITTED, qid__in=changed
+            assessment__in=drafts, qid__in=changed
         ).values_list("assessment_id", "qid", "value")
     }
     unneeded = [
@@ -614,9 +763,14 @@ def _drop_unneeded_draft_documents(before: dict, new: QuestionnaireVersion) -> N
         remove_files(unneeded)
 
 
-def _latest_edition(qid: str) -> Question | None:
-    """The question with this code as last published, in any version."""
-    return Question.objects.filter(qid=qid).order_by("-version_id").first()
+def _latest_edition(qid: str, department: Department) -> Question | None:
+    """The question with this code as last published in this department's questionnaire, or else
+    in the one shared before departments had their own (the published model)."""
+    editions = Question.objects.filter(qid=qid).order_by("-version_id")
+    return (
+        editions.filter(version__department=department).first()
+        or editions.filter(version__department__isnull=True).first()
+    )
 
 
 def _row_of(q: Question) -> dict:

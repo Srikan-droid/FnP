@@ -88,14 +88,60 @@ engine/fixtures/        real engine responses, used by the tests instead of the 
 media/                  uploaded documents (git-ignored), see below
 ```
 
+### Roles and departments
+
+There are three kinds of account (`User.role`):
+
+- **User** (`applicant`): applies, and sees only their own applications.
+- **Admin** (`reviewer`): reviews, rules on and decides the cases of the departments given to them
+  (`User.departments`), opens applications for those departments, and configures their questions.
+  Any other department's case is a 404 to them, as if it did not exist.
+- **Super user** (`superuser`): every department, plus the admin panel: accounts (role, an admin's
+  departments, whether it may sign in) and departments (add, rename, switch off). The development
+  sign-in `admin` is the super user.
+
+The scoping lives in one place, `cases/permissions.py` (`visible_assessments`, `assessment_for`,
+`department_to_manage`); every view goes through it.
+
+Each department has its **own questionnaire** (`QuestionnaireVersion.department`, one edition in
+force per department). A draft follows its department's edition in force; a submitted case keeps the
+edition it was submitted under. Publishing a department's questions reaches only that department's
+drafts. A new department starts with no questions (or, if chosen, a copy of another department's)
+and takes no applications until it has some. A department switched off takes no new applications;
+its cases carry on. Migration 0014 gave every department a copy of the questionnaire then in force;
+0015 then left those questions with banking only (and with any department that had an application
+in progress), the others starting empty. Each department remembers the edition it started from
+(`Department.starting_version`), which "Restore published model" goes back to.
+
+**Several admins in one department.** A submitted case is reviewed by one of them
+(`Assessment.reviewer`): the first to take it (`POST .../claim`), or the first to act on it. Only
+they rule on it, send it on and decide it; the others read it and are refused (409, naming who has
+it). They can release it; the super user can take it over or give it to another admin of the
+department. Every check runs on the case's locked row, so two admins acting at once are taken one
+after the other. Cases an admin can no longer act on (department taken away, switched off, made a
+user) go back to the queue in the same transaction as the change.
+
+**Two admins editing one department's questions.** One at a time (`QuestionnaireLock`): the first
+change takes the department's editing lock for that browser tab; others see who is editing and read
+the questions until it is given back (apply, leave) or lapses after
+`QUESTIONNAIRE_LOCK_IDLE_SECONDS` (default 15 minutes) without word from the editor. The super user
+can take it over. Publishing checks the lock as well as the version the edit was made from.
+
 ### Endpoints
 
 | Method and path | Who | Purpose |
 |---|---|---|
-| `GET/POST/DELETE /api/session` | anyone | Who is signed in (with the reviewer's department) / sign in (development rule) / sign out |
-| `GET /api/catalogue` | signed in | Active questions, rules and evidence options |
-| `GET /api/departments` | signed in | The departments an assessment can be filed under |
-| `GET/PUT /api/questionnaire` | reviewer | Question settings; saving publishes a new version |
+| `GET/POST/DELETE /api/session` | anyone | Who is signed in (`role` applicant/reviewer, `access` user/admin/superuser, the reviewer's `departments`) / sign in (development rule) / sign out |
+| `GET /api/catalogue` | signed in | Questions, rules and evidence options: an assessment's (`?assessment=`) or a department's (`?department=`) |
+| `GET /api/departments` | signed in | Applicants: the departments taking applications. Reviewers: the ones they work on |
+| `GET/PUT /api/questionnaire` | admin, super user | One department's question settings (`?department=`, or `department` in the body); saving publishes a new version |
+| `GET /api/questionnaire/impact` | admin, super user | What applying would reach on that department's unsubmitted forms |
+| `POST/DELETE /api/questionnaire/lock` | admin, super user | Take (or keep alive, or `takeOver`) / give back the editing lock on a department's questions |
+| `POST/DELETE /api/assessments/{id}/claim` | admin, super user | Take the case to review it (`takeOver`: the super user) / give it back |
+| `GET/POST /api/assessments/{id}/assign` | super user | Who the case can be given to / give it to one of them |
+| `GET /api/admin/overview`, `GET /api/admin/users` | super user | The admin panel: counts, and accounts (`?role=applicant/admin/superuser/reviewer`) |
+| `GET/PATCH /api/admin/users/{id}` | super user | One account; change its role, an admin's departments, or whether it may sign in (audited; a changed role signs it out) |
+| `GET/POST /api/admin/departments`, `PATCH /api/admin/departments/{key}` | super user | Departments: list, add (`startFrom` another department's questions), rename or switch off |
 | `GET /api/assessments` | signed in | Applicant: their own. Reviewer: the queue (`?stage=`, `?department=`, `?cursor=`) |
 | `POST /api/assessments` | signed in | Reviewer: open one for an applicant (by email). Applicant: start their own (as themselves, dated today; at most 3 unsubmitted at a time) |
 | `GET/DELETE /api/assessments/{id}` | owner, reviewer | One assessment / remove before submission (reviewer: any started here; applicant: one they started) |

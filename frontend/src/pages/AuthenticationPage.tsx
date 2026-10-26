@@ -30,7 +30,7 @@ export default function AuthenticationPage() {
   const view = useCaseView(id);
   // The form's current documents and the catalogue are needed to replace rejected evidence.
   const form = useForm(id);
-  const catalogue = useCatalogue();
+  const catalogue = useCatalogue(id);
   const upload = useUploadEvidence(id);
   const remove = useRemoveEvidence(id);
   const resubmit = useResubmit(id);

@@ -14,6 +14,11 @@ export class ApiError extends Error {
     this.body = body;
   }
 
+  /** The machine-readable reason a refusal carries, if any ("held_by_other", "lock_held"). */
+  get code(): string | undefined {
+    return typeof this.body.code === "string" ? this.body.code : undefined;
+  }
+
   /** The message for one field, as the backend validated it. */
   field(name: string): string | undefined {
     const value = this.body[name];
@@ -29,6 +34,8 @@ export function refusalMessage(error: unknown, field: string): string {
     if (error.status === 400) return error.field(field) ?? error.message;
     // Not allowed: the server says why (a reviewer's own application, say).
     if (error.status === 403) return error.message;
+    // Another admin is reviewing it: the server names them.
+    if (error.status === 409 && error.code === "held_by_other") return error.message;
     if (error.status === 409) return "The case changed in the meantime and has been refreshed. Cancel, then review it again.";
   }
   return "Not saved. Check your connection and try again.";
@@ -39,6 +46,23 @@ function csrfToken(): string {
 }
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+
+/**
+ * A request that still goes out while the page is closing (a lock given back as the editor is
+ * left, say). Nothing waits for, or reads, its answer.
+ */
+export function sendOnLeave(method: Method, path: string): void {
+  try {
+    void fetch(`/api${path}`, {
+      method,
+      credentials: "same-origin",
+      keepalive: true,
+      headers: { Accept: "application/json", "X-CSRFToken": csrfToken() },
+    }).catch(() => undefined);
+  } catch {
+    // The browser refused: the lock lapses by itself.
+  }
+}
 
 /**
  * API responses can be written to the browser console, one collapsed group per call, to see what

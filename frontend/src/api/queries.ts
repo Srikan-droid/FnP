@@ -6,8 +6,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useInfiniteQuery, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
-import { ApiError, api, uploadWithProgress } from "./client";
+import { ApiError, api, sendOnLeave, uploadWithProgress } from "./client";
 import type {
+  AccountRole,
+  AdminDepartment,
   AdminOverview,
   AdminUserDetail,
   AdminUserRow,
@@ -22,9 +24,9 @@ import type {
   LibraryDocument,
   Page,
   QuestionnaireImpact,
+  QuestionnaireLock,
   QuestionnaireSettings,
   QuestionnaireVersion,
-  Role,
   SessionUser,
   Stage,
   Verdict,
@@ -113,12 +115,25 @@ export function useSignOut() {
 
 // ---- Catalogue and question settings ----------------------------------------------------------
 
-export function useCatalogue() {
+/**
+ * The questions and document types an assessment is held to: each department has its own
+ * questionnaire, and a submitted assessment keeps the edition it was submitted under.
+ */
+export function useCatalogue(assessmentId: string, enabled = true) {
   return useQuery({
-    queryKey: keys.catalogue,
-    queryFn: () => api<Catalogue>("GET", "/catalogue"),
+    queryKey: [...keys.catalogue, assessmentId],
+    queryFn: () => api<Catalogue>("GET", `/catalogue?assessment=${encodeURIComponent(assessmentId)}`),
+    enabled: enabled && assessmentId !== "",
     staleTime: 5 * 60 * 1000,
   });
+}
+
+/**
+ * The largest document the server accepts, from the assessment's catalogue (the one its page
+ * already loads, so no extra request). Undefined until it has arrived.
+ */
+export function useMaxUploadBytes(assessmentId: string): number | undefined {
+  return useCatalogue(assessmentId).data?.maxUploadBytes;
 }
 
 /**
@@ -126,10 +141,16 @@ export function useCatalogue() {
  * the editor's unsaved changes without a word. Another reviewer's change shows when saving (the
  * save is refused as out of date) or on opening the page again.
  */
-export function useQuestionnaire() {
+export function useQuestionnaire(department: string, token: string) {
   return useQuery({
-    queryKey: keys.questionnaire,
-    queryFn: () => api<QuestionnaireSettings>("GET", "/questionnaire"),
+    queryKey: [...keys.questionnaire, department],
+    // The tab's token: the editing lock it holds (if any) reads as its own.
+    queryFn: () =>
+      api<QuestionnaireSettings>(
+        "GET",
+        `/questionnaire?department=${encodeURIComponent(department)}&token=${encodeURIComponent(token)}`
+      ),
+    enabled: department !== "",
     refetchOnWindowFocus: false,
   });
 }
@@ -138,15 +159,31 @@ export function useQuestionnaire() {
  * What applying a change would reach on the applications not yet submitted. Read when the
  * reviewer is about to apply (enabled), never kept: applicants keep filling in forms meanwhile.
  */
-export function useQuestionnaireImpact(enabled: boolean) {
+export function useQuestionnaireImpact(enabled: boolean, department: string) {
   return useQuery({
-    queryKey: [...keys.questionnaire, "impact"],
-    queryFn: () => api<QuestionnaireImpact>("GET", "/questionnaire/impact"),
+    queryKey: [...keys.questionnaire, department, "impact"],
+    queryFn: () =>
+      api<QuestionnaireImpact>("GET", `/questionnaire/impact?department=${encodeURIComponent(department)}`),
     enabled,
     staleTime: 0,
     gcTime: 0,
   });
 }
+
+/**
+ * The editing lock on a department's questions, for this browser tab (`token`): taken when the
+ * first change is made, kept alive while the editor is open, given back when it is left. Refused
+ * (409, with who is editing) while someone else holds it; `takeOver` takes it from another tab of
+ * the same admin or, for the super user, from another admin.
+ */
+export const takeQuestionnaireLock = (department: string, token: string, takeOver = false) =>
+  api<{ lock: QuestionnaireLock }>("POST", "/questionnaire/lock", { department, token, takeOver });
+
+export const giveBackQuestionnaireLock = (department: string, token: string) =>
+  sendOnLeave(
+    "DELETE",
+    `/questionnaire/lock?department=${encodeURIComponent(department)}&token=${encodeURIComponent(token)}`
+  );
 
 export type QuestionSettings = Record<
   string,
@@ -184,11 +221,23 @@ export function useSaveQuestionnaire() {
     client.invalidateQueries({ queryKey: keys.catalogue });
   };
   return useMutation({
-    mutationFn: (edit: { version: string; questions?: QuestionSettings; sections?: SectionEdit[] }) =>
+    mutationFn: (edit: {
+      department: string;
+      version: string;
+      /** The tab holding the editing lock. */
+      lockToken?: string;
+      questions?: QuestionSettings;
+      sections?: SectionEdit[];
+    }) =>
       api<QuestionnaireVersion>("PUT", "/questionnaire", edit),
-    onSuccess: (published) => {
+    onSuccess: (published, { department }) => {
       // The page moves onto the published version at once, so a follow-up save builds on it.
-      client.setQueryData<QuestionnaireSettings>(keys.questionnaire, (old) => old && { ...old, current: published });
+      // Applying gave the editing lock back (the server dropped it), so the editor that opens on
+      // the new version starts without it.
+      client.setQueryData<QuestionnaireSettings>(
+        [...keys.questionnaire, department],
+        (old) => old && { ...old, current: published, lock: null }
+      );
       refresh();
     },
     // Refused as out of date: load the settings now in force.
@@ -216,11 +265,16 @@ export function usePrefill(enabled: boolean) {
   });
 }
 
+/**
+ * The departments: for an applicant those taking applications, for a reviewer the ones they work
+ * on. The super user can switch one off or change an admin's departments at any time, so the list
+ * is read again when it is a minute old and the tab comes back into focus.
+ */
 export function useDepartments() {
   return useQuery({
     queryKey: keys.departments,
     queryFn: () => api<Department[]>("GET", "/departments"),
-    staleTime: Infinity,
+    staleTime: 60 * 1000,
   });
 }
 
@@ -228,15 +282,21 @@ export function useDepartments() {
  * The applicant's own assessments, or the reviewer's queue, a page at a time. The reviewer can
  * narrow the queue to one department and/or one stage.
  */
-export function useAssessments(department = "", stage = "", search = "", { live = false } = {}) {
+export function useAssessments(
+  department = "",
+  stage = "",
+  search = "",
+  { live = false, holder = "" }: { live?: boolean; holder?: string } = {}
+) {
   const { data: user } = useSession();
   return useInfiniteQuery({
-    queryKey: [...keys.assessments, department, stage, search],
+    queryKey: [...keys.assessments, department, stage, search, holder],
     // Signed out, there is nothing to list (the page sends the user to sign in).
     enabled: Boolean(user),
     queryFn: ({ pageParam }) => {
       const params = new URLSearchParams();
       if (department) params.set("department", department);
+      if (holder) params.set("holder", holder);
       if (stage) params.set("stage", stage);
       if (search) params.set("q", search);
       if (pageParam) params.set("cursor", pageParam);
@@ -274,6 +334,10 @@ export function useCreateAssessment() {
     // The reviewer sends every field; an applicant sends neither email nor date (see newAssessmentFields).
     mutationFn: (input: Partial<NewAssessmentInput>) => api<Assessment>("POST", "/assessments", input),
     onSuccess: () => client.invalidateQueries({ queryKey: keys.assessments }),
+    // Refused over the department (switched off meanwhile, say): the list is read again.
+    onError: (error) => {
+      if (error instanceof ApiError && error.field("department")) client.invalidateQueries({ queryKey: keys.departments });
+    },
   });
 }
 
@@ -549,6 +613,35 @@ export const useResubmit = (id: string) =>
     () => "Resubmitted with your new evidence.",
     { changesForm: true }
   );
+/** An admin takes the case to review it; the super user can take it over (takeOver). */
+export const useClaim = (id: string) =>
+  useCaseStep(
+    id,
+    ({ takeOver = false }: { takeOver?: boolean }) => api<Case>("POST", `/assessments/${id}/claim`, { takeOver }),
+    () => "You are reviewing this case."
+  );
+
+/** The admin reviewing the case (or the super user) gives it back to the queue. */
+export const useRelease = (id: string) =>
+  useCaseStep(id, () => api<Case>("DELETE", `/assessments/${id}/claim`), () => "Released. Any admin of its department can take it.");
+
+/** The super user gives the case to one of its department's admins. */
+export const useAssign = (id: string) =>
+  useCaseStep(
+    id,
+    ({ userId }: { userId: number; email: string }) => api<Case>("POST", `/assessments/${id}/assign`, { userId }),
+    (_, { email }) => `Given to ${email}.`
+  );
+
+/** Who the super user can give the case to: its department's admins and the super users. */
+export function useAssignees(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...keys.case(id), "assignees"],
+    queryFn: () => api<{ id: number; email: string; superUser: boolean }[]>("GET", `/assessments/${id}/assign`),
+    enabled,
+  });
+}
+
 export const useRetry = (id: string) =>
   useCaseStep(id, () => api<Case>("POST", `/assessments/${id}/retry`), () => "Sent to the AI engine again.");
 
@@ -607,7 +700,8 @@ export function useAdminOverview() {
 
 export interface AdminUserFilters {
   search: string;
-  role: "" | Role;
+  /** "reviewer" is admins and super users together; "admin" is admins only. */
+  role: "" | "applicant" | "reviewer" | "admin" | "superuser";
   status: "" | "active" | "inactive";
 }
 
@@ -637,4 +731,80 @@ export function useAdminUser(userId: number) {
     queryFn: () => api<AdminUserDetail>("GET", `/admin/users/${userId}`),
     enabled: Number.isInteger(userId) && userId > 0,
   });
+}
+
+export interface AccessChange {
+  role?: AccountRole;
+  departments?: string[];
+  isActive?: boolean;
+}
+
+/** The super user changes an account's role, an admin's departments, or whether it may sign in. */
+export function useUpdateAccess(userId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (change: AccessChange) => api<AdminUserDetail>("PATCH", `/admin/users/${userId}`, change),
+    onSuccess: (user) => {
+      client.setQueryData([...keys.admin, "user", userId], user);
+      // The lists and counts show roles too.
+      client.invalidateQueries({ queryKey: keys.admin, predicate: (q) => q.queryKey[1] !== "user" });
+      const released = user.released
+        ? ` ${user.released} case${user.released === 1 ? "" : "s"} they were reviewing went back to the queue.`
+        : "";
+      toast(
+        `Access saved. The person is signed out if their role or departments changed, and sees the change when they sign in again.${released}`,
+        "good"
+      );
+    },
+  });
+}
+
+export function useAdminDepartments() {
+  return useQuery({
+    queryKey: [...keys.admin, "departments"],
+    queryFn: () => api<AdminDepartment[]>("GET", "/admin/departments"),
+  });
+}
+
+export interface NewDepartment {
+  key: string;
+  name: string;
+  blurb: string;
+  /** The department whose questions it starts with a copy of; null: no questions (set up afterwards). */
+  startFrom: string | null;
+}
+
+/** The super user adds a department, or renames one or switches it off or on. */
+export function useDepartmentChanges() {
+  const client = useQueryClient();
+  const refresh = () => {
+    client.invalidateQueries({ queryKey: keys.admin });
+    client.invalidateQueries({ queryKey: keys.departments });
+    // The session lists the super user's departments.
+    client.invalidateQueries({ queryKey: keys.session });
+  };
+  const create = useMutation({
+    mutationFn: (input: NewDepartment) => api<AdminDepartment>("POST", "/admin/departments", input),
+    onSuccess: (d, input) => {
+      refresh();
+      toast(
+        input.startFrom
+          ? `${d.name} added, with its own copy of the questions.`
+          : `${d.name} added. It takes applications once its questions are set up.`,
+        "good"
+      );
+    },
+  });
+  const update = useMutation({
+    mutationFn: ({ key, ...change }: { key: string; name?: string; blurb?: string; isActive?: boolean }) =>
+      api<AdminDepartment>("PATCH", `/admin/departments/${encodeURIComponent(key)}`, change),
+    onSuccess: (changed) => {
+      // The list shows the change at once; the rest is read again behind it.
+      client.setQueryData<AdminDepartment[]>([...keys.admin, "departments"], (list) =>
+        list?.map((d) => (d.key === changed.key ? changed : d))
+      );
+      refresh();
+    },
+  });
+  return { create, update };
 }

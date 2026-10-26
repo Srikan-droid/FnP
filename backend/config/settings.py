@@ -160,6 +160,8 @@ ENGINE_FOLLOW_IN_REQUESTS = env_bool("ENGINE_FOLLOW_IN_REQUESTS", True)
 # A run still unfinished this long after it was sent is failed, so it can be sent again. Real runs
 # take two to three minutes.
 ENGINE_MAX_RUN_SECONDS = int(env("ENGINE_MAX_RUN_SECONDS", "3600"))
+# An editing lock on a department's questions lapses after this long without word from the editor.
+QUESTIONNAIRE_LOCK_IDLE_SECONDS = int(env("QUESTIONNAIRE_LOCK_IDLE_SECONDS", "900"))
 # When the reviewer accepts every flagged answer, ask the engine to score the run anyway
 # (POST /authentication/force-score), so the decision has a score and an assessment. Off: the case
 # goes to the decision unscored, as before.

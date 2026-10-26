@@ -54,7 +54,8 @@ def form_payload(assessment: Assessment, viewer) -> dict:
     """The form as the applicant fills it in. A question with no saved answer reads "No", which is
     what a blank form starts from. `viewer`: who reads it; anyone but the applicant sees only the
     documents attached to a question."""
-    questions = catalogue.questions(catalogue.version_for(assessment).pk)
+    version = catalogue.version_for(assessment)
+    questions = catalogue.questions(version.pk)
     saved = dict(assessment.answers.values_list("qid", "value"))
     own = _own_options(questions)
     evidence = list(
@@ -62,6 +63,9 @@ def form_payload(assessment: Assessment, viewer) -> dict:
     )
     return {
         "locked": assessment.stage != Stage.NOT_SUBMITTED,
+        # The questionnaire edition the form is on: a page holding an older copy of the questions
+        # (its department changed them meanwhile) reads them again.
+        "version": version.label,
         # Personal details (date of birth, ID number and the like) are not collected or shown.
         "applicant": {
             "fullName": assessment.applicant_name,

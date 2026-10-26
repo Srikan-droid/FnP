@@ -13,9 +13,11 @@ import json
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.auth.models import Group
+from django.db import transaction
 from django.utils.html import format_html
 
 from . import audit
+from .accounts import lock_access_changes, other_super_users, promotion_refused, release_lost_work
 from .auth_sessions import end_sessions
 from .models import (
     AnswerValue,
@@ -30,6 +32,7 @@ from .models import (
     QuestionnaireVersion,
     QuestionResult,
     QuestionSection,
+    STAFF_ROLES,
     Role,
     Stage,
     Ruling,
@@ -94,32 +97,6 @@ class ReadOnlyInline(admin.TabularInline):
 
 # ---- People and reference data -----------------------------------------------------------------
 
-# Stages after which an application needs nothing more from its applicant.
-DECIDED = (Stage.ACCEPTED, Stage.REJECTED)
-
-
-def undecided(user: User) -> list[str]:
-    """The user's own applications not decided yet. Even a submitted one can still come back to
-    them as the applicant (the reviewer may ask for new evidence)."""
-    return list(
-        Assessment.objects.filter(applicant=user).exclude(stage__in=DECIDED)
-        .order_by("public_id").values_list("public_id", flat=True)
-    )
-
-
-def promotion_refused(user: User) -> str | None:
-    """Why the user cannot be given reviewer access yet, if they cannot. A reviewer is sent to the
-    reviewer pages, so an application of theirs that is not decided yet could reach a step they,
-    as its applicant, could no longer take."""
-    pending = undecided(user)
-    if not pending:
-        return None
-    return (
-        f"{user.email} still has applications that are not decided ({', '.join(pending)}). They must "
-        "be decided, or removed if not submitted yet, before reviewer access is given."
-    )
-
-
 class UserAdminForm(forms.ModelForm):
     class Meta:
         model = User
@@ -134,12 +111,30 @@ class UserAdminForm(forms.ModelForm):
         }
 
     def clean_role(self):
+        # Changes to accounts' access are made one after another (the admin site saves inside a
+        # transaction, so this holds until the change is saved).
+        lock_access_changes()
         role = self.cleaned_data["role"]
-        if role == Role.REVIEWER and self.instance.pk and self.instance.role != Role.REVIEWER:
+        if role in STAFF_ROLES and self.instance.pk and self.instance.role not in STAFF_ROLES:
             refused = promotion_refused(self.instance)
             if refused:
                 raise forms.ValidationError(refused)
+        if self.instance.pk and self.instance.role == Role.SUPERUSER and role != Role.SUPERUSER:
+            if not other_super_users(self.instance):
+                raise forms.ValidationError("There must always be a super user who can sign in.")
         return role
+
+    def clean(self):
+        cleaned = super().clean()
+        role = cleaned.get("role", self.instance.role)
+        # An admin works on the departments chosen here (the admin site's own staff accounts never
+        # use the app, so they need none).
+        if "departments" in cleaned and role == Role.REVIEWER and not self.instance.is_staff and not cleaned["departments"]:
+            self.add_error("departments", "Give an admin at least one department.")
+        if "is_active" in cleaned and not cleaned["is_active"] and self.instance.pk and self.instance.role == Role.SUPERUSER:
+            if self.instance.is_active and not other_super_users(self.instance):
+                self.add_error("is_active", "There must always be a super user who can sign in.")
+        return cleaned
 
 
 @admin.register(User)
@@ -149,8 +144,12 @@ class UserAdmin(admin.ModelAdmin):
     list_filter = ("role", "is_active", "is_staff")
     search_fields = ("email",)
     ordering = ("-created_at",)
-    fields = ("email", "role", "is_active", "is_staff", "created_at", "last_login")
-    actions = ("make_reviewer", "make_applicant")
+    fields = ("email", "role", "departments", "is_active", "is_staff", "created_at", "last_login")
+    # An admin (role reviewer) works on the departments chosen here; the super user on every one.
+    filter_horizontal = ("departments",)
+    # Admin access is given on the account's own page (or in the app's admin panel), where its
+    # departments are chosen with it: a bulk action could only make admins with none.
+    actions = ("make_applicant",)
 
     def get_readonly_fields(self, request, obj=None):
         # Whether the account may sign in, and its role, can change here. A staff member cannot
@@ -168,6 +167,14 @@ class UserAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        # Only an admin keeps departments: a user applies, and the super user works on every one.
+        if form.instance.role != Role.REVIEWER:
+            form.instance.departments.clear()
+        # Cases they can no longer act on go back to the queue for the other admins.
+        release_lost_work(form.instance, request.user)
+
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         if "is_active" in form.changed_data:
@@ -175,17 +182,22 @@ class UserAdmin(admin.ModelAdmin):
             audit.record(request.user, action, target_type="user", target_id=obj.pk)
         if "role" in form.changed_data:
             role_changed(request, obj, form.initial.get("role"))
+        if "role" in form.changed_data or "departments" in form.changed_data:
+            # Their next sign-in opens the app for the role and departments they now have.
             end_sessions([obj])
 
-    @admin.action(description="Give reviewer (admin) access to the selected users")
-    def make_reviewer(self, request, queryset):
-        self._set_role(request, queryset, Role.REVIEWER)
-
-    @admin.action(description="Make the selected users applicants (remove reviewer access)")
+    @admin.action(description="Make the selected users applicants (remove admin access)")
     def make_applicant(self, request, queryset):
         self._set_role(request, queryset, Role.APPLICANT)
 
     def _set_role(self, request, queryset, role):
+        # One transaction for the whole action: the last-super-user check locks rows, and access
+        # changes are made one after another.
+        with transaction.atomic():
+            lock_access_changes()
+            self._set_roles(request, queryset, role)
+
+    def _set_roles(self, request, queryset, role):
         changed, skipped, blocked, moved = 0, [], 0, []
         for user in queryset:
             if user.role == role:
@@ -193,7 +205,9 @@ class UserAdmin(admin.ModelAdmin):
             if role_fixed(request, user):
                 skipped.append(user.email)
                 continue
-            refused = promotion_refused(user) if role == Role.REVIEWER else None
+            refused = promotion_refused(user) if role in STAFF_ROLES and user.role not in STAFF_ROLES else None
+            if user.role == Role.SUPERUSER and role != Role.SUPERUSER and not other_super_users(user):
+                refused = f"{user.email} is the last super user who can sign in."
             if refused:
                 self.message_user(request, f"Not changed: {refused}", messages.WARNING)
                 blocked += 1
@@ -201,6 +215,9 @@ class UserAdmin(admin.ModelAdmin):
             before = user.role
             user.role = role
             user.save(update_fields=["role"])
+            if role != Role.REVIEWER:
+                user.departments.clear()
+            release_lost_work(user, request.user)
             role_changed(request, user, before)
             moved.append(user)
             changed += 1
@@ -235,7 +252,7 @@ def role_changed(request, user: User, before) -> None:
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ("key", "name", "blurb")
+    list_display = ("key", "name", "blurb", "is_active")
     readonly_fields = ("key",)  # Assessments and the frontend refer to departments by key.
 
     def has_add_permission(self, request):
@@ -254,7 +271,8 @@ class QuestionSectionInline(ReadOnlyInline):
 
 @admin.register(QuestionnaireVersion)
 class QuestionnaireVersionAdmin(ReadOnlyAdmin):
-    list_display = ("label", "published_at", "is_active")
+    list_display = ("label", "department", "published_at", "is_active")
+    list_filter = ("department", "is_active")
     inlines = [QuestionSectionInline]
 
 

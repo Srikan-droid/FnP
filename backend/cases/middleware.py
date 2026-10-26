@@ -9,7 +9,7 @@ from django.utils.csp import CSP
 api_log = logging.getLogger("cases.api")
 
 # Values never written to the log, whatever their nesting.
-_SECRET_KEYS = {"password", "csrfmiddlewaretoken", "token", "secret", "authorization", "sessionid"}
+_SECRET_KEYS = {"password", "csrfmiddlewaretoken", "token", "locktoken", "secret", "authorization", "sessionid"}
 
 # Room for the multipart framing and the form fields around an uploaded file.
 _FORM_OVERHEAD_BYTES = 64 * 1024
@@ -61,6 +61,15 @@ class AdminCspMiddleware:
         return response
 
 
+def _masked_query(request) -> str:
+    """The query string with any secret parameter's value masked (the editing lock's ?token=)."""
+    params = request.GET.copy()
+    for key in params:
+        if key.lower() in _SECRET_KEYS:
+            params.setlist(key, ["***"])
+    return params.urlencode(safe="*")
+
+
 def _redacted(value):
     if isinstance(value, dict):
         return {k: "***" if str(k).lower() in _SECRET_KEYS else _redacted(v) for k, v in value.items()}
@@ -100,7 +109,7 @@ class ApiLogMiddleware:
 
         user = getattr(request, "user", None)
         who = user.email if user is not None and user.is_authenticated else "anonymous"
-        query = f"?{request.META['QUERY_STRING']}" if request.META.get("QUERY_STRING") else ""
+        query = f"?{_masked_query(request)}" if request.META.get("QUERY_STRING") else ""
         lines = [f"{request.method} {request.path}{query} → {response.status_code} ({took:.0f} ms) · {who}"]
         if sent is not None:
             lines.append(f"  request:\n{self._indent(_shown(sent))}")

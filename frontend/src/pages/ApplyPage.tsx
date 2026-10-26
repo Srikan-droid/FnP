@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  useCatalogue,
+  useMaxUploadBytes,
   useFormBusy,
   useRefreshCase,
   useRemoveDocument,
@@ -20,7 +20,7 @@ import { sourceFields, type AttachSource } from "../domain/attachSource";
 import DocumentLibrary from "../components/DocumentLibrary";
 import PageHeader, { AssignmentMeta } from "../components/PageHeader";
 import { Loading, LoadError } from "../components/LoadState";
-import { ArrowRightIcon, AlertTriangleIcon, ChevronDownIcon } from "../components/icons";
+import { ArrowRightIcon, AlertTriangleIcon, ChevronDownIcon, InfoIcon } from "../components/icons";
 import { documentRuleBreaks, evidenceGaps, hasMissingMandatoryEvidence } from "../domain/evidenceRules";
 import {
   CV_QID,
@@ -41,6 +41,9 @@ function refusalText(refusal: SaveRefusal): string {
   const { error, changes } = refusal;
   if (!(error instanceof ApiError) || error.status >= 500) return "Check your connection and make the change again.";
   if (error.status === 400) {
+    if (Object.keys(changes.answers ?? {}).some((qid) => error.field(`answers.${qid}`) === "Unknown question.")) {
+      return "This question is no longer asked: the department changed the questions. The form now shows the current ones.";
+    }
     if (Object.keys(changes.answers ?? {}).some((qid) => error.field(`answers.${qid}`))) {
       return "The question's options have changed; the form now shows the current ones. Make the change again.";
     }
@@ -58,7 +61,7 @@ export default function ApplyPage() {
   const uploadDocument = useUploadDocument(id);
   const removeDocument = useRemoveDocument(id);
   const refreshCase = useRefreshCase(id);
-  const maxBytes = useCatalogue().data?.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
+  const maxBytes = useMaxUploadBytes(id) ?? DEFAULT_MAX_UPLOAD_BYTES;
   // Whether a change is still being sent, and whether one has been saved on this visit: the action
   // bar says "Saving…", then "All changes saved".
   const busy = useFormBusy(id);
@@ -76,6 +79,12 @@ export default function ApplyPage() {
     },
     []
   );
+  // The questionnaire edition the page opened on: if the department changes the questions while
+  // the form is open, the applicant is told to check their answers.
+  const [openedOn, setOpenedOn] = useState<string | undefined>(undefined);
+  const formVersion = data.status === "ready" ? data.raw.version : undefined;
+  if (openedOn === undefined && formVersion !== undefined) setOpenedOn(formVersion);
+  const questionsChanged = openedOn !== undefined && formVersion !== undefined && formVersion !== openedOn;
 
   if (data.status === "loading") return <Loading />;
   if (data.status === "error") return <LoadError error={data.error} onRetry={data.retry} />;
@@ -165,6 +174,16 @@ export default function ApplyPage() {
           <AssignmentMeta assignment={assessment} showDepartment />
         </PageHeader>
 
+        {questionsChanged && (
+          <div className="notice notice-info" role="status">
+            <InfoIcon size={17} />
+            <div>
+              <strong>The questions for this application were updated.</strong> Its department changed
+              them while you were filling it in; the form now shows the current ones. Please check
+              your answers.
+            </div>
+          </div>
+        )}
 
         {refusal && (
           <div className="notice notice-critical" role="alert">

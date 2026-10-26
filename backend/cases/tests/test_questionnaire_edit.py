@@ -35,6 +35,7 @@ def structure(reviewer) -> dict:
     """The questionnaire in force, in the shape the editor sends it back."""
     current = reviewer.get("/api/questionnaire").json()["current"]
     return {
+        "department": "banking",
         "version": current["version"],
         "sections": [
             {
@@ -71,8 +72,8 @@ def test_the_editor_gets_answer_types_and_the_document_types_to_choose_from(revi
 
 def test_sending_the_questionnaire_unchanged_publishes_nothing(reviewer):
     response = reviewer.put("/api/questionnaire", structure(reviewer))
-    assert response.status_code == 200 and response.json()["version"] == "v1"
-    assert QuestionnaireVersion.objects.count() == 1
+    assert response.status_code == 200 and response.json()["version"] == make.label()
+    assert QuestionnaireVersion.objects.count() == make.versions_at_start()
 
 
 def test_section_weights_can_change_as_long_as_they_add_up_to_100(reviewer):
@@ -83,7 +84,7 @@ def test_section_weights_can_change_as_long_as_they_add_up_to_100(reviewer):
     basic["questions"][0]["weight"], basic["questions"][1]["weight"] = 4.5, 1.5
     quals["questions"][0]["weight"], quals["questions"][1]["weight"] = 6, 10
     response = reviewer.put("/api/questionnaire", body)
-    assert response.status_code == 200 and response.json()["version"] == "v2"
+    assert response.status_code == 200 and response.json()["version"] == make.label() != body["version"]
     assert [s["weight"] for s in response.json()["sections"][:2]] == [6, 16]
 
     off = structure(reviewer)
@@ -96,7 +97,7 @@ def test_section_weights_can_change_as_long_as_they_add_up_to_100(reviewer):
     mismatch["sections"][0]["questions"][0]["weight"] = 1  # 1 + 1.5 is not the section's 6
     refused = reviewer.put("/api/questionnaire", mismatch)
     assert refused.status_code == 400 and "Basic Details" in refused.json()["sections"]
-    assert QuestionnaireVersion.objects.count() == 2
+    assert QuestionnaireVersion.objects.count() == make.versions_at_start() + 1
 
 
 def test_a_section_and_question_added_reach_drafts_the_payload_and_uploads(reviewer, applicant):
@@ -111,7 +112,7 @@ def test_a_section_and_question_added_reach_drafts_the_payload_and_uploads(revie
     assert AuditEvent.objects.filter(action="questionnaire.publish", metadata__added=["N1"]).exists()
 
     # The catalogue offers the chosen document types under the new code.
-    catalogue_body = applicant.get("/api/catalogue").json()
+    catalogue_body = applicant.get("/api/catalogue", department="banking").json()
     # The chosen types, and "Other — please specify", which every question offers.
     assert [o["code"] for o in catalogue_body["evidenceOptions"]["N1"]] == ["PASSPORT", "OTHER"]
 
@@ -166,7 +167,7 @@ def test_a_text_question_is_answered_in_words_and_must_be_answered_to_submit(rev
     assert applicant.patch(f"/api/assessments/{aid}/form", {"answers": {qid: "x" * 2001}}).status_code == 400
     assert applicant.patch(f"/api/assessments/{aid}/form", {"answers": {qid: 5}}).status_code == 400
 
-    questions = catalogue.questions(QuestionnaireVersion.objects.get(is_active=True).pk)
+    questions = catalogue.questions(catalogue.active_version(Assessment.objects.get(public_id=aid).department).pk)
     answers = {q: catalogue.default_answer(questions[q]) for q in questions}
     assert any("answers for" in m and qid in m for m in workflow.incomplete_for_submission(questions, answers, []))
     answers[qid] = "Two."
@@ -249,13 +250,13 @@ def test_two_sections_cannot_share_a_name_and_an_edit_names_its_version(reviewer
     stale = structure(reviewer)
     stale["version"] = "v0"
     assert reviewer.put("/api/questionnaire", stale).status_code == 409
-    assert reviewer.put("/api/questionnaire", {"version": "v1", "sections": "nope"}).status_code == 400
+    assert reviewer.put("/api/questionnaire", {"department": "banking", "version": make.label(), "sections": "nope"}).status_code == 400
 
 
 def test_weights_compare_exactly(reviewer):
     body = copy.deepcopy(structure(reviewer))
     body["sections"][0]["questions"][0]["weight"] = "2.50"
-    assert reviewer.put("/api/questionnaire", body).json()["version"] == "v1"
+    assert reviewer.put("/api/questionnaire", body).json()["version"] == body["version"]
     assert Decimal("2.50") == Decimal("2.5")
 
 
@@ -374,7 +375,7 @@ def test_settings_only_saves_keep_a_text_question_and_added_flag(reviewer):
     )
     version = reviewer.put("/api/questionnaire", body).json()["version"]
     a1 = {"allowedAnswers": ["Yes", "No"], "fileTypes": ["pdf", "png"], "maxFiles": 1}
-    after = {q["qid"]: q for q in reviewer.put("/api/questionnaire", {"version": version, "questions": {"A1": a1}}).json()["questions"]}
+    after = {q["qid"]: q for q in reviewer.put("/api/questionnaire", {"department": "banking", "version": version, "questions": {"A1": a1}}).json()["questions"]}
     assert after["N1"]["answerType"] == "text" and after["N1"]["addedHere"] is True and after["N1"]["evidenceOptions"] == ["PASSPORT"]
 
 
@@ -384,7 +385,8 @@ def test_the_editor_is_told_how_many_drafts_each_change_reaches(reviewer, applic
     upload = {"file": SimpleUploadedFile("passport.pdf", PDF), "qid": "A1", "optionCode": "PASSPORT"}
     assert applicant.post(f"/api/assessments/{aid}/evidence", upload, multipart=True).status_code == 201
     make.assessment(public_id="FNP-2026-0950", reference="BL-USE-1", stage="REVIEW_PENDING").answers.create(qid="A4", value="No")
-    impact = reviewer.get("/api/questionnaire/impact").json()
+    assert reviewer.get("/api/questionnaire/impact").status_code == 400  # it must name the department
+    impact = reviewer.get("/api/questionnaire/impact", department="banking").json()
     assert impact == {"drafts": 1, "answered": {"A4": 1}, "documents": {"A1": 1}}
     # Read when needed, not with every load of the editor; reviewers only.
     assert "draftUse" not in reviewer.get("/api/questionnaire").json()
@@ -402,7 +404,7 @@ def test_a_question_added_here_can_take_document_types_named_here(reviewer, appl
     # Spaces tidied, the same name once, an empty one left out.
     assert added["evidenceOptions"] == ["PASSPORT", "CUSTOM:Professional licence"]
 
-    options = applicant.get("/api/catalogue").json()["evidenceOptions"]["N1"]
+    options = applicant.get("/api/catalogue", department="banking").json()["evidenceOptions"]["N1"]
     assert [(o["code"], o["label"], o["doc_type"]) for o in options] == [
         ("PASSPORT", options[0]["label"], "passport"),
         ("CUSTOM:Professional licence", "Professional licence", "other"),
@@ -447,7 +449,7 @@ def test_a_question_added_here_always_offers_other_please_specify(reviewer, appl
     # Chosen explicitly or not, it is offered once, last.
     body["sections"][-1]["questions"].append(new_question(evidenceOptions=["OTHER", "PASSPORT"]))
     assert reviewer.put("/api/questionnaire", body).status_code == 200
-    assert [o["code"] for o in applicant.get("/api/catalogue").json()["evidenceOptions"]["N1"]] == ["PASSPORT", "OTHER"]
+    assert [o["code"] for o in applicant.get("/api/catalogue", department="banking").json()["evidenceOptions"]["N1"]] == ["PASSPORT", "OTHER"]
     # The editor does not offer it as a choice: it is always there.
     choices = [c["code"] for c in reviewer.get("/api/questionnaire").json()["evidenceOptionChoices"]]
     assert "OTHER" not in choices and "PASSPORT" in choices
@@ -496,7 +498,7 @@ def test_an_existing_question_can_take_other_document_types_and_go_back_to_the_e
     assert a1["evidenceOptions"] == ["PASSPORT", "NATIONAL_ID", "CUSTOM:Residence card"] and a1["addedHere"] is False
 
     # The applicant is offered them, "Other — please specify" last as always.
-    codes = [o["code"] for o in applicant.get("/api/catalogue").json()["evidenceOptions"]["A1"]]
+    codes = [o["code"] for o in applicant.get("/api/catalogue", department="banking").json()["evidenceOptions"]["A1"]]
     assert codes == ["PASSPORT", "NATIONAL_ID", "CUSTOM:Residence card", "OTHER"]
     aid = reviewer.post("/api/assessments", NEW).json()["id"]
     form = applicant.get(f"/api/assessments/{aid}/form").json()
@@ -507,14 +509,14 @@ def test_an_existing_question_can_take_other_document_types_and_go_back_to_the_e
     _q(body, "A1")["evidenceOptions"] = list(reversed(engine_a1))
     response = reviewer.put("/api/questionnaire", body)
     assert next(q for q in response.json()["questions"] if q["qid"] == "A1")["evidenceOptions"] == []
-    codes = [o["code"] for o in applicant.get("/api/catalogue").json()["evidenceOptions"]["A1"]]
+    codes = [o["code"] for o in applicant.get("/api/catalogue", department="banking").json()["evidenceOptions"]["A1"]]
     assert codes == [*engine_a1, "OTHER"]
 
 
 def test_an_existing_question_sent_with_no_types_keeps_the_engines(reviewer):
     # What the editor sent before it could choose them: nothing changes.
     response = reviewer.put("/api/questionnaire", structure(reviewer))
-    assert response.status_code == 200 and QuestionnaireVersion.objects.count() == 1
+    assert response.status_code == 200 and QuestionnaireVersion.objects.count() == make.versions_at_start()
     body = structure(reviewer)
     _a4(body)["evidenceOptions"] = ["NOT_A_TYPE"]
     refused = reviewer.put("/api/questionnaire", body)
@@ -527,7 +529,7 @@ def test_an_existing_question_takes_only_the_engines_types_for_it(reviewer):
     _a4(body)["evidenceOptions"] = ["NATURALISATION", "PASSPORT"]
     refused = reviewer.put("/api/questionnaire", body)
     assert refused.status_code == 400 and "PASSPORT is not among" in str(refused.json())
-    assert QuestionnaireVersion.objects.count() == 1
+    assert QuestionnaireVersion.objects.count() == make.versions_at_start()
 
 
 def test_document_types_left_as_they_are_need_nothing_from_the_engine(reviewer, monkeypatch):
@@ -560,9 +562,12 @@ def test_a_form_on_an_older_version_keeps_the_engines_types_it_was_given(reviewe
     body = structure(reviewer)
     _a4(body)["evidenceOptions"] = ["CUSTOM:Residence card"]
     assert reviewer.put("/api/questionnaire", body).status_code == 200
-    # The catalogue lists the latest version's types; this form still gets the engine's for A4.
-    latest = [o["code"] for o in applicant.get("/api/catalogue").json()["evidenceOptions"]["A4"]]
+    # The department's catalogue lists its latest version's types; this form still gets the
+    # engine's for A4, in the form and in the catalogue for the form's own version.
+    latest = [o["code"] for o in applicant.get("/api/catalogue", department="banking").json()["evidenceOptions"]["A4"]]
     assert latest == ["CUSTOM:Residence card", "OTHER"]
+    own = [o["code"] for o in applicant.get("/api/catalogue", assessment=aid).json()["evidenceOptions"]["A4"]]
+    assert own == ["NATURALISATION", "OTHER"]
     form = applicant.get(f"/api/assessments/{aid}/form").json()
     a4 = next(a for a in form["answers"] if a["qid"] == "A4")
     assert [o["code"] for o in a4["evidenceOptions"]] == ["NATURALISATION", "OTHER"]

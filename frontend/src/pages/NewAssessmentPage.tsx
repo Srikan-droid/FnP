@@ -205,11 +205,14 @@ export default function NewAssessmentPage({ mode }: { mode: NewAssessmentMode })
                       <option value="" disabled>
                         Choose a department
                       </option>
-                      {departments.data.map((d) => (
-                        <option key={d.key} value={d.key}>
-                          {d.name}
-                        </option>
-                      ))}
+                      {/* A department switched off, or with no questions yet, takes no applications. */}
+                      {departments.data
+                        .filter((d) => d.isActive !== false && d.hasQuestions !== false)
+                        .map((d) => (
+                          <option key={d.key} value={d.key}>
+                            {d.name}
+                          </option>
+                        ))}
                     </select>
                   ) : (
                     <input

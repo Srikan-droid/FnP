@@ -85,7 +85,7 @@ class Command(BaseCommand):
 
     def _load(self, d: dict, root: Path, stored: list[str]) -> int:
         form = json.loads((root / "form_data" / f"{d['applicantId']}.json").read_text(encoding="utf-8"))
-        version = catalogue.active_version()
+        version = catalogue.active_version(Department.objects.get(key=d["departmentKey"]))
         questions = catalogue.questions(version.pk)
         files: list[tuple[str, str, str, Path]] = []  # qid, doc_type, role, path
         answers: dict[str, str] = {}

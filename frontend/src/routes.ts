@@ -19,6 +19,7 @@ export const ROUTE_PATTERNS = {
   reviewerAdmin: "/reviewer/admin",
   reviewerAdminUsers: "/reviewer/admin/users",
   reviewerAdminUser: "/reviewer/admin/users/:userId",
+  reviewerAdminDepartments: "/reviewer/admin/departments",
 } as const;
 
 /** The applicant's steps after the form itself, in the order the stepper shows them. */
@@ -42,6 +43,7 @@ export const routes = {
   reviewerAdmin: () => ROUTE_PATTERNS.reviewerAdmin,
   reviewerAdminUsers: () => ROUTE_PATTERNS.reviewerAdminUsers,
   reviewerAdminUser: (userId: number) => `/reviewer/admin/users/${userId}`,
+  reviewerAdminDepartments: () => ROUTE_PATTERNS.reviewerAdminDepartments,
 };
 
 /** Navigation state the reviewer queue reads, so it can confirm what the reviewer just did. */

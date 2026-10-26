@@ -1,11 +1,16 @@
 from django.urls import path
 
-from .views.admin_panel import AdminOverviewView, AdminUserDetailView, AdminUserListView
+from .views.admin_panel import (
+    AdminDepartmentDetailView, AdminDepartmentListView, AdminOverviewView, AdminUserDetailView, AdminUserListView,
+)
 from .views.assessments import AssessmentDetailView, AssessmentListView, ContinueView, PrefillView
 from .views.case import (
-    CaseView, CompleteReviewView, DecisionView, ForceScoreView, HighlightView, ResubmitView, RetryView, RulingView, SubmitView,
+    AssignView, CaseView, ClaimView, CompleteReviewView, DecisionView, ForceScoreView, HighlightView, ResubmitView, RetryView,
+    RulingView, SubmitView,
 )
-from .views.catalogue import CatalogueView, DepartmentListView, QuestionnaireImpactView, QuestionnaireView
+from .views.catalogue import (
+    CatalogueView, DepartmentListView, QuestionnaireImpactView, QuestionnaireLockView, QuestionnaireView,
+)
 from .views.evidence import (
     DocumentDetailView, DocumentFileView, DocumentListView, EvidenceDetailView, EvidenceFileView, EvidenceUploadView,
 )
@@ -20,10 +25,13 @@ urlpatterns = [
     path("admin/overview", AdminOverviewView.as_view(), name="admin-overview"),
     path("admin/users", AdminUserListView.as_view(), name="admin-users"),
     path("admin/users/<int:user_id>", AdminUserDetailView.as_view(), name="admin-user"),
+    path("admin/departments", AdminDepartmentListView.as_view(), name="admin-departments"),
+    path("admin/departments/<slug:key>", AdminDepartmentDetailView.as_view(), name="admin-department"),
     path("catalogue", CatalogueView.as_view(), name="catalogue"),
     path("departments", DepartmentListView.as_view(), name="departments"),
     path("questionnaire", QuestionnaireView.as_view(), name="questionnaire"),
     path("questionnaire/impact", QuestionnaireImpactView.as_view(), name="questionnaire-impact"),
+    path("questionnaire/lock", QuestionnaireLockView.as_view(), name="questionnaire-lock"),
     path("assessments", AssessmentListView.as_view(), name="assessments"),
     # Before the assessment pattern below, which would otherwise take "prefill" as an id.
     path("assessments/prefill", PrefillView.as_view(), name="assessments-prefill"),
@@ -44,6 +52,8 @@ urlpatterns = [
     path(f"{A}/case", CaseView.as_view(), name="case"),
     path(f"{A}/rulings/<str:qid>", RulingView.as_view(), name="ruling"),
     path(f"{A}/decision", DecisionView.as_view(), name="decision"),
+    path(f"{A}/claim", ClaimView.as_view(), name="claim"),
+    path(f"{A}/assign", AssignView.as_view(), name="assign"),
     path(f"{A}/force-score", ForceScoreView.as_view(), name="force-score"),
     path(f"{A}/complete-review", CompleteReviewView.as_view(), name="complete-review"),
     path(f"{A}/highlights/<str:name>", HighlightView.as_view(), name="highlight"),

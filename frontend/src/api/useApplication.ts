@@ -1,4 +1,6 @@
-import { useAssessment, useCatalogue, useForm } from "./queries";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { keys, useAssessment, useCatalogue, useForm } from "./queries";
 import { toApplicationForm } from "./adapt";
 import type { Assessment, Catalogue, Form } from "./types";
 import type { ApplicationForm } from "../domain/types";
@@ -11,8 +13,18 @@ export type ApplicationData =
 /** What the form and review pages start from: the assessment, the catalogue and the form. */
 export function useApplication(id: string): ApplicationData {
   const assessment = useAssessment(id);
-  const catalogue = useCatalogue();
+  const catalogue = useCatalogue(id);
   const form = useForm(id);
+  // The department changed the questions since the page read them (the form, always current,
+  // says so): the questions are read again, so a question added shows and a deleted one goes.
+  const client = useQueryClient();
+  const formVersion = form.data?.version;
+  const catalogueVersion = catalogue.data?.version;
+  useEffect(() => {
+    if (formVersion && catalogueVersion && formVersion !== catalogueVersion) {
+      client.invalidateQueries({ queryKey: [...keys.catalogue, id] });
+    }
+  }, [client, id, formVersion, catalogueVersion]);
   // A failed background refresh keeps what is on screen; only a page with nothing to show yet
   // turns into the error page.
   const failed = [assessment, catalogue, form].find((q) => q.isError && q.data === undefined);

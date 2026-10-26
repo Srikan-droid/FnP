@@ -42,9 +42,9 @@ from ..models import (
     User,
     Verdict,
 )
-from ..permissions import assessment_for
+from ..permissions import assessment_for, may_manage, visible_assessments
 from ..storage import delete_files
-from .common import Conflict, lock
+from .common import Conflict, holder_payload, lock
 
 PAGE_SIZE = 50
 # Applications an applicant may have started and not yet submitted at one time.
@@ -79,10 +79,10 @@ def _stages(value: str | None) -> list[str] | None:
 def document_progress(drafts: list[Assessment]) -> dict[int, dict]:
     """For forms not submitted yet (by pk): how many of the documents each needs are attached, by
     the rule submitting checks (workflow.documents_needed). A fixed number of queries, however many
-    drafts: drafts are all held to the active settings, so those are read once."""
+    drafts: drafts are held to their department's settings in force, so those are read once each."""
     if not drafts:
         return {}
-    questions = catalogue.questions(catalogue.active_version().pk)
+    versions = catalogue.active_versions(a.department_id for a in drafts)
     saved: dict[int, dict[str, str]] = {}
     for pk, qid, value in AnswerValue.objects.filter(assessment__in=drafts).values_list("assessment_id", "qid", "value"):
         saved.setdefault(pk, {})[qid] = value
@@ -93,6 +93,7 @@ def document_progress(drafts: list[Assessment]) -> dict[int, dict]:
         attached.setdefault(pk, set()).add(qid)
     progress = {}
     for a in drafts:
+        questions = catalogue.questions(versions[a.department_id].pk)
         # An answer not saved yet reads as the form starts it (No, or nothing for a text question).
         answers = {qid: saved.get(a.pk, {}).get(qid, catalogue.default_answer(q)) for qid, q in questions.items()}
         needed = workflow.documents_needed(questions, answers)
@@ -122,7 +123,7 @@ def with_queue_summary(qs):
         # Documents uploaded to "Your documents" first, before any answer: started too.
         | Exists(CaseDocument.objects.filter(assessment=OuterRef("pk")))
     )
-    return qs.annotate(has_draft=started).select_related("department", "applicant", "decision").prefetch_related(
+    return qs.annotate(has_draft=started).select_related("department", "applicant", "decision", "reviewer").prefetch_related(
         Prefetch(
             "submissions",
             # Only what the queue card needs: never the payload sent to the engine.
@@ -154,17 +155,23 @@ def _queue_summary(a: Assessment) -> dict:
     }
 
 
+def _held_by_other(user: User, a: Assessment) -> bool:
+    """Another admin has taken the case: only they, or the super user, act on it."""
+    return a.reviewer_id is not None and a.reviewer_id != user.pk and not user.is_super_user
+
+
 def removable_by(user: User, a: Assessment) -> bool:
-    """The reviewer may remove any assessment, at any stage, except while the AI engine is working
-    on it (a run being sent or followed would lose its case). An applicant may remove only one they
-    started themselves, before submission, and never a built-in demo one."""
+    """An admin may remove any assessment of their departments, at any stage, except while the AI
+    engine is working on it (a run being sent or followed would lose its case) or while another
+    admin has taken it; the super user any of them. An applicant may remove only one they started
+    themselves, before submission, and never a built-in demo one."""
     if user.is_reviewer:
-        return a.stage not in workflow.FOLLOWED_STAGES
+        return a.stage not in workflow.FOLLOWED_STAGES and not _held_by_other(user, a)
     return a.stage == Stage.NOT_SUBMITTED and a.created_by_id == user.id
 
 
 def assessment_payload(a: Assessment, viewer: User) -> dict:
-    return {
+    payload = {
         "id": a.public_id,
         "applicantName": a.applicant_name,
         "applicantEmail": a.applicant.email,
@@ -188,6 +195,10 @@ def assessment_payload(a: Assessment, viewer: User) -> dict:
         "hasDraft": a.has_draft,
         "queue": _queue_summary(a),
     }
+    if viewer.is_reviewer:
+        # Which of the department's admins is reviewing it (the queue card says; null: not taken).
+        payload["reviewer"] = holder_payload(a)
+    return payload
 
 
 def _encode_cursor(a: Assessment) -> str:
@@ -228,6 +239,11 @@ class NewAssessmentSerializer(serializers.Serializer):
         department = Department.objects.filter(key=value).first()
         if department is None:
             raise serializers.ValidationError("Choose a department from the list.")
+        # A department switched off takes no new applications, nor one with no questions yet.
+        if not department.is_active:
+            raise serializers.ValidationError(f"{department.name} is not taking new applications at the moment.")
+        if not catalogue.has_questions(department):
+            raise serializers.ValidationError(f"{department.name} is not taking applications yet: it has no questions.")
         return department
 
     def validate_reference(self, value):
@@ -268,12 +284,11 @@ class AssessmentListView(APIView):
         return super().get_throttles()
 
     def get(self, request):
-        visible = Assessment.objects.all()
-        if not request.user.is_reviewer:
-            visible = visible.filter(applicant=request.user)
+        # Everything for the super user, an admin's departments, an applicant's own.
+        visible = visible_assessments(request.user)
         if not request.query_params.get("cursor"):
-            # The reviewer sees every assessment, so their runs need no narrowing.
-            _follow_running(None if request.user.is_reviewer else visible)
+            # The super user sees every assessment, so their runs need no narrowing.
+            _follow_running(None if request.user.is_super_user else visible)
         if not request.user.is_reviewer:
             items = list(with_queue_summary(visible).order_by("-updated_at", "-id"))
             progress = document_progress([a for a in items if a.stage == Stage.NOT_SUBMITTED])
@@ -295,6 +310,13 @@ class AssessmentListView(APIView):
             if not Department.objects.filter(key=department).exists():
                 raise ValidationError({"department": "Unknown department."})
             visible = visible.filter(department__key=department)
+        holder = request.query_params.get("holder")
+        if holder == "mine":
+            visible = visible.filter(reviewer=request.user)
+        elif holder == "none":
+            visible = visible.filter(reviewer__isnull=True)
+        elif holder:
+            raise ValidationError({"holder": "Choose mine or none."})
         search = (request.query_params.get("q") or "").strip()[:SEARCH_MAX]
         if search:
             visible = visible.filter(
@@ -305,7 +327,14 @@ class AssessmentListView(APIView):
         # The queue's counts come with its first page only: "Show more" adds rows, not new counts.
         # The count of each stage among what the department and search leave, whatever the status
         # filter: the queue's summary tiles, each a way into that part of the queue.
-        stage_counts = None if cursor else dict(visible.order_by().values_list("stage").annotate(n=Count("pk")))
+        # With them, per stage, how many wait on this reviewer: theirs or nobody's yet (another
+        # admin's wait on that admin; the super user too acts on those only by taking them over).
+        counted = None if cursor else list(
+            visible.order_by().values("stage").annotate(
+                n=Count("pk"), on_me=Count("pk", filter=Q(reviewer__isnull=True) | Q(reviewer=request.user))
+            )
+        )
+        stage_counts = None if counted is None else {row["stage"]: row["n"] for row in counted}
         if stages is None or Stage.NOT_SUBMITTED not in stages:
             visible = visible.exclude(stage=Stage.NOT_SUBMITTED)
         if stages:
@@ -334,7 +363,9 @@ class AssessmentListView(APIView):
             # The header's counts cover the whole queue, not just the pages the reviewer has loaded:
             # the cases the status filter leaves, counted from the stage counts already read.
             listed = {st: n for st, n in stage_counts.items() if st in shown_stages}
-            actionable = sum(n for st, n in listed.items() if st in NEEDS_REVIEWER)
+            actionable = sum(
+                row["on_me"] for row in counted if row["stage"] in NEEDS_REVIEWER and row["stage"] in shown_stages
+            )
             body.update(total=sum(listed.values()), actionable=actionable, stageCounts=stage_counts)
         return Response(body)
 
@@ -344,6 +375,8 @@ class AssessmentListView(APIView):
         data.is_valid(raise_exception=True)
         v = data.validated_data
         if by_reviewer:
+            if not may_manage(request.user, v["department"]):
+                raise ValidationError({"department": "You can open applications only for your own departments."})
             applicant = User.objects.filter(email=v["email"]).first()
             if applicant is not None and applicant.role != Role.APPLICANT:
                 raise ValidationError({"email": "This email belongs to a reviewer account."})
@@ -385,7 +418,8 @@ def _check_draft_limit(applicant: User) -> None:
 
 
 def _open_assessment(applicant: User, created_by: User, initiated_on, **fields) -> Assessment:
-    """A new assessment, numbered from the case sequence and held to the questions in force now."""
+    """A new assessment, numbered from the case sequence and held to its department's questions in
+    force now."""
     with connection.cursor() as cur:
         cur.execute("SELECT nextval('assessment_serial')")
         serial = cur.fetchone()[0]
@@ -393,7 +427,7 @@ def _open_assessment(applicant: User, created_by: User, initiated_on, **fields) 
         public_id=f"FNP-{initiated_on.year}-{serial:04d}",
         applicant=applicant,
         initiated_on=initiated_on,
-        version=catalogue.active_version(),
+        version=catalogue.active_version(fields["department"]),
         created_by=created_by,
         **fields,
     )
@@ -462,7 +496,10 @@ class PrefillView(APIView):
         details = prefill.details_for(request.user.email)
         if details is None:
             return Response({"prefill": None})
-        if not Department.objects.filter(key=details["department"]).exists():
+        # Left for the applicant to choose when that department is switched off or has no
+        # questions yet: the form would refuse it.
+        department = Department.objects.filter(key=details["department"]).first()
+        if department is None or not department.is_active or not catalogue.has_questions(department):
             details["department"] = ""
         details["reference"] = free_reference(request.user, details["reference"])
         return Response({"prefill": details})
@@ -484,6 +521,10 @@ class ContinueView(APIView):
             raise PermissionDenied("Only the applicant can continue from their own application.")
         if source.stage not in CONTINUABLE:
             raise Conflict("An application can be continued from once a decision has been made on it.")
+        if not source.department.is_active:
+            raise Conflict(f"{source.department.name} takes no new applications at the moment.")
+        if not catalogue.has_questions(source.department):
+            raise Conflict(f"{source.department.name} is not taking applications yet: it has no questions.")
         with transaction.atomic():
             _check_draft_limit(request.user)
             for _ in range(5):
@@ -559,19 +600,21 @@ class AssessmentDetailView(APIView):
         assessment = assessment_for(request.user, public_id)
         if not request.user.is_reviewer and assessment.created_by_id != request.user.id:
             raise PermissionDenied("Only an application you started yourself can be removed.")
-        refused = (
-            "This assessment is with the AI engine right now. Remove it once the run has finished."
-            if request.user.is_reviewer
-            else "Only an assessment that was started here, and not yet submitted, can be removed."
-        )
+        def refused(a: Assessment) -> str:
+            if not request.user.is_reviewer:
+                return "Only an assessment that was started here, and not yet submitted, can be removed."
+            if _held_by_other(request.user, a):
+                return "Another admin is reviewing this assessment. Only they, or the super user, can remove it."
+            return "This assessment is with the AI engine right now. Remove it once the run has finished."
+
         if not removable_by(request.user, assessment):
-            raise Conflict(refused)
+            raise Conflict(refused(assessment))
         with transaction.atomic():
-            # Re-checked on the locked row: a submit or a run starting at the same moment must not
-            # lose its case.
+            # Re-checked on the locked row: a submit, a run starting or an admin taking the case at
+            # the same moment must not lose its case.
             row = lock(assessment)
             if not removable_by(request.user, row):
-                raise Conflict(refused)
+                raise Conflict(refused(row))
             record = _removal_record(row)
             # The files attached and those in "Your documents" (often the same ones).
             files = sorted(

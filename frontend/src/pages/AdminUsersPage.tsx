@@ -11,13 +11,14 @@ import { formatDateTime } from "../utils/format";
 import { routes } from "../routes";
 import { queueUrl } from "../state/queueReturn";
 import type { AdminUser } from "../api/types";
+import { departmentList } from "../state/access";
 
+/** What an account is: a user, an admin (an account with the reviewer role), or the super user. */
 export function RoleChip({ user }: { user: Pick<AdminUser, "role" | "isStaff"> }) {
-  return (
-    <span className={`chip chip-${user.role === "reviewer" ? "info" : "neutral"}`}>
-      {user.role === "reviewer" ? (user.isStaff ? "Reviewer · staff" : "Reviewer") : "Applicant"}
-    </span>
-  );
+  const label =
+    user.role === "superuser" ? "Super user" : user.role === "reviewer" ? (user.isStaff ? "Admin · staff" : "Admin") : "User";
+  const tone = user.role === "superuser" ? "serious" : user.role === "reviewer" ? "info" : "neutral";
+  return <span className={`chip chip-${tone}`}>{label}</span>;
 }
 
 export function StatusChip({ active }: { active: boolean }) {
@@ -73,8 +74,9 @@ export default function AdminUsersPage() {
           onChange={(e) => setFilters((f) => ({ ...f, role: e.target.value as AdminUserFilters["role"] }))}
         >
           <option value="">All roles</option>
-          <option value="applicant">Applicants</option>
-          <option value="reviewer">Reviewers</option>
+          <option value="applicant">Users</option>
+          <option value="admin">Admins</option>
+          <option value="superuser">Super users</option>
         </select>
         <label className="sr-only" htmlFor="admin-status">
           Status
@@ -128,6 +130,7 @@ export default function AdminUsersPage() {
                     </td>
                     <td>
                       <RoleChip user={u} />
+                      {departmentList(u) && <span className="admin-muted admin-sub">{departmentList(u)}</span>}
                     </td>
                     <td>
                       <StatusChip active={u.isActive} />

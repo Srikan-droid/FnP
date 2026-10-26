@@ -182,6 +182,148 @@
   color: var(--ink-3);
 }
 
+/* ---- One user's access ---- */
+.admin-access-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0;
+  padding: 0.25rem 1.25rem 1rem;
+  border: 0;
+  min-width: 0;
+}
+
+.admin-roles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.admin-role {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0.85rem 0.75rem 2.2rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.admin-role input {
+  position: absolute;
+  top: 0.85rem;
+  left: 0.8rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.admin-role.is-on {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.admin-role-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.admin-role-hint {
+  display: block;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+.admin-access-body:disabled .admin-role {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.admin-access-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.admin-access-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+
+.admin-access-switch input {
+  margin-top: 0.2rem;
+  accent-color: var(--accent);
+}
+
+.admin-access-note {
+  margin: 0 1.25rem 0.85rem;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.admin-warn {
+  color: var(--critical);
+  font-weight: 600;
+}
+
+.admin-access-error {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 1.25rem 0.75rem;
+}
+
+.admin-access-foot {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--hairline);
+}
+
+/* ---- Departments ---- */
+.admin-dept-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.85rem;
+}
+
+.admin-dept-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.admin-dept-table tr.is-off td {
+  color: var(--ink-3);
+}
+
+.admin-dept-table tbody tr {
+  cursor: default;
+}
+
+.admin-dept-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.admin-dept-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: 0.75rem;
+}
+
 /* ---- One user ---- */
 .admin-person-head {
   display: flex;
@@ -256,6 +398,12 @@
   font-family: var(--mono);
   font-size: var(--fs-xs);
   color: var(--ink-2);
+}
+
+@media (max-width: 720px) {
+  .admin-roles {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 540px) {

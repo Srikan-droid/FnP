@@ -33,5 +33,6 @@
 @import "./components/applicant-details.css";
 @import "./components/not-submitted.css";
 @import "./pages/admin.css";
+@import "./components/case-reviewer.css";
 @import "./components/polish.css";
 @import "./pages/login-flow.css";

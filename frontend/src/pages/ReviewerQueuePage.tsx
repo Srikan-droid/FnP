@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { useAssessments, useDepartments, useRemoveAssessment } from "../api/queries";
+import { useAssessments, useDepartments, useRemoveAssessment, useSession } from "../api/queries";
 import { ApiError } from "../api/client";
 import Modal from "../components/Modal";
+import { REVIEWABLE, isSuperUser } from "../state/access";
 import { daysSince, formatDate } from "../utils/format";
 import { STAGE_ORDER, STAGE_LABELS, needsReviewer } from "../state/caseLabels";
 import { rememberQueueSearch } from "../state/queueReturn";
@@ -71,10 +72,13 @@ export default function ReviewerQueuePage() {
   const status = toStatus(params.get("status"));
   const showDrafts = status === "NOT_SUBMITTED";
   const search = (params.get("q") ?? "").trim();
+  // Whose cases: "" every one, "mine" the viewer's, "none" those no admin has taken yet.
+  const holderParam = params.get("holder");
+  const holder = holderParam === "mine" || holderParam === "none" ? holderParam : "";
   // A filter change replaces the address rather than adding to the history (Back leaves the
   // queue), and keeps any notice on screen.
   const setFilter = useCallback(
-    (name: "department" | "status" | "q", value: string) =>
+    (name: "department" | "status" | "q" | "holder", value: string) =>
       setParams(
         (previous) => {
           const next = new URLSearchParams(previous);
@@ -105,8 +109,11 @@ export default function ReviewerQueuePage() {
   const departments = useDepartments();
   // The application the reviewer asked to remove, while they confirm it.
   const [toRemove, setToRemove] = useState<Assessment | null>(null);
-  // Refreshes itself while any listed case is still with the engine.
-  const list = useAssessments(department, status, search, { live: true });
+  // The admin panel is the super user's; an admin sees their own departments only.
+  const me = useSession().data;
+  const superUser = isSuperUser(me);
+  // Refreshes itself while any listed case is still with the engine, and every so often.
+  const list = useAssessments(department, status, search, { live: true, holder });
 
   if (list.isPending) return <Loading />;
   if (list.isError && !list.data) return <LoadError error={list.error} onRetry={() => list.refetch()} />;
@@ -124,10 +131,14 @@ export default function ReviewerQueuePage() {
   // The whole queue's counts, not just the pages loaded so far (they come with the first page).
   const first = list.data.pages[0];
   const total = first?.total ?? rows.length;
-  const actionable = first?.actionable ?? rows.filter((r) => needsReviewer(r.stage)).length;
+  // Waiting on this reviewer: needing a reviewer, and not taken by another admin (as the server
+  // counts `actionable`).
+  const onMe = (r: QueueRow) =>
+    needsReviewer(r.stage) && (!r.assignment.reviewer || r.assignment.reviewer.email === me?.email);
+  const actionable = first?.actionable ?? rows.filter(onMe).length;
   // The queue lists the latest activity first, so a case needing the reviewer that has not moved in
   // a while can be further down than the rows loaded: say so, with a way to list just those.
-  const actionableBelow = actionable - rows.filter((r) => needsReviewer(r.stage)).length;
+  const actionableBelow = actionable - rows.filter(onMe).length;
   const departmentName = departments.data?.find((d) => d.key === department)?.name;
   const stageCounts = first?.stageCounts ?? {};
   const tileCount = (tile: (typeof TILES)[number]) =>
@@ -162,7 +173,12 @@ export default function ReviewerQueuePage() {
                 {total === 1 ? "" : "s"}
                 {status && !showDrafts ? ` with status ${statusLabel(status)}` : ""}
                 {search ? ` matching “${search}”` : ""}{" "}
-                {departmentName ? `for ${departmentName}` : "across all departments"}.{" "}
+                {departmentName
+                  ? `for ${departmentName}`
+                  : superUser
+                    ? "across all departments"
+                    : "across your departments"}
+                .{" "}
                 {actionable > 0
                   ? `${actionable} need${actionable === 1 ? "s" : ""} your attention.`
                   : "Nothing is waiting on you."}
@@ -171,10 +187,12 @@ export default function ReviewerQueuePage() {
           </p>
         </div>
         <div className="page-head-aside">
-          <button className="btn btn-ghost" onClick={() => navigate(routes.reviewerAdmin())}>
-            <GridIcon size={15} />
-            Admin panel
-          </button>
+          {superUser && (
+            <button className="btn btn-ghost" onClick={() => navigate(routes.reviewerAdmin())}>
+              <GridIcon size={15} />
+              Admin panel
+            </button>
+          )}
           <button className="btn btn-ghost" onClick={() => navigate(routes.reviewerQuestions())}>
             <SlidersIcon size={15} />
             Configure questions
@@ -254,12 +272,20 @@ export default function ReviewerQueuePage() {
           value={department}
           onChange={(e) => setFilter("department", e.target.value)}
         >
-          <option value="">All departments</option>
+          <option value="">{superUser ? "All departments" : "All your departments"}</option>
           {departments.data?.map((d) => (
             <option key={d.key} value={d.key}>
               {d.name}
             </option>
           ))}
+        </select>
+        <label className="field-label" htmlFor="queue-holder">
+          Reviewer
+        </label>
+        <select id="queue-holder" className="input" value={holder} onChange={(e) => setFilter("holder", e.target.value)}>
+          <option value="">Anyone</option>
+          <option value="mine">Mine</option>
+          <option value="none">Not taken yet</option>
         </select>
       </div>
 
@@ -349,6 +375,21 @@ export default function ReviewerQueuePage() {
                         <dt>Department</dt>
                         <dd>{assignment.department.name}</dd>
                       </div>
+                      {/* Who reviews it: one of the department's admins takes each submitted case. */}
+                      {assignment.reviewer !== undefined && (REVIEWABLE.includes(stage) || assignment.reviewer) && (
+                        <div>
+                          <dt>Reviewer</dt>
+                          <dd>
+                            {assignment.reviewer === null ? (
+                              <span className="case-card-reviewer">Not taken yet</span>
+                            ) : assignment.reviewer.email === me?.email ? (
+                              <span className="case-card-reviewer is-mine">You</span>
+                            ) : (
+                              <span className="case-card-reviewer">{assignment.reviewer.email}</span>
+                            )}
+                          </dd>
+                        </div>
+                      )}
                     </dl>
   
                     <footer className="case-foot">
@@ -368,7 +409,9 @@ export default function ReviewerQueuePage() {
                     title={
                       assignment.removable
                         ? "Remove this application"
-                        : "With the AI engine right now: it can be removed once the run has finished"
+                        : assignment.reviewer && assignment.reviewer.email !== me?.email && !superUser
+                          ? "Another admin is reviewing it: only they, or the super user, can remove it"
+                          : "With the AI engine right now: it can be removed once the run has finished"
                     }
                     onClick={() => {
                       if (assignment.removable) setToRemove(assignment);

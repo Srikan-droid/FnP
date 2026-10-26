@@ -48,7 +48,7 @@ def test_the_overview_counts_the_whole_system(reviewer, population):
     body = reviewer.get("/api/admin/overview").json()
     # Three applicants plus the reviewer.
     assert body["users"] == {
-        "total": 4, "applicants": 3, "reviewers": 1, "active": 3, "inactive": 1,
+        "total": 4, "applicants": 3, "reviewers": 1, "admins": 0, "superUsers": 1, "active": 3, "inactive": 1,
         "newRecently": 3, "signedInRecently": 1,  # the reviewer, signed in by the test client
     }
     assessments = body["assessments"]

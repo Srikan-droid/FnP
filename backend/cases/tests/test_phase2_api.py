@@ -19,6 +19,12 @@ from engine.client import EngineUnavailable
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("engine_options")]
 
+
+@pytest.fixture(autouse=True)
+def _every_department_has_questions(db):
+    """These tests file applications under several departments: each is given banking's questions."""
+    make.questions_for()
+
 PDF = b"%PDF-1.7\n%test document\n"
 NEW = {
     "applicantName": "Anna M. Nghipandulwa",
@@ -54,8 +60,8 @@ def opened(reviewer, applicant):
 # ---- Catalogue -------------------------------------------------------------------------------
 
 def test_catalogue_serves_the_question_set_and_engine_options(applicant):
-    body = applicant.get("/api/catalogue").json()
-    assert body["version"] == "v1"
+    body = applicant.get("/api/catalogue", department="banking").json()
+    assert body["version"] == make.label()
     assert [q["qid"] for q in body["questions"]][:3] == ["A1", "A4", "Q1"]
     assert sum(q["weight"] for q in body["questions"]) == 100
     assert {"CV", "A1", "FC5"} <= set(body["evidenceOptions"])
@@ -70,7 +76,7 @@ def test_catalogue_reports_an_unavailable_engine_as_503(applicant, monkeypatch):
         raise EngineUnavailable("down")
 
     monkeypatch.setattr(client, "evidence_options", down)
-    response = applicant.get("/api/catalogue")
+    response = applicant.get("/api/catalogue", department="banking")
     assert response.status_code == 503
     assert "engine.invalid" not in response.content.decode()
 
@@ -127,7 +133,10 @@ OWN = {
 def test_departments_are_listed_for_the_application_form(applicant):
     departments = applicant.get("/api/departments").json()
     assert [d["key"] for d in departments] == ["banking", "education", "insurance", "microfinance", "payments", "markets"]
-    assert departments[2] == {"key": "insurance", "name": "Insurance Supervision", "blurb": "Long and short term insurers"}
+    assert departments[2] == {
+        "key": "insurance", "name": "Insurance Supervision", "blurb": "Long and short term insurers", "isActive": True,
+        "hasQuestions": True,
+    }
 
 
 def test_an_applicant_starts_their_own_application(applicant):
@@ -579,13 +588,13 @@ def test_other_people_cannot_reach_documents(as_user, applicant, reviewer, opene
 
 def test_reviewer_publishes_new_settings_as_a_new_version(reviewer, applicant, opened):
     current = reviewer.get("/api/questionnaire").json()["current"]
-    assert current["version"] == "v1"
-    response = reviewer.put("/api/questionnaire", {"version": "v1", "questions": {
+    assert current["version"] == make.label()
+    response = reviewer.put("/api/questionnaire", {"department": "banking", "version": current["version"], "questions": {
         "A1": {"allowedAnswers": ["Yes", "No", "N/A"], "fileTypes": ["png", "pdf"], "maxFiles": 1},
     }})
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "v2"
+    assert body["version"] == make.label() != current["version"]
     a1 = next(q for q in body["questions"] if q["qid"] == "A1")
     assert a1["allowedAnswers"] == ["Yes", "No", "N/A"] and a1["fileTypes"] == ["pdf", "png"]
     # Unsubmitted forms follow the new version straight away.
@@ -595,21 +604,23 @@ def test_reviewer_publishes_new_settings_as_a_new_version(reviewer, applicant, o
 
 def test_saving_identical_settings_publishes_nothing(reviewer):
     a1 = {"allowedAnswers": ["No", "Yes"], "fileTypes": ["pdf"], "maxFiles": 1}
-    assert reviewer.put("/api/questionnaire", {"version": "v1", "questions": {"A1": a1}}).json()["version"] == "v1"
+    assert reviewer.put("/api/questionnaire", {"department": "banking", "version": make.label(), "questions": {"A1": a1}}).json()["version"] == make.label()
 
 
 def test_settings_edited_from_a_replaced_version_are_refused(reviewer):
+    versions = QuestionnaireVersion.objects.count()
     a1 = {"allowedAnswers": ["Yes", "No"], "fileTypes": ["pdf", "png"], "maxFiles": 1}
-    assert reviewer.put("/api/questionnaire", {"version": "v1", "questions": {"A1": a1}}).json()["version"] == "v2"
+    was = make.label()
+    assert reviewer.put("/api/questionnaire", {"department": "banking", "version": was, "questions": {"A1": a1}}).json()["version"] == make.label() != was
     # A second reviewer still editing v1 is told, and their save publishes nothing.
-    stale = reviewer.put("/api/questionnaire", {"version": "v1", "questions": {"A1": {**a1, "maxFiles": 2}}})
+    stale = reviewer.put("/api/questionnaire", {"department": "banking", "version": was, "questions": {"A1": {**a1, "maxFiles": 2}}})
     assert stale.status_code == 409
-    assert QuestionnaireVersion.objects.count() == 2
+    assert QuestionnaireVersion.objects.count() == versions + 1
     assert reviewer.put("/api/questionnaire", {"questions": {"A1": a1}}).status_code == 400
 
 
 def test_question_settings_are_validated_and_reviewer_only(reviewer, applicant):
-    bad = {"version": "v1", "questions": {"A1": {"allowedAnswers": [], "fileTypes": ["exe"], "maxFiles": 3}, "ZZ": {}}}
+    bad = {"department": "banking", "version": make.label(), "questions": {"A1": {"allowedAnswers": [], "fileTypes": ["exe"], "maxFiles": 3}, "ZZ": {}}}
     response = reviewer.put("/api/questionnaire", bad)
     assert response.status_code == 400 and set(response.json()) == {"A1", "ZZ"}
     assert applicant.get("/api/questionnaire").status_code == 403
@@ -622,29 +633,30 @@ def _settings(version: dict, qid: str, **change) -> dict:
 
 def test_question_weights_can_be_shared_differently_within_a_fixed_section_weight(reviewer):
     current = reviewer.get("/api/questionnaire").json()["current"]
-    response = reviewer.put("/api/questionnaire", {"version": "v1", "questions": {
+    response = reviewer.put("/api/questionnaire", {"department": "banking", "version": current["version"], "questions": {
         "CoI2": _settings(current, "CoI2", weight=7.5), "CoI6": _settings(current, "CoI6", weight=6.5),
     }})
     assert response.status_code == 200
     body = response.json()
     weights = {q["qid"]: q["weight"] for q in body["questions"]}
-    assert body["version"] == "v2" and weights["CoI2"] == 7.5 and weights["CoI6"] == 6.5
+    assert body["version"] != current["version"] and weights["CoI2"] == 7.5 and weights["CoI6"] == 6.5
     # The section weights, and so the total, are unchanged.
     assert body["sections"] == current["sections"]
     assert sum(weights.values()) == sum(s["weight"] for s in current["sections"])
     event = AuditEvent.objects.get(action="questionnaire.publish")
-    assert event.metadata == {"changed": ["CoI2", "CoI6"]}
+    assert event.metadata == {"department": "banking", "changed": ["CoI2", "CoI6"]}
 
 
 def test_question_weights_that_do_not_add_up_to_the_section_weight_are_refused(reviewer):
+    versions = QuestionnaireVersion.objects.count()
     current = reviewer.get("/api/questionnaire").json()["current"]
-    over = reviewer.put("/api/questionnaire", {"version": "v1", "questions": {"CoI2": _settings(current, "CoI2", weight=6)}})
+    over = reviewer.put("/api/questionnaire", {"department": "banking", "version": current["version"], "questions": {"CoI2": _settings(current, "CoI2", weight=6)}})
     assert over.status_code == 400
     message = over.json()["sections"]["Conflict of interest. (Entity/Enterprise based)"]
     assert "add up to 15" in message and "section weight, 14" in message
-    negative = reviewer.put("/api/questionnaire", {"version": "v1", "questions": {"CoI2": _settings(current, "CoI2", weight=-1)}})
+    negative = reviewer.put("/api/questionnaire", {"department": "banking", "version": current["version"], "questions": {"CoI2": _settings(current, "CoI2", weight=-1)}})
     assert negative.status_code == 400 and "CoI2" in negative.json()
-    assert QuestionnaireVersion.objects.count() == 1
+    assert QuestionnaireVersion.objects.count() == versions
 
 
 def test_initiated_on_today_is_allowed(reviewer):
@@ -659,7 +671,7 @@ def test_a_section_weight_total_of_zero_is_reported_not_a_server_error():
     from cases.models import QuestionSection
     from cases.views.catalogue import _section_weight_errors
 
-    current = QuestionnaireVersion.objects.get(is_active=True)
+    current = QuestionnaireVersion.objects.get(is_active=True, department__key="banking")
     section = QuestionSection.objects.create(version=current, name="Empty", weight=Decimal("5"), position=99)
     # Its one question's weight changed to 0: the total is 0, reported, not an error in the check.
     question = SimpleNamespace(qid="X", section_id=section.pk, weight=Decimal("2"))
@@ -671,12 +683,12 @@ def test_other_settings_save_although_stored_weights_do_not_add_up(reviewer):
     from cases.models import Question
 
     # A rounding difference in the stored weights (13.99 against a section weight of 14).
-    current = QuestionnaireVersion.objects.get(is_active=True)
+    current = make.version_in_force()
     Question.objects.filter(version=current, qid="CoI2").update(weight="4.99")
     q = reviewer.get("/api/questionnaire").json()["current"]
     a1 = next(x for x in q["questions"] if x["qid"] == "A1")
     coi2 = next(x for x in q["questions"] if x["qid"] == "CoI2")
-    body = {"version": current.label, "questions": {
+    body = {"department": "banking", "version": current.label, "questions": {
         # Only A1's file types change; every weight is sent back as it is.
         "A1": {"allowedAnswers": a1["allowedAnswers"], "fileTypes": ["pdf", "png"], "maxFiles": a1["maxFiles"], "weight": a1["weight"]},
         "CoI2": {"allowedAnswers": coi2["allowedAnswers"], "fileTypes": coi2["fileTypes"], "maxFiles": coi2["maxFiles"], "weight": coi2["weight"]},
@@ -813,7 +825,7 @@ def test_another_applicants_reference_does_not_change_the_numbering(applicant):
 def test_a_draft_counts_text_answers_still_to_give(reviewer, applicant):
     from cases.models import AnswerType, Question
 
-    version = QuestionnaireVersion.objects.get(is_active=True)
+    version = make.version_in_force()
     Question.objects.filter(version=version, qid="T1").update(answer_type=AnswerType.TEXT, allowed_answers=[], evidence_required="never")
     from django.core.cache import cache
     cache.clear()

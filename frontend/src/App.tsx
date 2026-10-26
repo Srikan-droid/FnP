@@ -23,6 +23,8 @@ import NewAssessmentPage from "./pages/NewAssessmentPage";
 import AdminOverviewPage from "./pages/AdminOverviewPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminUserPage from "./pages/AdminUserPage";
+import AdminDepartmentsPage from "./pages/AdminDepartmentsPage";
+import SuperUserRoute from "./components/SuperUserRoute";
 import { ROUTE_PATTERNS } from "./routes";
 import "./styles/app.css";
 
@@ -62,6 +64,8 @@ function SessionGate({ children }: { children: ReactNode }) {
 
 const applicant = (page: ReactNode) => <ApplicantRoute>{page}</ApplicantRoute>;
 const reviewer = (page: ReactNode) => <ReviewerRoute>{page}</ReviewerRoute>;
+// The admin panel is the super user's.
+const superUser = (page: ReactNode) => <SuperUserRoute>{page}</SuperUserRoute>;
 
 export default function App() {
   return (
@@ -103,9 +107,10 @@ export default function App() {
                 path={ROUTE_PATTERNS.reviewerResult}
                 element={reviewer(<ReviewerResultPage />)}
               />
-              <Route path={ROUTE_PATTERNS.reviewerAdmin} element={reviewer(<AdminOverviewPage />)} />
-              <Route path={ROUTE_PATTERNS.reviewerAdminUsers} element={reviewer(<AdminUsersPage />)} />
-              <Route path={ROUTE_PATTERNS.reviewerAdminUser} element={reviewer(<AdminUserPage />)} />
+              <Route path={ROUTE_PATTERNS.reviewerAdmin} element={superUser(<AdminOverviewPage />)} />
+              <Route path={ROUTE_PATTERNS.reviewerAdminUsers} element={superUser(<AdminUsersPage />)} />
+              <Route path={ROUTE_PATTERNS.reviewerAdminUser} element={superUser(<AdminUserPage />)} />
+              <Route path={ROUTE_PATTERNS.reviewerAdminDepartments} element={superUser(<AdminDepartmentsPage />)} />
             </Routes>
           </AppShell>
         </SessionGate>

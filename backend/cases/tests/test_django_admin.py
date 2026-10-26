@@ -5,7 +5,7 @@ from django.test import Client
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from cases.models import ApplicantProfile, Assessment, AuditEvent, Role, Stage, User
+from cases.models import ApplicantProfile, Assessment, AuditEvent, Department, Role, Stage, User
 from cases.tests import factories as make
 
 pytestmark = pytest.mark.django_db
@@ -105,7 +105,11 @@ def test_a_user_can_be_made_a_reviewer_and_back_and_it_is_audited(browser, staff
     signed_in.force_login(anna)
     url = reverse("admin:cases_user_change", args=[anna.pk])
 
-    assert browser.post(url, {"role": "reviewer", "is_active": "on"}).status_code == 302
+    # An admin needs a department.
+    page = browser.post(url, {"role": "reviewer", "is_active": "on"})
+    assert page.status_code == 200 and "at least one department" in page.content.decode()
+    banking = Department.objects.get(key="banking")
+    assert browser.post(url, {"role": "reviewer", "departments": [banking.pk], "is_active": "on"}).status_code == 302
     anna.refresh_from_db()
     assert anna.role == Role.REVIEWER and anna.is_active and not anna.is_staff
     event = AuditEvent.objects.get(action="user.role_change")
@@ -113,12 +117,16 @@ def test_a_user_can_be_made_a_reviewer_and_back_and_it_is_audited(browser, staff
     assert event.metadata == {"from": "applicant", "to": "reviewer"}
     # Their open session ended, so the app is not left running for the old role.
     assert signed_in.get("/api/session").json() == {"user": None}
-    assert _app_sign_in("anna@example.na").json()["user"] == {"email": "anna@example.na", "role": "reviewer"}
+    # An admin of the department chosen with the role.
+    assert _app_sign_in("anna@example.na").json()["user"] == {
+        "email": "anna@example.na", "role": "reviewer", "access": "admin",
+        "departments": [{"key": "banking", "name": "Banking Licence"}],
+    }
 
     assert browser.post(url, {"role": "applicant", "is_active": "on"}).status_code == 302
     anna.refresh_from_db()
     assert anna.role == Role.APPLICANT
-    assert _app_sign_in("anna@example.na").json()["user"] == {"email": "anna@example.na", "role": "applicant"}
+    assert _app_sign_in("anna@example.na").json()["user"] == {"email": "anna@example.na", "role": "applicant", "access": "user"}
 
 
 def test_some_accounts_keep_their_role(browser, staff):
@@ -136,17 +144,22 @@ def test_roles_can_be_changed_for_several_users_at_once(browser, staff):
     changelist = reverse("admin:cases_user_changelist")
     picked = [anna.pk, ben.pk, admin_account.pk, staff.pk]
 
+    # Admin access comes with departments, so it is given account by account, not in bulk.
+    assert "make_reviewer" not in browser.get(changelist).content.decode()
     browser.post(changelist, {"action": "make_reviewer", "_selected_action": picked})
-    assert set(User.objects.filter(role=Role.REVIEWER).values_list("email", flat=True)) == {
-        "anna@example.na", "ben@example.na", "admin", "ops@example.na"}
-    assert AuditEvent.objects.filter(action="user.role_change").count() == 2
+    assert not User.objects.filter(email__in=["anna@example.na", "ben@example.na"], role=Role.REVIEWER).exists()
+    for account in (anna, ben):
+        account.role = Role.REVIEWER
+        account.save(update_fields=["role"])
+        account.departments.set(Department.objects.filter(key="banking"))
 
     browser.post(changelist, {"action": "make_applicant", "_selected_action": picked})
     anna.refresh_from_db(); ben.refresh_from_db(); admin_account.refresh_from_db(); staff.refresh_from_db()
     assert anna.role == ben.role == Role.APPLICANT
-    # The built-in reviewer and the staff account were skipped.
-    assert admin_account.role == staff.role == Role.REVIEWER
-    assert AuditEvent.objects.filter(action="user.role_change").count() == 4
+    # The built-in admin (the super user) and the staff account were skipped; departments went too.
+    assert admin_account.role == Role.SUPERUSER and staff.role == Role.REVIEWER
+    assert not anna.departments.exists() and not ben.departments.exists()
+    assert AuditEvent.objects.filter(action="user.role_change").count() == 2
 
 
 def test_a_staff_account_cannot_use_the_apps_passwordless_sign_in(staff):
@@ -154,7 +167,7 @@ def test_a_staff_account_cannot_use_the_apps_passwordless_sign_in(staff):
 
 
 def test_a_reviewer_cannot_rule_on_or_decide_their_own_application():
-    anna = make.user("anna@example.na", Role.REVIEWER)
+    anna = make.admin("anna@example.na", ("banking",))
     own = make.assessment(applicant=anna, stage=Stage.DECISION_PENDING)
     client = APIClient()
     client.force_login(anna)
@@ -175,7 +188,6 @@ def test_an_applicant_with_undecided_applications_is_not_made_a_reviewer(browser
     anna.refresh_from_db()
     assert anna.role == Role.APPLICANT
 
-    browser.post(reverse("admin:cases_user_changelist"), {"action": "make_reviewer", "_selected_action": [anna.pk]})
     anna.refresh_from_db()
     assert anna.role == Role.APPLICANT and not AuditEvent.objects.filter(action="user.role_change").exists()
 
@@ -186,13 +198,15 @@ def test_an_applicant_with_undecided_applications_is_not_made_a_reviewer(browser
     assert anna.role == Role.APPLICANT
     # Once it is decided, they can be.
     Assessment.objects.filter(applicant=anna).update(stage=Stage.ACCEPTED)
-    assert browser.post(reverse("admin:cases_user_change", args=[anna.pk]), {"role": "reviewer", "is_active": "on"}).status_code == 302
+    banking = Department.objects.get(key="banking")
+    assert browser.post(reverse("admin:cases_user_change", args=[anna.pk]),
+                        {"role": "reviewer", "departments": [banking.pk], "is_active": "on"}).status_code == 302
     anna.refresh_from_db()
     assert anna.role == Role.REVIEWER
 
 
 def test_the_assessment_says_whether_it_is_the_viewers_own():
-    anna = make.user("anna@example.na", Role.REVIEWER)
+    anna = make.admin("anna@example.na", ("banking",))
     own = make.assessment(applicant=anna, stage=Stage.DECISION_PENDING)
     other = make.assessment(public_id="FNP-2026-0002", reference="BL-2026-0002", stage=Stage.DECISION_PENDING)
     client = APIClient()
@@ -207,8 +221,29 @@ def test_a_bulk_role_change_signs_out_every_changed_user(browser, staff):
     for user in (anna, ben, carl):
         clients[user.email] = APIClient()
         clients[user.email].force_login(user)
-    browser.post(reverse("admin:cases_user_changelist"), {"action": "make_reviewer", "_selected_action": [anna.pk, ben.pk]})
+    for account in (anna, ben):
+        account.role = Role.REVIEWER
+        account.save(update_fields=["role"])
+    browser.post(reverse("admin:cases_user_changelist"), {"action": "make_applicant", "_selected_action": [anna.pk, ben.pk]})
     assert clients["anna@example.na"].get("/api/session").json() == {"user": None}
     assert clients["ben@example.na"].get("/api/session").json() == {"user": None}
     # Someone not changed stays signed in.
     assert clients["carl@example.na"].get("/api/session").json()["user"]["email"] == "carl@example.na"
+
+
+def test_the_bulk_action_demotes_a_super_user_but_never_the_last_one(browser, staff):
+    changelist = reverse("admin:cases_user_changelist")
+    second = make.user("second@example.na", Role.SUPERUSER)
+    # Another super user who can sign in is left (the built-in admin): the change goes through.
+    make.reviewer()
+    assert browser.post(changelist, {"action": "make_applicant", "_selected_action": [second.pk]}).status_code == 302
+    second.refresh_from_db()
+    assert second.role == Role.APPLICANT
+
+    # The only one who can sign in: refused with a message, not an error.
+    User.objects.filter(email="admin").update(is_active=False)
+    third = make.user("third@example.na", Role.SUPERUSER)
+    page = browser.post(changelist, {"action": "make_applicant", "_selected_action": [third.pk]}, follow=True)
+    assert page.status_code == 200 and "last super user" in page.content.decode()
+    third.refresh_from_db()
+    assert third.role == Role.SUPERUSER

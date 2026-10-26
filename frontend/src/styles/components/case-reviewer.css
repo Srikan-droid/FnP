@@ -1,0 +1,106 @@
+/* ---- Who reviews a case: taken by one of its department's admins, read by the others ---- */
+.case-reviewer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem 1.1rem;
+  border-left: 3px solid var(--hairline);
+}
+
+.case-reviewer.is-mine {
+  border-left-color: var(--good);
+}
+
+.case-reviewer.is-other {
+  border-left-color: var(--accent);
+}
+
+.case-reviewer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.case-reviewer-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--ink-3);
+}
+
+.case-reviewer.is-mine .case-reviewer-icon {
+  color: var(--good);
+}
+
+.case-reviewer.is-other .case-reviewer-icon {
+  color: var(--accent-ink);
+}
+
+.case-reviewer-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.case-reviewer-text strong {
+  color: var(--ink);
+}
+
+.case-reviewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.case-reviewer-assign {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.case-reviewer-assign .input {
+  flex: 1 1 14rem;
+  width: auto;
+}
+
+.case-reviewer-assign .field-label {
+  margin: 0;
+}
+
+.case-reviewer-error {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+/* The reviewer queue's cards: who has each case. */
+.case-card-reviewer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+
+.case-card-reviewer.is-mine {
+  color: var(--good);
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .case-reviewer-row {
+    flex-wrap: wrap;
+  }
+
+  .case-reviewer-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}

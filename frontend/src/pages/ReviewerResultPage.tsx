@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { useDecide, useForceScore } from "../api/queries";
+import { useDecide, useForceScore, useSession } from "../api/queries";
 import { refusalMessage } from "../api/client";
 import { useCaseView } from "../api/useCaseView";
+import CaseReviewerBar from "../components/CaseReviewerBar";
+import { heldByOther } from "../state/access";
 import { isScored } from "../state/caseLabels";
 import { routes } from "../routes";
 import { queueUrl } from "../state/queueReturn";
@@ -33,22 +35,26 @@ export default function ReviewerResultPage() {
   const view = useCaseView(id);
   const decide = useDecide(id);
   const forceScore = useForceScore(id);
+  const me = useSession().data;
 
   if (view.status === "loading") return <Loading />;
   if (view.status === "error") return <LoadError error={view.error} onRetry={view.retry} />;
   const { assessment: assignment, data, outcome, score: scoreResult } = view;
   const stage = data.stage;
+  // Another admin is reviewing it: this one reads it (the server refuses their steps too).
+  const othersCase = heldByOther(data.reviewer, me);
   // Sent on to scoring: the engine is working; this page refreshes until the score is in.
   if (stage === "SCORING") {
     return (
       <div className="page">
         <ReviewerCaseHeader assignment={assignment} stage={stage} />
         <ReviewerTabs assessmentId={id} active="scoring" scoringReady />
+        <CaseReviewerBar id={id} assignment={assignment} data={data} />
         <EmptyState
           icon={<InfoIcon size={22} />}
           title="Scoring in progress"
           action={
-            data.run?.canForceScore && !assignment.ownApplication ? (
+            data.run?.canForceScore && !assignment.ownApplication && !othersCase ? (
               <button className="btn btn-primary" disabled={forceScore.isPending} onClick={() => forceScore.mutate(undefined)}>
                 {forceScore.isPending ? "Sending…" : "Send it to the AI engine again"}
               </button>
@@ -86,6 +92,10 @@ export default function ReviewerResultPage() {
   const decision = data.decision;
   // A reviewer never decides their own application (the server refuses it too).
   const ownApplication = assignment.ownApplication;
+  // Only the admin reviewing the case decides it.
+  const blocked = ownApplication || othersCase;
+  // Who decided it, as the decision records it: "You" when it was this admin.
+  const decidedBy = decision?.by && decision.by !== me?.email ? decision.by : "You";
 
   const confirm = (remarks: string) => {
     if (!pending) return;
@@ -107,6 +117,8 @@ export default function ReviewerResultPage() {
 
       <ReviewerTabs assessmentId={id} active="scoring" scoringReady />
 
+      <CaseReviewerBar id={id} assignment={assignment} data={data} />
+
       {decision ? (
         <div
           className={`notice notice-${decision.verdict === "accepted" ? "good" : "critical"}`}
@@ -119,8 +131,8 @@ export default function ReviewerResultPage() {
           <div>
             <strong>
               {decision.verdict === "accepted"
-                ? "You accepted this assessment."
-                : "You rejected this assessment."}
+                ? `${decidedBy} accepted this assessment.`
+                : `${decidedBy} rejected this assessment.`}
             </strong>{" "}
             Feedback: {decision.remarks}
           </div>
@@ -133,7 +145,7 @@ export default function ReviewerResultPage() {
             it.
           </div>
         </div>
-      ) : (
+      ) : othersCase ? null : (
         <div className="notice notice-info">
           <MessageIcon size={17} />
           <div>
@@ -170,7 +182,7 @@ export default function ReviewerResultPage() {
               : data.run?.canForceScore
                 ? "Request an AI score to replace it, or decide on it as it stands."
                 : "Decide on it as it stands."}
-            {!decision && data.run?.canForceScore && !ownApplication && (
+            {!decision && data.run?.canForceScore && !blocked && (
               <div className="notice-actions">
                 <button
                   className="btn btn-ghost btn-sm"
@@ -201,7 +213,7 @@ export default function ReviewerResultPage() {
           title="Not scored by the AI engine"
           action={
             <div className="empty-actions">
-              {data.run?.canForceScore && !decision && !ownApplication && (
+              {data.run?.canForceScore && !decision && !blocked && (
                 <button
                   className="btn btn-primary"
                   disabled={forceScore.isPending}
@@ -249,7 +261,7 @@ export default function ReviewerResultPage() {
           <FileTextIcon size={15} />
           Assessment summary
         </button>
-        {!decision && !ownApplication && (
+        {!decision && !blocked && (
           <>
             <button className="btn btn-ghost" onClick={() => {
                 decide.reset();

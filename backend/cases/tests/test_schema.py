@@ -4,7 +4,7 @@
 import pytest
 from django.db import IntegrityError, connection, transaction
 
-from cases.models import AnswerValue, ApplicantProfile, QuestionnaireVersion, Submission
+from cases.models import AnswerValue, ApplicantProfile, Department, QuestionnaireVersion, Submission
 from cases.tests import factories as make
 
 pytestmark = pytest.mark.django_db
@@ -25,10 +25,13 @@ def test_emails_are_stored_lower_case_and_unique():
         ))
 
 
-def test_only_one_questionnaire_version_is_active():
-    # Migration 0003 published v1 as the active version.
-    _violates(lambda: QuestionnaireVersion.objects.create(label="v2", is_active=True))
-    QuestionnaireVersion.objects.create(label="v3", is_active=False)
+def test_only_one_questionnaire_version_is_active_per_department():
+    # Migration 0014 gave every department its own copy of the questionnaire, in force.
+    banking = Department.objects.get(key="banking")
+    _violates(lambda: QuestionnaireVersion.objects.create(label="x-1", is_active=True, department=banking))
+    # An edition in force always belongs to a department.
+    _violates(lambda: QuestionnaireVersion.objects.create(label="x-2", is_active=True))
+    QuestionnaireVersion.objects.create(label="x-3", is_active=False, department=banking)
 
 
 def test_parent_reference_is_unique_regardless_of_case():

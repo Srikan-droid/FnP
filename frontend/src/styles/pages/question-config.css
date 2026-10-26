@@ -648,6 +648,41 @@ button.weight-legend-item:hover {
   width: 6rem;
 }
 
+/* The editable part of the page: read-only (disabled) while someone else is editing. It takes no
+   box of its own, so the cards inside keep the page's spacing. */
+.qconfig-lockable {
+  display: contents;
+}
+
+.qconfig-lockable:disabled .qsection,
+.qconfig-lockable:disabled .qoverview {
+  opacity: 0.85;
+}
+
+.qconfig-lock {
+  align-items: center;
+}
+
+.qconfig-lock > div {
+  flex: 1;
+}
+
+/* Which department's questions are open, beside the total. */
+.qconfig-department {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qconfig-department .field-label {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.qconfig-department .input {
+  min-width: 12rem;
+}
+
 .qrow-of {
   display: flex;
   flex-direction: column;

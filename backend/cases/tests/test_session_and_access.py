@@ -67,9 +67,12 @@ def test_a_session_in_use_is_not_rewritten_on_every_request(client):
 
 def test_an_email_signs_in_as_an_applicant_and_admin_as_the_reviewer(client):
     response = _sign_in(client, " A.Person@Example.NA ")
-    assert response.json() == {"user": {"email": "a.person@example.na", "role": "applicant"}}
+    assert response.json() == {"user": {"email": "a.person@example.na", "role": "applicant", "access": "user"}}
     reviewer = _sign_in(APIClient(enforce_csrf_checks=True), "Admin")
-    assert reviewer.json()["user"] == {"email": "admin", "role": "reviewer"}
+    user = reviewer.json()["user"]
+    # "admin" is the super user: the reviewer side, every department.
+    assert {k: user[k] for k in ("email", "role", "access")} == {"email": "admin", "role": "reviewer", "access": "superuser"}
+    assert [d["key"] for d in user["departments"]][:2] == ["banking", "education"]
 
 
 def test_sign_in_rejects_anything_that_is_not_an_email(client):
@@ -108,7 +111,7 @@ def test_sign_in_and_out_are_audited(client):
 def test_an_applicant_only_reaches_their_own_assessment_and_the_reviewer_any():
     owner = make.user("owner@example.na")
     other = make.user("other@example.na")
-    reviewer = make.user("admin", Role.REVIEWER)
+    reviewer = make.reviewer()
     assessment = make.assessment(applicant=owner)
     assert assessment_for(owner, assessment.public_id) == assessment
     assert assessment_for(reviewer, assessment.public_id) == assessment

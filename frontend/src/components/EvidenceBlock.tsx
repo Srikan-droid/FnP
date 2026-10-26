@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import {
   acceptAttribute,
@@ -10,7 +11,7 @@ import {
   sameFormat,
   sizeHint,
 } from "../domain/catalogue";
-import { useCatalogue } from "../api/queries";
+import { useMaxUploadBytes } from "../api/queries";
 import { FileTextIcon, UploadIcon, XIcon } from "./icons";
 import type { EvidenceOption } from "../domain/catalogue";
 import type { EvidenceRef, EvidenceRole } from "../domain/types";
@@ -267,7 +268,9 @@ function Picker({
   const chooser = useRef<HTMLInputElement>(null);
   const describe = useRef<HTMLInputElement>(null);
   // Already loaded by every page with a form; read here for the upload limit.
-  const maxBytes = useCatalogue().data?.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
+  // The page's assessment (every page with a form has it in its address).
+  const { id = "" } = useParams();
+  const maxBytes = useMaxUploadBytes(id) ?? DEFAULT_MAX_UPLOAD_BYTES;
 
   const isOther = optionCode === OTHER_CODE;
   const canAttach = optionCode !== "" && (!isOther || description.trim() !== "") && !uploading;
@@ -558,7 +561,8 @@ function ReplaceTarget({
   const [over, setOver] = useDragOver();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const maxBytes = useCatalogue().data?.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
+  const { id = "" } = useParams();
+  const maxBytes = useMaxUploadBytes(id) ?? DEFAULT_MAX_UPLOAD_BYTES;
   const accepted = fileTypes.map(sameFormat);
   const formats = fileTypes.map((t) => t.toUpperCase()).join(", ");
   const fit = dragFit(drag, library, attachedHere, accepted, formats);

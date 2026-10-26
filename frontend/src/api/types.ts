@@ -2,11 +2,20 @@
 
 import type { Answer, CheckResult, CvFinding, EvidenceRole } from "../domain/types";
 
+/** The side of the app an account uses: applying, or reviewing (an admin or the super user). */
 export type Role = "applicant" | "reviewer";
+/** What an account is: a user (applies), an admin of some departments, or the super user. */
+export type Access = "user" | "admin" | "superuser";
+/** An account's role as stored: an admin is a "reviewer". */
+export type AccountRole = "applicant" | "reviewer" | "superuser";
 
 export interface SessionUser {
   email: string;
   role: Role;
+  /** Missing from a session read before roles had kinds: treated as before (a user, or an admin). */
+  access?: Access;
+  /** On the reviewer side: the departments they work on (every one for the super user). */
+  departments?: { key: string; name: string }[];
 }
 
 export type Stage =
@@ -20,10 +29,20 @@ export type Stage =
   | "ACCEPTED"
   | "REJECTED";
 
+/** The admin reviewing a case, and since when they have it. */
+export interface CaseReviewer {
+  email: string;
+  since: string | null;
+}
+
 export interface Department {
   key: string;
   name: string;
   blurb: string;
+  /** False for a department switched off: it takes no new applications. */
+  isActive?: boolean;
+  /** False while it has no questions: it takes no applications until its admins set some up. */
+  hasQuestions?: boolean;
 }
 
 export interface Assessment {
@@ -56,6 +75,8 @@ export interface Assessment {
   startedByApplicant: boolean;
   /** Whether the applicant has saved anything yet. */
   hasDraft: boolean;
+  /** On the reviewer side: the admin reviewing it (null: nobody has taken it yet). */
+  reviewer?: CaseReviewer | null;
   /** What the reviewer queue's cards show about the latest run. */
   queue: {
     flagged: string[];
@@ -73,7 +94,10 @@ export interface AdminOverview {
   users: {
     total: number;
     applicants: number;
+    /** Admins and super users together. */
     reviewers: number;
+    admins?: number;
+    superUsers?: number;
     active: number;
     inactive: number;
     newRecently: number;
@@ -96,11 +120,30 @@ export interface AdminOverview {
 export interface AdminUser {
   id: number;
   email: string;
-  role: Role;
+  role: AccountRole;
+  /** An admin's departments. */
+  departments: { key: string; name: string }[];
   isActive: boolean;
   isStaff: boolean;
+  /** The built-in admin sign-in and staff accounts: their role and status are not changed here. */
+  accessFixed: boolean;
   joinedAt: string;
   lastLoginAt: string | null;
+}
+
+/** A department as the admin panel lists it. */
+export interface AdminDepartment {
+  key: string;
+  name: string;
+  blurb: string;
+  isActive: boolean;
+  assessmentCount: number;
+  adminCount: number;
+  questionCount: number;
+  /** Submitted cases not decided that no admin has taken yet. */
+  waitingCount?: number;
+  /** Its questionnaire edition in force. */
+  version: string | null;
 }
 
 export interface AdminUserRow extends AdminUser {
@@ -109,6 +152,10 @@ export interface AdminUserRow extends AdminUser {
 }
 
 export interface AdminUserDetail extends AdminUser {
+  /** The cases they are reviewing now (submitted, not decided). */
+  reviewing?: number;
+  /** After a change: how many of their cases went back to the queue. */
+  released?: number;
   assessments: {
     id: string;
     applicantName: string;
@@ -187,7 +234,20 @@ export interface Catalogue extends QuestionnaireVersion {
   maxUploadBytes?: number;
 }
 
+/** Who is editing a department's questions now; the editor is read-only for everyone else. */
+export interface QuestionnaireLock {
+  email: string;
+  since: string;
+  /** When it lapses unless the editor keeps it alive. */
+  until: string;
+  /** Held by the tab that asked (an editor reloaded after a refused save keeps it). */
+  thisTab?: boolean;
+}
+
 export interface QuestionnaireSettings {
+  /** The department whose questionnaire this is: each department has its own. */
+  department: { key: string; name: string };
+  lock?: QuestionnaireLock | null;
   current: QuestionnaireVersion;
   published: QuestionnaireVersion;
   configurableFileTypes: string[];
@@ -249,6 +309,8 @@ export interface ApplicantInfo {
 
 export interface Form {
   locked: boolean;
+  /** The questionnaire edition the form is on (its department may change its questions). */
+  version?: string;
   applicant: ApplicantInfo;
   /** allowedAnswers, fileTypes and maxFiles are the rules this form is checked against, always current. */
   answers: {
@@ -353,6 +415,8 @@ export interface ReviewEntry extends Ruling {
 
 export interface Case {
   stage: Stage;
+  /** On the reviewer side: who reviews it; only they rule on it and decide it (null: not taken). */
+  reviewer?: CaseReviewer | null;
   submittedAt: string | null;
   decidedAt: string | null;
   run: {

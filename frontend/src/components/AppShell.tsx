@@ -8,6 +8,7 @@ import { parseApplyPath, routes } from "../routes";
 import type { ApplyStep } from "../routes";
 import type { Stage } from "../api/types";
 import { useTrackHistoryEntry } from "../state/backNavigation";
+import { departmentsInWords } from "../state/access";
 import { usePageChange } from "../state/pageChange";
 
 const STEPS = ["Data collection", "Review", "Authentication", "Result"] as const;
@@ -89,7 +90,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <span className="brand-title">Fit and Proper Assessment</span>
               <span className="brand-sub">
                 {isReviewer
-                  ? "Reviewer portal · All departments"
+                  ? `Reviewer portal · ${departmentsInWords(user)}`
                   : (assessment?.department.name ?? "Applicant portal")}
               </span>
             </span>

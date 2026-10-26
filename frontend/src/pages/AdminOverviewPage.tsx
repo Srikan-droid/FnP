@@ -80,7 +80,7 @@ export default function AdminOverviewPage() {
           Users
         </h2>
         <dl className="admin-stats">
-          <Stat label="All users" value={users.total} note={`${plural(users.applicants, "applicant")} · ${plural(users.reviewers, "reviewer")}`} />
+          <Stat label="All users" value={users.total} note={`${plural(users.applicants, "user")} · ${plural(users.admins ?? users.reviewers, "admin")}${users.superUsers ? ` · ${plural(users.superUsers, "super user")}` : ""}`} />
           <Stat label="Active" value={users.active} note={`${users.inactive} deactivated`} />
           <Stat label="New" value={users.newRecently} note={`joined in the ${recent}`} />
           <Stat label="Signed in" value={users.signedInRecently} note={`in the ${recent}`} />

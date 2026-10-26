@@ -9,6 +9,8 @@ import { STAGE_LABELS } from "../state/caseLabels";
 import { formatDateTime } from "../utils/format";
 import { routes } from "../routes";
 import { RoleChip, StatusChip } from "./AdminUsersPage";
+import { departmentList } from "../state/access";
+import AccessCard from "../components/admin/AccessCard";
 import type { AdminUserDetail, Stage } from "../api/types";
 
 /** The audit trail's actions in words. An action not listed here is shown as recorded. */
@@ -38,6 +40,9 @@ const ACTIONS: Record<string, string> = {
   "user.activate": "Reactivated an account",
   "user.deactivate": "Deactivated an account",
   "user.role_change": "Changed an account's role",
+  "user.departments_change": "Changed an admin's departments",
+  "department.create": "Added a department",
+  "department.update": "Changed a department",
 };
 
 /** Where the reviewer works on a case: the decision page once it is waiting for one. */
@@ -86,7 +91,7 @@ export default function AdminUserPage() {
   if (notFound) {
     return (
       <div className="page">
-        <AdminHeader active="users" sub="One account's assessments and recent activity." />
+        <AdminHeader active="users" sub="One account's access, assessments and recent activity." />
         <EmptyState icon={<UsersIcon size={22} />} title="User not found">
           There is no account with this number. It may have been mistyped.
         </EmptyState>
@@ -100,7 +105,7 @@ export default function AdminUserPage() {
 
   return (
     <div className="page">
-      <AdminHeader active="users" sub="One account's assessments and recent activity." />
+      <AdminHeader active="users" sub="One account's access, assessments and recent activity." />
 
       <section className="card admin-person">
         <div className="admin-person-head">
@@ -128,14 +133,23 @@ export default function AdminUserPage() {
             <dt>Assessments</dt>
             <dd>{u.assessments.length}</dd>
           </div>
+          {departmentList(u) && (
+            <div>
+              <dt>Departments</dt>
+              <dd>{departmentList(u)}</dd>
+            </div>
+          )}
         </dl>
       </section>
+
+      {/* Keyed on the access saved, so a save starts the card again from what the server holds. */}
+      <AccessCard key={`${u.role}:${u.isActive}:${u.departments.map((d) => d.key).join()}`} user={u} />
 
       <section className="card">
         <header className="card-head">
           <h2>Assessments</h2>
           <p className="card-sub">
-            {u.role === "applicant" ? "Applications this person fills in." : "Reviewer accounts do not apply for assessments."}
+            {u.role === "applicant" ? "Applications this person fills in." : "Admins and super users do not apply for assessments."}
           </p>
         </header>
         {u.assessments.length === 0 ? (

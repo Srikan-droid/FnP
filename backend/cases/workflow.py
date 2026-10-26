@@ -58,6 +58,103 @@ def _locked(assessment: Assessment, *allowed: Stage) -> Assessment:
     return row
 
 
+# ---- Who reviews a case ------------------------------------------------------------------------
+# A department can have several admins. A submitted case is reviewed by one of them: the first to
+# take it (or the one the super user gives it to). Only they rule on it, send it on and decide it;
+# the others read it. Every check below runs on the case's locked row, so two admins acting at
+# the same moment are taken one after the other, and the second is told who has it.
+
+# Submitted and not decided: a case that can be taken, released or given to someone.
+REVIEWABLE = (
+    Stage.AUTH_RUNNING, Stage.AUTH_FAILED, Stage.REVIEW_PENDING, Stage.AWAITING_APPLICANT, Stage.SCORING,
+    Stage.DECISION_PENDING,
+)
+
+
+class HeldByOther(TransitionError):
+    """Another admin is reviewing the case."""
+
+
+def _held_message(row: Assessment) -> str:
+    return (
+        f"{row.reviewer.email} is reviewing this case. Ask them to release it, or the super user to "
+        "give it to you."
+    )
+
+
+def _take(row: Assessment, reviewer: User, action: str, actor: User | None = None, **metadata) -> None:
+    """Gives the locked case to `reviewer`, recorded as done by `actor` (the reviewer themselves,
+    unless the super user gave it to them). Checked against the account as it is now (not as the
+    request found it): one losing the department at this very moment waits for, or is refused by,
+    that change, so a case is never left with someone who can no longer see it."""
+    from .accounts import lock_account
+    from .permissions import may_manage
+
+    lock_account(reviewer.pk)
+    fresh = User.objects.get(pk=reviewer.pk)
+    someone_else = actor is not None and actor.pk != reviewer.pk
+    if row.applicant_id == fresh.pk:
+        raise TransitionError(
+            f"{fresh.email} cannot review their own application." if someone_else
+            else "You cannot review your own application."
+        )
+    if not (fresh.is_active and may_manage(fresh, row.department)):
+        raise TransitionError(
+            f"{fresh.email} does not work on {row.department.name}." if someone_else
+            else f"You no longer work on {row.department.name}."
+        )
+    previous = row.reviewer.email if row.reviewer_id else None
+    row.reviewer, row.claimed_at = reviewer, timezone.now()
+    row.save(update_fields=["reviewer", "claimed_at", "updated_at"])
+    audit.record(actor or reviewer, action, assessment_ref=row.public_id,
+                 metadata={"from": previous, "to": reviewer.email, **metadata})
+
+
+def _hold(row: Assessment, reviewer: User) -> None:
+    """On the locked row: the reviewer may act on the case if it is theirs. One nobody has taken
+    becomes theirs with this first step (as if they had clicked Take this case)."""
+    if row.reviewer_id == reviewer.pk:
+        return
+    if row.reviewer_id is not None:
+        raise HeldByOther(_held_message(row))
+    _take(row, reviewer, "case.claim", automatic=True)
+
+
+def claim(assessment: Assessment, reviewer: User, take_over: bool = False) -> None:
+    """An admin takes the case to review it. The super user may take over one another admin has."""
+    with transaction.atomic():
+        row = _locked(assessment, *REVIEWABLE)
+        if row.reviewer_id == reviewer.pk:
+            return
+        if row.reviewer_id is not None and not (take_over and reviewer.is_super_user):
+            raise HeldByOther(_held_message(row))
+        _take(row, reviewer, "case.claim")
+
+
+def release(assessment: Assessment, actor: User) -> None:
+    """The admin reviewing the case (or the super user) gives it back: it waits in the queue,
+    untaken, for any admin of its department. Its rulings stay."""
+    with transaction.atomic():
+        row = _locked(assessment, *REVIEWABLE)
+        if row.reviewer_id is None:
+            return
+        if row.reviewer_id != actor.pk and not actor.is_super_user:
+            raise HeldByOther(_held_message(row))
+        previous = row.reviewer.email
+        row.reviewer, row.claimed_at = None, None
+        row.save(update_fields=["reviewer", "claimed_at", "updated_at"])
+        audit.record(actor, "case.release", assessment_ref=row.public_id, metadata={"from": previous})
+
+
+def assign(assessment: Assessment, to: User, by: User) -> None:
+    """The super user gives the case to an admin of its department (or to a super user)."""
+    with transaction.atomic():
+        row = _locked(assessment, *REVIEWABLE)
+        if row.reviewer_id == to.pk:
+            return
+        _take(row, to, "case.assign", actor=by)
+
+
 def latest_submission(assessment: Assessment) -> Submission | None:
     return assessment.submissions.order_by("-attempt_no").first()
 
@@ -161,6 +258,10 @@ def _start_run(assessment: Assessment, actor: User, action: str, *from_stages: S
     failed send leaves a visible AUTH_FAILED case rather than nothing."""
     with transaction.atomic():
         row = _locked(assessment, *from_stages)
+        if actor.is_reviewer and actor.pk != row.applicant_id:
+            # Sending a failed run again is the reviewer's step on the case like any other (the
+            # applicant sending their own again is not reviewing it).
+            _hold(row, actor)
         version = catalogue.version_for(row)
         questions = catalogue.questions(version.pk)
         saved = dict(AnswerValue.objects.filter(assessment=row).values_list("qid", "value"))
@@ -583,6 +684,7 @@ def rule(assessment: Assessment, qid: str, verdict: str, comment: str, reviewer:
     ruling can be undone, until the reviewer sends it on with complete_review."""
     with transaction.atomic():
         row = _locked(assessment, Stage.REVIEW_PENDING)
+        _hold(row, reviewer)
         submission = latest_submission(row)
         flags = flagged_qids(submission)
         if qid not in flags:
@@ -617,6 +719,7 @@ def complete_review(assessment: Assessment, reviewer: User) -> None:
     forced = False
     with transaction.atomic():
         row = _locked(assessment, Stage.REVIEW_PENDING)
+        _hold(row, reviewer)
         submission = latest_submission(row)
         outcome = review_outcome(submission)
         if outcome is None:
@@ -658,6 +761,7 @@ def force_score(assessment: Assessment, reviewer: User) -> None:
     could not be reached the first time, or the flags were accepted before scoring was forced)."""
     with transaction.atomic():
         row = _locked(assessment, Stage.DECISION_PENDING, Stage.SCORING)
+        _hold(row, reviewer)
         submission = latest_submission(row)
         if not can_force_score(row, submission):
             raise TransitionError("This assessment cannot be sent to the AI engine for scoring.")
@@ -759,6 +863,7 @@ def _forced_settled(submission: Submission, status: dict) -> bool:
 def undo_ruling(assessment: Assessment, qid: str, reviewer: User) -> None:
     with transaction.atomic():
         row = _locked(assessment, Stage.REVIEW_PENDING)
+        _hold(row, reviewer)
         deleted, _ = latest_submission(row).rulings.filter(qid=qid).delete()
         if not deleted:
             raise TransitionError("There is no ruling on this answer.")
@@ -769,6 +874,7 @@ def undo_ruling(assessment: Assessment, qid: str, reviewer: User) -> None:
 def decide(assessment: Assessment, verdict: str, remarks: str, reviewer: User) -> None:
     with transaction.atomic():
         row = _locked(assessment, Stage.DECISION_PENDING)
+        _hold(row, reviewer)
         Decision.objects.create(assessment=row, verdict=verdict, remarks=remarks, reviewer=reviewer)
         moved = set_stage(row, Stage.ACCEPTED if verdict == Verdict.ACCEPTED else Stage.REJECTED)
         row.decided_at = timezone.now()

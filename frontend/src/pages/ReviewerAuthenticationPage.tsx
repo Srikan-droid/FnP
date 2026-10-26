@@ -7,10 +7,13 @@ import {
   useRemoveAssessment,
   useRetry,
   useRule,
+  useSession,
   useUndoRuling,
 } from "../api/queries";
 import { refusalMessage } from "../api/client";
 import { useCaseView } from "../api/useCaseView";
+import CaseReviewerBar from "../components/CaseReviewerBar";
+import { heldByOther } from "../state/access";
 import {
   questionsWithIssues,
   reviewStateFor,
@@ -56,13 +59,14 @@ export default function ReviewerAuthenticationPage() {
   // The applicant's answers are shown only for a draft not submitted yet, so only read then.
   const isDraft = view.status === "ready" && view.data.stage === "NOT_SUBMITTED";
   const form = useForm(id, isDraft);
-  // Only for showing an unsubmitted draft; already cached for every other page that needs it.
-  const catalogue = useCatalogue();
+  // Only for showing an unsubmitted draft: read then, not for a submitted case.
+  const catalogue = useCatalogue(id, isDraft);
   const rule = useRule(id);
   const undo = useUndoRuling(id);
   const retry = useRetry(id);
   const removal = useRemoveAssessment(id);
   const completeReview = useCompleteReview(id);
+  const me = useSession().data;
   // Asking to confirm before the case goes back to the applicant.
   const [confirmReturn, setConfirmReturn] = useState(false);
 
@@ -120,6 +124,7 @@ export default function ReviewerAuthenticationPage() {
       <div className="page">
         <ReviewerCaseHeader assignment={assignment} stage={stage} />
         <ReviewerTabs assessmentId={id} active="authentication" scoringReady={false} />
+        <CaseReviewerBar id={id} assignment={assignment} data={data} />
         {failed && data.run?.unconfirmed && (
           <div className="notice notice-warning" role="note">
             <AlertTriangleIcon size={17} />
@@ -133,7 +138,9 @@ export default function ReviewerAuthenticationPage() {
           icon={failed ? <AlertTriangleIcon size={22} /> : <ShieldCheckIcon size={22} />}
           title={failed ? "Authentication could not run" : "Authentication in progress"}
           action={
-            failed && (
+            // Sending again is the reviewer's step: not for one another admin is reviewing.
+            failed &&
+            !heldByOther(data.reviewer, me) && (
               <button className="btn btn-primary" disabled={retry.isPending} onClick={() => retry.mutate()}>
                 {retry.isPending ? "Sending…" : "Send again"}
               </button>
@@ -153,7 +160,8 @@ export default function ReviewerAuthenticationPage() {
   const issues = questionsWithIssues(outcome);
   // A reviewer never rules on their own application (the server refuses it too).
   const ownApplication = assignment.ownApplication;
-  const canRule = stage === "REVIEW_PENDING" && !ownApplication;
+  // Only the admin reviewing the case rules on it (another admin reads it; the server refuses too).
+  const canRule = stage === "REVIEW_PENDING" && !ownApplication && !heldByOther(data.reviewer, me);
   // Every flag ruled on: the reviewer sends the case on with the footer's button.
   const reviewOutcome = canRule ? data.reviewOutcome : null;
   const rejectedNow = Object.entries(data.rulings)
@@ -324,6 +332,8 @@ export default function ReviewerAuthenticationPage() {
         active="authentication"
         scoringReady={isScored(stage) || stage === "SCORING"}
       />
+
+      <CaseReviewerBar id={id} assignment={assignment} data={data} />
 
       <AuthenticationReport
         outcome={outcome}

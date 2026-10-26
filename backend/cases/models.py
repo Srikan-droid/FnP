@@ -26,8 +26,17 @@ def _in_choices(field: str, choices: type[models.TextChoices], name: str) -> mod
 
 
 class Role(models.TextChoices):
+    """Who an account is. An applicant (a "user") applies; a reviewer (an "admin") reviews and
+    decides the cases of the departments they are given; the super user sees and manages
+    everything, accounts and departments included."""
+
     APPLICANT = "applicant"
     REVIEWER = "reviewer"
+    SUPERUSER = "superuser", "Super user"
+
+
+# The roles that work on the reviewer side of the app.
+STAFF_ROLES = (Role.REVIEWER, Role.SUPERUSER)
 
 
 class Answer(models.TextChoices):
@@ -147,6 +156,9 @@ class User(AbstractBaseUser):
     is_active = models.BooleanField(default=True)
     # May sign in to the admin site at /admin/ (with a password). No effect on the app itself.
     is_staff = models.BooleanField(default=False)
+    # For a reviewer (an admin): the departments whose cases and questions they work on. The super
+    # user works on every department, whatever is set here.
+    departments = models.ManyToManyField("Department", blank=True, related_name="admins", db_table="user_department")
     created_at = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"
@@ -171,7 +183,26 @@ class User(AbstractBaseUser):
 
     @property
     def is_reviewer(self) -> bool:
-        return self.role == Role.REVIEWER
+        """Works on the reviewer side: an admin or the super user."""
+        return self.role in STAFF_ROLES
+
+    @property
+    def is_super_user(self) -> bool:
+        return self.role == Role.SUPERUSER
+
+    def department_ids(self) -> set[int] | None:
+        """The departments this account may see the cases and questions of: None for every one
+        (the super user), none for an applicant. Read once per request and kept on the user."""
+        if self.is_super_user:
+            return None
+        if not self.is_reviewer:
+            return set()
+        if not hasattr(self, "_department_ids"):
+            if "departments" in getattr(self, "_prefetched_objects_cache", {}):
+                self._department_ids = {d.pk for d in self.departments.all()}  # loaded already
+            else:
+                self._department_ids = set(self.departments.values_list("pk", flat=True))
+        return self._department_ids
 
 
 # ---------------------------------------------------------------------------------------------
@@ -183,10 +214,21 @@ class Department(models.Model):
     key = models.SlugField(max_length=32, db_index=False)
     name = models.CharField(max_length=120)
     blurb = models.CharField(max_length=200, blank=True)
+    # A department switched off takes no new applications; its cases stay as they are.
+    is_active = models.BooleanField(default=True)
+    # The questionnaire edition the department started from: what "Restore published model" goes
+    # back to. An empty one for a department that started with no questions.
+    starting_version = models.ForeignKey(
+        "QuestionnaireVersion", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
 
     class Meta:
         db_table = "department"
-        constraints = [models.UniqueConstraint(fields=["key"], name="department_key_unique")]
+        constraints = [
+            models.UniqueConstraint(fields=["key"], name="department_key_unique"),
+            # Two departments named alike would be indistinguishable in every picker.
+            models.UniqueConstraint(Lower("name"), name="department_name_ci_unique"),
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -199,13 +241,22 @@ class QuestionnaireVersion(models.Model):
     label = models.CharField(max_length=40)
     published_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=False)
+    # Each department has its own questionnaire. Null for the editions from before departments had
+    # their own (the first one is still the model "Restore published model" goes back to).
+    department = models.ForeignKey(
+        Department, null=True, blank=True, on_delete=models.PROTECT, related_name="questionnaire_versions"
+    )
 
     class Meta:
         db_table = "questionnaire_version"
         constraints = [
             models.UniqueConstraint(fields=["label"], name="questionnaire_label_unique"),
+            # One edition in force per department; an edition in force always has its department.
             models.UniqueConstraint(
-                fields=["is_active"], condition=Q(is_active=True), name="questionnaire_one_active"
+                fields=["department"], condition=Q(is_active=True), name="questionnaire_one_active_per_department"
+            ),
+            models.CheckConstraint(
+                condition=Q(is_active=False) | Q(department__isnull=False), name="questionnaire_active_has_department"
             ),
         ]
 
@@ -298,6 +349,13 @@ class Assessment(models.Model):
     continued_from = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="continuations"
     )
+    # The admin reviewing it: the first of the department's admins to take it (or the one the super
+    # user gave it to). Only they rule on it, send it on and decide it; the others can read it.
+    # Null while nobody has taken it. Kept once decided, as a record of who reviewed it.
+    reviewer = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.PROTECT, related_name="reviewing", db_index=False
+    )  # indexed by the composite index that starts with it
+    claimed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     # When the stage last changed, for how long a case has waited where it is ("Waiting 3 days"):
@@ -322,6 +380,8 @@ class Assessment(models.Model):
             models.Index(fields=["-updated_at", "-id"], name="assessment_recent"),
             # The queue filtered to one department.
             models.Index(fields=["department", "-updated_at", "-id"], name="assessment_by_department"),
+            # The queue narrowed to one reviewer's cases ("Mine").
+            models.Index(fields=["reviewer", "-updated_at", "-id"], name="assessment_by_reviewer"),
         ]
 
     def __str__(self) -> str:
@@ -585,6 +645,24 @@ class Decision(models.Model):
     class Meta:
         db_table = "decision"
         constraints = [_in_choices("verdict", Verdict, "decision_verdict_valid")]
+
+
+class QuestionnaireLock(models.Model):
+    """Who is editing a department's questions now: one admin at a time, so two never change them
+    at once. Kept alive by the editor while it is open (seen_at); one not seen for
+    QUESTIONNAIRE_LOCK_IDLE_SECONDS has lapsed and can be taken. `token` tells the holder's browser
+    tabs apart."""
+
+    department = models.OneToOneField(
+        Department, primary_key=True, on_delete=models.CASCADE, related_name="questionnaire_lock"
+    )
+    holder = models.ForeignKey(User, on_delete=models.CASCADE, related_name="+")
+    token = models.CharField(max_length=64)
+    started_at = models.DateTimeField()
+    seen_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "questionnaire_lock"
 
 
 class AuditEvent(models.Model):

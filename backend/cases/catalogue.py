@@ -1,5 +1,5 @@
-"""The question catalogue: the active questionnaire version, its rules, and the evidence options
-the engine accepts. Questions are read once per version and cached, since a version never changes
+"""The question catalogue: each department's questionnaire version in force, its rules, and the
+evidence options the engine accepts. Questions are read once per version and cached, since a version never changes
 after it is published."""
 
 import re
@@ -21,14 +21,40 @@ _OPTIONS_CACHE_KEY = "catalogue:evidence-options"
 _OPTIONS_TTL_SECONDS = 6 * 60 * 60
 
 
-def active_version() -> QuestionnaireVersion:
-    return QuestionnaireVersion.objects.get(is_active=True)
+def active_version(department) -> QuestionnaireVersion:
+    """The questionnaire in force for a department (given as a Department or its id): each
+    department has its own."""
+    department_id = getattr(department, "pk", department)
+    return QuestionnaireVersion.objects.get(is_active=True, department_id=department_id)
+
+
+def with_questions(departments):
+    """The departments (a Department queryset) whose questionnaire in force has a question: those
+    set up to take applications. One with none waits for its admins to add some."""
+    return departments.filter(
+        questionnaire_versions__is_active=True, questionnaire_versions__questions__isnull=False
+    ).distinct()
+
+
+def has_questions(department) -> bool:
+    department_id = getattr(department, "pk", department)
+    return Question.objects.filter(version__department_id=department_id, version__is_active=True).exists()
+
+
+def active_versions(department_ids) -> dict[int, QuestionnaireVersion]:
+    """department id -> its questionnaire in force, for several departments in one query."""
+    return {
+        v.department_id: v
+        for v in QuestionnaireVersion.objects.filter(is_active=True, department_id__in=set(department_ids))
+    }
 
 
 def version_for(assessment: Assessment) -> QuestionnaireVersion:
-    """The settings an assessment is held to: the active ones until it is submitted, then the
-    ones it was submitted under, so a later change never moves the goalposts mid-case."""
-    return active_version() if assessment.stage == Stage.NOT_SUBMITTED else assessment.version
+    """The settings an assessment is held to: its department's in force until it is submitted, then
+    the ones it was submitted under, so a later change never moves the goalposts mid-case."""
+    if assessment.stage == Stage.NOT_SUBMITTED:
+        return active_version(assessment.department_id)
+    return assessment.version
 
 
 def questions(version_id: int) -> dict[str, Question]:
@@ -191,6 +217,26 @@ def check_choices() -> list[dict]:
     return [{"name": name, "label": check_label(name)} for name in seen]
 
 
+def version_options(
+    version_id: int, by_code: dict[str, dict] | None = None, *, engine_down_ok: bool = False
+) -> dict[str, list[dict]]:
+    """The document types chosen for the questions added here in one version, by code: what that
+    version's form offers (another department's edition of a question may take others). With
+    engine_down_ok, an unreachable engine leaves out the questions that need its list (only names
+    typed in here are given) instead of raising."""
+    chosen = {qid: q.evidence_options for qid, q in questions(version_id).items() if q.evidence_options}
+    if not chosen:
+        return {}
+    if by_code is None and any(custom_name(c) is None for codes in chosen.values() for c in codes):
+        try:
+            by_code = options_by_code()
+        except engine.EngineUnavailable:
+            if not engine_down_ok:
+                raise
+            chosen = {qid: codes for qid, codes in chosen.items() if all(custom_name(c) for c in codes)}
+    return {qid: chosen_options(codes, by_code or {}) for qid, codes in chosen.items()}
+
+
 def option(qid: str, code: str, question: Question | None = None) -> dict | None:
     return next((o for o in options_for(qid, question) if o["code"] == code), None)
 
@@ -210,12 +256,3 @@ def chosen_codes() -> dict[str, list[str]]:
         cache.set(key, chosen, None)
     return chosen
 
-
-def added_question_options() -> dict[str, list[dict]]:
-    """The document types chosen here for questions, by code, from the latest version that has each
-    question: an assessment held to an older version still finds them after a later change. A
-    question of the engine's whose latest version has none chosen follows the engine's list again."""
-    chosen = chosen_codes()
-    needs_engine = any(custom_name(c) is None for codes in chosen.values() for c in codes)
-    by_code = options_by_code() if needs_engine else {}
-    return {qid: chosen_options(codes, by_code) for qid, codes in chosen.items()}

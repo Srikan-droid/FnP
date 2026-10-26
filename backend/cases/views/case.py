@@ -1,7 +1,7 @@
 import re
 
 from django.conf import settings
-from django.db.models import F, prefetch_related_objects
+from django.db.models import F, Q, prefetch_related_objects
 from django.db.models.fields.json import KeyTextTransform
 from django.http import Http404, StreamingHttpResponse
 from rest_framework import serializers
@@ -11,9 +11,11 @@ from rest_framework.views import APIView
 from engine import client as engine
 
 from .. import adapt, workflow
-from ..models import Assessment, Ruling, RunStatus, Stage, Submission, User, Verdict
-from ..permissions import IsReviewer, assessment_for
-from .common import Conflict, ServiceUnavailable, require_not_own, require_owner
+from ..models import Assessment, Role, Ruling, RunStatus, Stage, Submission, User, Verdict
+from ..permissions import IsReviewer, IsSuperUser, assessment_for
+from .common import (
+    HELD_BY_OTHER, Conflict, ServiceUnavailable, coded_conflict, holder_payload, require_not_own, require_owner,
+)
 
 _HIGHLIGHT_NAME = re.compile(r"[A-Za-z0-9._-]{1,120}\.pdf")  # used with fullmatch
 
@@ -132,6 +134,9 @@ def case_payload(assessment: Assessment, viewer: User) -> dict:
             "by": decision.reviewer.email if viewer.is_reviewer else None,
         },
     }
+    if viewer.is_reviewer:
+        # Which of the department's admins has it: only they act on it, the others read it.
+        payload["reviewer"] = holder_payload(assessment)
     if submission is None:
         return payload
     payload["run"] = {
@@ -184,19 +189,22 @@ def case_payload(assessment: Assessment, viewer: User) -> dict:
 
 def _assessment(request, public_id) -> Assessment:
     return assessment_for(
-        request.user, public_id, queryset=Assessment.objects.select_related("applicant", "decision__reviewer")
+        request.user, public_id,
+        queryset=Assessment.objects.select_related("applicant", "decision", "decision__reviewer", "reviewer"),
     )
 
 
 def _reloaded(assessment: Assessment) -> Assessment:
     """The case as a step left it, read again with its decision (refresh_from_db would drop the
     decision loaded with it, and reading it then takes a query of its own)."""
-    return Assessment.objects.select_related("applicant", "decision__reviewer").get(pk=assessment.pk)
+    return Assessment.objects.select_related("applicant", "decision", "decision__reviewer", "reviewer").get(pk=assessment.pk)
 
 
 def _transition(fn, *args):
     try:
         return fn(*args)
+    except workflow.HeldByOther as exc:
+        raise coded_conflict(HELD_BY_OTHER, str(exc)) from None
     except workflow.TransitionError as exc:
         raise Conflict(str(exc)) from None
 
@@ -305,6 +313,57 @@ class DecisionView(APIView):
         data.is_valid(raise_exception=True)
         _transition(workflow.decide, assessment, data.validated_data["verdict"],
                     data.validated_data["remarks"], request.user)
+        return Response(case_payload(_reloaded(assessment), request.user))
+
+
+class ClaimView(APIView):
+    """POST: an admin takes the case to review it (`takeOver`: the super user takes it from the
+    admin who has it). DELETE: the admin reviewing it, or the super user, gives it back."""
+
+    permission_classes = [IsReviewer]
+
+    def post(self, request, public_id):
+        assessment = _assessment(request, public_id)
+        require_not_own(request.user, assessment)
+        take_over = request.data.get("takeOver") is True if isinstance(request.data, dict) else False
+        _transition(workflow.claim, assessment, request.user, take_over)
+        return Response(case_payload(_reloaded(assessment), request.user))
+
+    def delete(self, request, public_id):
+        assessment = _assessment(request, public_id)
+        _transition(workflow.release, assessment, request.user)
+        return Response(case_payload(_reloaded(assessment), request.user))
+
+
+class AssignSerializer(serializers.Serializer):
+    userId = serializers.IntegerField()
+
+
+class AssignView(APIView):
+    """The super user: GET who the case can be given to (its department's admins, and the super
+    users); POST gives it to one of them."""
+
+    permission_classes = [IsSuperUser]
+
+    def get(self, request, public_id):
+        assessment = _assessment(request, public_id)
+        people = (
+            User.objects.filter(is_active=True)
+            .filter(Q(role=Role.SUPERUSER) | Q(role=Role.REVIEWER, departments=assessment.department_id))
+            .exclude(pk=assessment.applicant_id)
+            .distinct()
+            .order_by("role", "email")
+        )
+        return Response([{"id": u.pk, "email": u.email, "superUser": u.is_super_user} for u in people])
+
+    def post(self, request, public_id):
+        assessment = _assessment(request, public_id)
+        data = AssignSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        to = User.objects.filter(pk=data.validated_data["userId"]).first()
+        if to is None:
+            raise serializers.ValidationError({"userId": "Choose someone from the list."})
+        _transition(workflow.assign, assessment, to, request.user)
         return Response(case_payload(_reloaded(assessment), request.user))
 
 
