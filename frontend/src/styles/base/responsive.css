@@ -7,7 +7,8 @@
   }
 
   .page-head-text h1 {
-    font-size: 1.5rem;
+    font-size: var(--fs-h2);
+    font-weight: 600;
   }
 
   .meta-grid {
@@ -52,7 +53,7 @@
     flex-wrap: wrap;
     gap: 0.5rem;
     padding-top: 1rem;
-    background: linear-gradient(to top, var(--page) calc(100% - 0.75rem), transparent);
+    background: var(--page);
   }
 
   .actionbar > .btn {

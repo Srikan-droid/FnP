@@ -181,7 +181,7 @@
 
 .case-note.is-critical {
   color: var(--critical);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .case-open {
@@ -190,7 +190,7 @@
   gap: 0.25rem;
   flex: none;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--accent);
 }
 
@@ -278,7 +278,7 @@
 }
 
 .queue-kpi-count {
-  font-size: 1.5rem;
+  font-size: var(--fs-h2);
   font-weight: 700;
   line-height: 1.1;
   color: var(--ink);
@@ -316,7 +316,7 @@
 .case-age {
   margin: 0.35rem 0 0;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
 }
 

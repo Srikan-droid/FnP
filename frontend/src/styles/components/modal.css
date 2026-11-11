@@ -38,7 +38,7 @@
 }
 
 .modal h2 {
-  font-size: 1.0625rem;
+  font-size: var(--fs-h3);
 }
 
 .modal-sub {
@@ -69,7 +69,7 @@
   font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
 }
 
@@ -147,7 +147,7 @@
   margin-right: auto;
   align-self: center;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink);
 }
 

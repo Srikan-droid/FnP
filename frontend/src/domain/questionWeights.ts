@@ -5,10 +5,15 @@
  * A section's weight is its share of 100; each question gets a percentage of its section's weight,
  * and its weight follows from that. The percentages in a section add up to 100%, and the section
  * weights to 100, so the question weights always add up to 100 too.
+ *
+ * A follow-up question (asked only on one answer of a Yes/No question in its section, one level
+ * deep) is held in its section's list right after its parent, and nested under it only when the
+ * edit is sent. It has no weight of its own (it counts under its parent's): it takes no share of
+ * the section, and is sent with weight 0.
  */
 import type { AnswerType, CatalogueQuestion, EvidenceRule, QuestionnaireVersion } from "../api/types";
 import { DEFAULT_CHECKS, checkLabel } from "./checks";
-import type { SectionEdit } from "../api/queries";
+import type { QuestionEdit, SectionEdit } from "../api/queries";
 import { displaySection } from "./sectionLabels";
 import type { Answer } from "./types";
 
@@ -30,11 +35,15 @@ export interface QuestionSettingsDraft {
   evidenceOptions: string[];
   /** The checks the AI engine runs on its documents, in the engine's form. */
   checks: string[];
+  /** A follow-up question: its parent's answer that asks it (null for an ordinary question). */
+  showWhen: Answer | null;
 }
 
 /** A question as the editor holds it. */
 export interface EditQuestion extends QuestionSettingsDraft {
   key: string;
+  /** A follow-up question: the key of the question it follows on from (null for an ordinary one). */
+  parentKey: string | null;
   /** Its code; null for a question added in this edit (the server gives it one). */
   qid: string | null;
   /** Whether it names its own document types (one added here); otherwise the engine's list applies until others are chosen. */
@@ -87,44 +96,121 @@ export const settingsOf = (q: QuestionSettingsDraft): QuestionSettingsDraft => (
   evidenceRequired: q.evidenceRequired,
   evidenceOptions: q.evidenceOptions,
   checks: q.checks,
+  showWhen: q.showWhen,
 });
 
 export function fromVersion(version: QuestionnaireVersion): EditSection[] {
+  // A follow-up is edited (and sent back nested) under its parent, so it is held in its parent's
+  // section even if it was stored in another: it keeps its link rather than turning ordinary.
+  const sectionOf = new Map(version.questions.map((q) => [q.qid, q.section]));
+  const heldIn = (q: CatalogueQuestion) => (q.parentQid && sectionOf.get(q.parentQid)) || q.section;
   return version.sections.map((s) => {
-    const questions = version.questions.filter((q) => q.section === s.name);
+    const questions = inFormOrder(version.questions.filter((q) => heldIn(q) === s.name));
     return {
       key: newKey(),
       name: displaySection(s.name),
       baseName: s.name,
       weight: String(s.weight),
       baseWeight: s.weight,
-      baseCount: questions.length,
-      questions: withWholePercentages(questions.map((q) => fromQuestion(q, s.weight))),
+      baseCount: questions.filter((q) => !q.parentQid).length,
+      questions: withWholePercentages(withParents(questions.map((q) => fromQuestion(q, s.weight)), questions)),
     };
   });
 }
+
+/** A section's questions with each one's follow-ups right after it. */
+function inFormOrder(questions: CatalogueQuestion[]): CatalogueQuestion[] {
+  const codes = new Set(questions.map((q) => q.qid));
+  const top = questions.filter((q) => !q.parentQid || !codes.has(q.parentQid));
+  return top.flatMap((q) => [q, ...questions.filter((f) => f.parentQid === q.qid && f !== q)]);
+}
+
+/** Points each follow-up at its parent's key in the editor. */
+function withParents(edits: EditQuestion[], questions: CatalogueQuestion[]): EditQuestion[] {
+  const keyOf = new Map(edits.map((e) => [e.qid, e.key]));
+  return edits.map((e, i) => {
+    const parentQid = questions[i].parentQid;
+    const parentKey = parentQid ? (keyOf.get(parentQid) ?? null) : null;
+    return parentKey ? { ...e, parentKey } : e;
+  });
+}
+
+/** The questions that share the section's weight: all but the follow-ups. */
+export const weighted = (questions: EditQuestion[]) => questions.filter((q) => !q.parentKey);
+
+/** The follow-ups of a question, in order. */
+export const followUpsOf = (section: EditSection, key: string) => section.questions.filter((q) => q.parentKey === key);
+
+/** The question a follow-up follows on from (undefined for an ordinary question). */
+export const parentOf = (section: EditSection, q: EditQuestion) =>
+  q.parentKey ? section.questions.find((p) => p.key === q.parentKey) : undefined;
+
+/** The longest question code the server stores. */
+const QID_MAX_LENGTH = 10;
+
+/**
+ * The code each question added in this edit will be given when it is applied, by question key: the
+ * server's rule, in the same order. A new question takes the next N code (N1, N2 ...), a new
+ * follow-up its parent's code numbered on (A1-1, A1-2 ...), never a code used before, even by a
+ * question since deleted (`used`). A follow-up code too long to store takes an N code instead.
+ */
+export function previewCodes(sections: EditSection[], used: string[]): Map<string, string> {
+  const taken = new Set(used);
+  for (const s of sections) for (const q of s.questions) if (q.qid) taken.add(q.qid);
+  let n = Math.max(0, ...[...taken].map((c) => /^N(\d+)$/.exec(c)).filter(Boolean).map((m) => Number(m![1])));
+  const nextQuestion = () => {
+    n += 1;
+    while (taken.has(`N${n}`)) n += 1;
+    return `N${n}`;
+  };
+  const codes = new Map<string, string>();
+  const codeOf = (q: EditQuestion) => q.qid ?? codes.get(q.key) ?? null;
+  for (const s of sections) {
+    for (const q of s.questions) {
+      if (q.qid) continue;
+      const parent = parentOf(s, q);
+      const parentCode = parent ? codeOf(parent) : null;
+      let code: string;
+      if (parentCode) {
+        const own = new RegExp(`^${parentCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-(\\d+)$`);
+        const last = Math.max(0, ...[...taken].map((c) => own.exec(c)).filter(Boolean).map((m) => Number(m![1])));
+        code = `${parentCode}-${last + 1}`;
+        if (code.length > QID_MAX_LENGTH) code = nextQuestion();
+      } else {
+        code = nextQuestion();
+      }
+      taken.add(code);
+      codes.set(q.key, code);
+    }
+  }
+  return codes;
+}
+
+/** How the editor names a question: its code, or "the new question". */
+export const nameOf = (q: EditQuestion) => q.qid ?? "the new question";
 
 /**
  * Percentages rounded one by one need not add up to 100 (6, 6 and 6 of 18 read 33.33 each, 99.99
  * in all): the last question takes what is left, so a published section always reads 100%.
  */
 function withWholePercentages(questions: EditQuestion[]): EditQuestion[] {
-  if (questions.length === 0) return questions;
-  const others = questions.slice(0, -1).reduce((sum, q) => sum + (hundredths(q.pct) ?? 0), 0);
+  const shared = weighted(questions);
+  if (shared.length === 0) return questions;
+  const others = shared.slice(0, -1).reduce((sum, q) => sum + (hundredths(q.pct) ?? 0), 0);
   const rest = TOTAL - others;
   if (rest < 0) return questions;
-  const last = questions[questions.length - 1];
+  const last = shared[shared.length - 1];
   const fixed = {
     ...last,
     pct: show(rest),
     basePct: show(rest),
     original: last.original && { ...last.original, pct: show(rest) },
   };
-  return [...questions.slice(0, -1), fixed];
+  return questions.map((q) => (q === last ? fixed : q));
 }
 
 function fromQuestion(q: CatalogueQuestion, sectionWeight: number): EditQuestion {
-  const pct = sectionWeight > 0 ? String(Math.round((q.weight / sectionWeight) * 10000) / 100) : "0";
+  const pct = sectionWeight > 0 && !q.parentQid ? String(Math.round((q.weight / sectionWeight) * 10000) / 100) : "0";
   const question: EditQuestion = {
     key: newKey(),
     qid: q.qid,
@@ -138,6 +224,8 @@ function fromQuestion(q: CatalogueQuestion, sectionWeight: number): EditQuestion
     evidenceRequired: q.evidenceRequired,
     evidenceOptions: q.evidenceOptions ?? [],
     checks: q.checks ?? [],
+    showWhen: q.parentQid ? (q.showWhen ?? null) : null,
+    parentKey: null,
     // A question added here names its document types (the engine has no list of its own for it).
     ownOptions: q.addedHere ?? false,
     baseWeight: q.weight,
@@ -150,9 +238,12 @@ function fromQuestion(q: CatalogueQuestion, sectionWeight: number): EditQuestion
   return question;
 }
 
-export function blankQuestion(pct = "0"): EditQuestion {
+/** A new question; a new follow-up when given its parent and the answer that asks it. */
+export function blankQuestion(pct = "0", follows?: { parentKey: string; showWhen: Answer }): EditQuestion {
   return {
     key: newKey(),
+    parentKey: follows?.parentKey ?? null,
+    showWhen: follows?.showWhen ?? null,
     qid: null,
     text: "",
     polarity: "Positive",
@@ -188,6 +279,7 @@ export function isEdited(q: EditQuestion): boolean {
     now.answerType !== was.answerType ||
     now.maxFiles !== was.maxFiles ||
     now.evidenceRequired !== was.evidenceRequired ||
+    now.showWhen !== was.showWhen ||
     !sameSet(now.allowedAnswers, was.allowedAnswers) ||
     !sameSet(now.fileTypes, was.fileTypes) ||
     !sameSet(now.evidenceOptions, was.evidenceOptions) ||
@@ -204,22 +296,28 @@ export function undoEdits(q: EditQuestion): EditQuestion {
 }
 
 /**
- * Each question's weight, in hundredths, from the section's weight and the percentages. While
- * nothing they depend on has changed, the published weights stand as they are. Null while a number
- * is not valid.
+ * Each question's weight, in hundredths, from the section's weight and the percentages (in the
+ * order of the section's questions; 0 for a follow-up, which has none of its own). While nothing
+ * they depend on has changed, the published weights stand as they are. Null while a number is not
+ * valid.
  */
 export function weightsOf(section: EditSection): number[] | null {
+  const shared = weighted(section.questions);
   const sw = hundredths(section.weight);
-  const pcts = section.questions.map((q) => hundredths(q.pct));
+  const pcts = shared.map((q) => hundredths(q.pct));
   if (sw === null || pcts.some((p) => p === null)) return null;
   const untouched =
     section.baseWeight !== null &&
     sw === Math.round(section.baseWeight * 100) &&
-    section.questions.length === section.baseCount &&
-    section.questions.every((q) => q.baseWeight !== null && q.pct === q.basePct);
-  if (untouched) return section.questions.map((q) => Math.round((q.baseWeight ?? 0) * 100));
-  if (pctTotal(section) !== TOTAL) return pcts.map((p) => Math.round((sw * (p ?? 0)) / TOTAL));
-  return shareOut(sw, pcts.map((p) => p ?? 0));
+    shared.length === section.baseCount &&
+    shared.every((q) => q.baseWeight !== null && q.pct === q.basePct);
+  const weights = untouched
+    ? shared.map((q) => Math.round((q.baseWeight ?? 0) * 100))
+    : pctTotal(section) !== TOTAL
+      ? pcts.map((p) => Math.round((sw * (p ?? 0)) / TOTAL))
+      : shareOut(sw, pcts.map((p) => p ?? 0));
+  const byKey = new Map(shared.map((q, i) => [q.key, weights[i]]));
+  return section.questions.map((q) => byKey.get(q.key) ?? 0);
 }
 
 /**
@@ -241,7 +339,7 @@ function shareOut(total: number, pcts: number[]): number[] {
 }
 
 export function pctTotal(section: EditSection): number | null {
-  const pcts = section.questions.map((q) => hundredths(q.pct));
+  const pcts = weighted(section.questions).map((q) => hundredths(q.pct));
   return pcts.some((p) => p === null) ? null : pcts.reduce<number>((a, b) => a + (b ?? 0), 0);
 }
 
@@ -267,10 +365,27 @@ export function shareStatus(left: number | null, unit: string): { tone: "ok" | "
   return { tone: "over", text: `${show(-left)}${unit} over — reduce one by ${show(-left)}${unit}` };
 }
 
-/** What is wrong with a question's settings, if anything. */
-export function questionProblem(q: EditQuestion): string | null {
+/**
+ * What is wrong with a question's settings, if anything. Given its section, a follow-up is checked
+ * against its parent, and a parent against its follow-ups.
+ */
+export function questionProblem(q: EditQuestion, section?: EditSection): string | null {
   if (!q.text.trim()) return "Enter the question.";
-  if (hundredths(q.pct) === null) return "Enter a percentage from 0 to 100, with at most two decimals.";
+  if (section) {
+    const parent = parentOf(section, q);
+    if (parent && q.showWhen && (parent.answerType !== "choice" || !parent.allowedAnswers.includes(q.showWhen))) {
+      return `It is asked when ${nameOf(parent)} is answered ${q.showWhen}, which ${nameOf(parent)} no longer offers. Choose another answer for it, or offer ${q.showWhen} again.`;
+    }
+    const followUps = followUpsOf(section, q.key);
+    if (followUps.length > 0 && q.answerType !== "choice") {
+      return "A question answered in words cannot have follow-up questions: make it a Yes / No question, or delete its follow-ups.";
+    }
+    const stranded = followUps.find((f) => f.showWhen && !q.allowedAnswers.includes(f.showWhen));
+    if (stranded) {
+      return `Its follow-up ${nameOf(stranded)} is asked on ${stranded.showWhen}: keep ${stranded.showWhen} among the answers offered, or change the follow-up.`;
+    }
+  }
+  if (!q.parentKey && hundredths(q.pct) === null) return "Enter a percentage from 0 to 100, with at most two decimals.";
   if (q.answerType === "choice" && q.allowedAnswers.length === 0) return "Choose at least one answer option.";
   if (q.evidenceRequired !== "never" && q.fileTypes.length === 0) return "Choose at least one accepted file type.";
   if (q.ownOptions && q.evidenceRequired !== "never" && q.evidenceOptions.length === 0) {
@@ -298,31 +413,45 @@ export function summaryLine(q: QuestionSettingsDraft): string {
   return parts.join(" · ");
 }
 
-/** The questionnaire in the shape the server takes it. */
+/** The questionnaire in the shape the server takes it: each question's follow-ups nested under it. */
 export function toBody(sections: EditSection[]): SectionEdit[] {
   return sections.map((s) => {
     const weights = weightsOf(s) ?? s.questions.map(() => 0);
     const takesDocs = (q: EditQuestion) => q.evidenceRequired !== "never";
+    const edit = (q: EditQuestion): QuestionEdit => ({
+      qid: q.qid,
+      text: q.text.trim(),
+      polarity: q.polarity,
+      answerType: q.answerType,
+      weight: weights[s.questions.indexOf(q)] / 100,
+      allowedAnswers: q.answerType === "text" ? [] : ANSWERS.filter((a) => q.allowedAnswers.includes(a)),
+      fileTypes: takesDocs(q) ? q.fileTypes : [],
+      maxFiles: takesDocs(q) ? q.maxFiles : 1,
+      evidenceRequired: q.evidenceRequired,
+      // None chosen for one of the engine's questions: it takes the engine's own list.
+      evidenceOptions: takesDocs(q) ? q.evidenceOptions : [],
+      // Checks are run on its documents: none for a question that takes none.
+      checks: takesDocs(q) ? q.checks : [],
+    });
     return {
       name: s.baseName !== null && s.name.trim() === displaySection(s.baseName) ? s.baseName : s.name.trim(),
       weight: (hundredths(s.weight) ?? 0) / 100,
-      questions: s.questions.map((q, i) => ({
-        qid: q.qid,
-        text: q.text.trim(),
-        polarity: q.polarity,
-        answerType: q.answerType,
-        weight: weights[i] / 100,
-        allowedAnswers: q.answerType === "text" ? [] : ANSWERS.filter((a) => q.allowedAnswers.includes(a)),
-        fileTypes: takesDocs(q) ? q.fileTypes : [],
-        maxFiles: takesDocs(q) ? q.maxFiles : 1,
-        evidenceRequired: q.evidenceRequired,
-        // None chosen for one of the engine's questions: it takes the engine's own list.
-        evidenceOptions: takesDocs(q) ? q.evidenceOptions : [],
-        // Checks are run on its documents: none for a question that takes none.
-        checks: takesDocs(q) ? q.checks : [],
-      })),
+      questions: s.questions
+        .filter((q) => !q.parentKey)
+        .map((q) => ({
+          ...edit(q),
+          followUps: followUpsOf(s, q.key).map((f) => ({ ...edit(f), showWhen: f.showWhen ?? "Yes" })),
+        })),
     };
   });
+}
+
+/** Every question an edit sends, follow-ups included, each with the code of the question it follows on from. */
+function flatQuestions(section: SectionEdit): (QuestionEdit & { parent: string | null; showWhen: Answer | null })[] {
+  return section.questions.flatMap((q) => [
+    { ...q, parent: null, showWhen: null },
+    ...(q.followUps ?? []).map((f) => ({ ...f, parent: q.qid ?? "the new question" })),
+  ]);
 }
 
 // ---- What an edit changes, for the summary shown before applying it ---------------------------
@@ -376,14 +505,14 @@ export function changeSummary(published: QuestionnaireVersion, edited: SectionEd
   const before = new Map(published.sections.map((s) => [s.name, s]));
   const after = new Map(edited.map((s) => [s.name, s]));
   const beforeQ = new Map(published.questions.map((q) => [q.qid, q]));
-  const afterQ = new Map(edited.flatMap((s) => s.questions.filter((q) => q.qid).map((q) => [q.qid as string, { ...q, section: s.name }])));
+  const afterQ = new Map(edited.flatMap((s) => flatQuestions(s).filter((q) => q.qid).map((q) => [q.qid as string, { ...q, section: s.name }])));
 
   // Sections: matched by name, or by holding the same questions when renamed.
   const sectionOf = (qid: string) => beforeQ.get(qid)?.section;
   const renamedFrom = new Map<string, string>();
   for (const s of edited) {
     if (before.has(s.name)) continue;
-    const from = s.questions.map((q) => (q.qid ? sectionOf(q.qid) : undefined)).find((n) => n && !after.has(n));
+    const from = flatQuestions(s).map((q) => (q.qid ? sectionOf(q.qid) : undefined)).find((n) => n && !after.has(n));
     if (from) renamedFrom.set(s.name, from);
   }
   const renamedTo = new Set(renamedFrom.values());
@@ -418,8 +547,14 @@ export function changeSummary(published: QuestionnaireVersion, edited: SectionEd
 
   // Questions.
   for (const s of edited) {
-    for (const q of s.questions) {
-      if (!q.qid) lines.push(`New question in ${displaySection(s.name)}: "${short(q.text || "(no text yet)")}", ${q.weight} of 100`);
+    for (const q of flatQuestions(s)) {
+      if (q.qid) continue;
+      const text = short(q.text || "(no text yet)");
+      lines.push(
+        q.parent
+          ? `New follow-up question in ${displaySection(s.name)} (to ${q.parent}, asked when it is ${q.showWhen}): "${text}"`
+          : `New question in ${displaySection(s.name)}: "${text}", ${q.weight} of 100`
+      );
     }
   }
   for (const [qid, was] of beforeQ) {
@@ -431,6 +566,9 @@ export function changeSummary(published: QuestionnaireVersion, edited: SectionEd
       continue;
     }
     const changes: string[] = [];
+    if (now.parent !== (was.parentQid ?? null) || now.showWhen !== (was.showWhen ?? null)) {
+      changes.push(now.parent ? `now a follow-up to ${now.parent}, asked when it is ${now.showWhen}` : "now asked of everyone");
+    }
     if (now.text.trim() !== was.text.trim()) changes.push("question text edited");
     if (now.polarity !== was.polarity) changes.push(`polarity ${was.polarity} → ${now.polarity}`);
     const retyped = now.answerType !== (was.answerType ?? "choice");

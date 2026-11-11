@@ -1,4 +1,4 @@
-import { PencilIcon, XIcon } from "../icons";
+import { PencilIcon, PlusIcon, XIcon } from "../icons";
 import { TOTAL, hundredths, isEdited, show, summaryLine } from "../../domain/questionWeights";
 import type { EditQuestion } from "../../domain/questionWeights";
 
@@ -9,6 +9,8 @@ import type { EditQuestion } from "../../domain/questionWeights";
  */
 export default function QuestionRow({
   question: q,
+  code,
+  parentCode,
   weight,
   sectionWeight,
   problem,
@@ -19,8 +21,13 @@ export default function QuestionRow({
   onEdit,
   onUndo,
   onDelete,
+  onAddFollowUp,
 }: {
   question: EditQuestion;
+  /** Its code: as published, or the one applying will give a question added now (null: unknown). */
+  code: string | null;
+  /** Its parent's code, the same way (a follow-up only). */
+  parentCode?: string | null;
   /** Its weight of 100, in hundredths (null while a number is not valid). */
   weight: number | null;
   /** Its section's weight of 100, in hundredths (null while not a valid number). */
@@ -35,16 +42,24 @@ export default function QuestionRow({
   onEdit: () => void;
   onUndo: () => void;
   onDelete: () => void;
+  /** Adds a follow-up question under this one (a Yes / No question that is not a follow-up itself). */
+  onAddFollowUp?: () => void;
 }) {
   const edited = isEdited(q);
+  const name = code ?? "the new question";
   const isNew = q.qid === null;
   const pct = hundredths(q.pct);
   const shown = weight === null ? "—" : show(weight);
   return (
-    <article className={`qrow${problem ? " is-off" : ""}`}>
+    <article className={`qrow${problem ? " is-off" : ""}${q.parentKey ? " is-follow-up" : ""}`}>
       <div className="qrow-main">
-        <span className="qid">{q.qid ?? "New"}</span>
+        <span className="qid">{code ?? "New"}</span>
         <div className="qrow-text">
+          {q.parentKey && (
+            <p className="qrow-follow-up">
+              Follow-up · asked when {parentCode ?? "the question above"} is {q.showWhen}
+            </p>
+          )}
           <p className="qrow-question">{q.text.trim() || <span className="qrow-placeholder">No question text yet</span>}</p>
           <p className="qrow-summary">{summaryLine(q)}</p>
           {problem && <p className="field-error qrow-problem">{problem}</p>}
@@ -56,9 +71,13 @@ export default function QuestionRow({
       </div>
 
       <div className="qrow-side">
+        {q.parentKey ? (
+          // No weight of its own: it counts under its parent's.
+          <p className="qrow-no-weight">No weight of its own · counts under {parentCode ?? "its parent"}</p>
+        ) : (
         <div className="qrow-weight">
           <label className="sr-only" htmlFor={`p-${q.key}`}>
-            Percentage of the section for {q.qid ?? "the new question"}
+            Percentage of the section for {name}
           </label>
           <div className="input-suffix qrow-pct">
             <input
@@ -87,20 +106,33 @@ export default function QuestionRow({
             <span className="qrow-of-overall">{shown} of 100 overall</span>
           </div>
         </div>
+        )}
         <div className="qrow-actions">
           {edited && (
             <button type="button" className="btn btn-ghost btn-sm" onClick={onUndo}>
               Undo changes
             </button>
           )}
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onEdit} aria-label={`Edit ${q.qid ?? "the new question"}`}>
+          {onAddFollowUp && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={onAddFollowUp}
+              aria-label={`Add a follow-up question to ${name}`}
+              title="A question asked only when this one has a given answer"
+            >
+              <PlusIcon size={13} />
+              Follow-up
+            </button>
+          )}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onEdit} aria-label={`Edit ${name}`}>
             <PencilIcon size={13} />
             Edit
           </button>
           <button
             type="button"
             className="icon-button qconfig-delete"
-            aria-label={`Delete question ${q.qid ?? ""}`.trim()}
+            aria-label={`Delete question ${code ?? ""}`.trim()}
             title={deleteDisabledReason ?? "Delete question"}
             disabled={deleteDisabledReason !== null}
             onClick={onDelete}

@@ -40,7 +40,7 @@
 }
 
 .pane-head h2 {
-  font-size: 1.0625rem;
+  font-size: var(--fs-h3);
   margin: 0;
 }
 
@@ -103,7 +103,7 @@
   align-items: center;
   gap: 0.5rem;
   margin: 0 0 0.85rem;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -176,8 +176,8 @@
 }
 
 .pane-verdict-reco {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--fs-body);
+  font-weight: 700;
   color: var(--ink);
 }
 
@@ -236,7 +236,7 @@
 
 .pane-stats dd {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
@@ -271,7 +271,7 @@
 
 .pane-concern-type {
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink);
 }
 
@@ -306,7 +306,7 @@
   gap: 0.25rem;
   margin-top: 0.4rem;
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--accent);
 }
 
@@ -361,6 +361,18 @@
   color: var(--warning);
 }
 
+/* The executive summary's points: a plain bullet where the other lists carry an icon. */
+.pane-list-points li::before {
+  content: "";
+  flex: none;
+  width: 0.4rem;
+  height: 0.4rem;
+  /* Level with the middle of the first line. */
+  margin-top: 0.5rem;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+
 .pane-qsplit {
   display: flex;
   flex-direction: column;
@@ -401,7 +413,7 @@
 }
 
 .pane-decision-by {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-2);
   overflow-wrap: anywhere;
 }
@@ -409,7 +421,7 @@
 .pane-decision-label {
   margin: 0 0 0.2rem;
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink-3);
 }
 
@@ -575,7 +587,7 @@
   text-align: left;
   white-space: nowrap;
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-3);
@@ -621,7 +633,7 @@
 }
 
 .pane-risk-note.is-knockout {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--critical-ink);
 }
 
@@ -666,7 +678,7 @@
 
 .pane-outcome-count {
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink-2);
 }
 
@@ -759,16 +771,16 @@
   }
 
   @bottom-left {
-    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     font-size: 7.5pt;
-    color: #8a8881;
+    color: #55524c; /* IRIS Slate */
   }
 
   @bottom-right {
     content: "Page " counter(page) " of " counter(pages);
-    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     font-size: 7.5pt;
-    color: #8a8881;
+    color: #55524c; /* IRIS Slate */
   }
 }
 
@@ -781,26 +793,48 @@
     --page: #ffffff;
     --surface: #ffffff;
     --surface-raised: #ffffff;
-    --surface-sunken: #f6f6f3;
-    --ink: #121a16;
-    --ink-2: #3f4642;
-    --ink-3: #75736d;
-    --hairline: #dcdbd4;
+    --surface-sunken: #f2f0ec;
+    --ink: #1b1a18;
+    --ink-2: #55524c;
+    --ink-3: #686660;
+    --hairline: #d9d7d1;
+    --field-border: #87847d;
+    --ring: rgba(11, 11, 11, 0.08);
     --accent: #36594b;
-    --accent-wash: #e8f0eb;
-    --accent-ink: #24443a;
-    --on-accent: #ffffff;
+    --accent-strong: #2e463c;
+    --accent-wash: #e8efeb;
+    --accent-track: #cdd3cc;
+    --bar-track: #d4d9d3;
+    --accent-ink: #2e463c;
+    --on-accent: #f7f5f1;
+    --ochre: #c9861f;
+    --ochre-strong: #d0973f;
+    --on-ochre: #1b1a18;
+    --gold-text: #8a5e10;
+    --brand-copper: #6f4a2f;
+    --brand-sand: #f3ede6;
+    --art-mid: #aebab2;
+    --art-deep: #7f948a;
     --brand-logo: url("/brand/iris-logo.png");
-    --good-wash: #e7f6e7;
-    --good-ink: #0a6b0a;
-    --warning-wash: #fdf3e0;
-    --warning-ink: #7a4f00;
-    --serious-wash: #fdf0ea;
-    --serious-ink: #9c4520;
-    --critical-wash: #fbeaea;
-    --critical-ink: #a32b2b;
-    --decision-wash: #ebf0fb;
-    --decision-ink: #2f4b9c;
+    --good: #1b7f5c;
+    --good-wash: #e4f0eb;
+    --good-ink: #1b7052;
+    --warning: #b4531c;
+    --warning-wash: #f6eae4;
+    --warning-ink: #9d4a1b;
+    --critical: #b3261e;
+    --critical-wash: #f6e5e4;
+    --critical-ink: #9c241d;
+    --decision-wash: #f3ede6;
+    --decision-ink: #6f4a2f;
+    --band-low-wash: #e7f6e7;
+    --band-low-ink: #0a6b0a;
+    --band-moderate-wash: #fdf3e0;
+    --band-moderate-ink: #7a4f00;
+    --band-elevated-wash: #fdf0ea;
+    --band-elevated-ink: #9c4520;
+    --band-high-wash: #fbeaea;
+    --band-high-ink: #a32b2b;
     color-scheme: light;
   }
 
@@ -853,7 +887,7 @@
     align-items: center;
     gap: 6pt;
     font-size: 8.5pt;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--ink-2);
   }
 
@@ -866,7 +900,7 @@
   .pane-print-doc {
     margin-left: auto;
     font-size: 7.5pt;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -896,7 +930,7 @@
   .pane-print-meta dt {
     display: block;
     font-size: 7pt;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.07em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -905,7 +939,7 @@
   .pane-print-meta dd {
     margin: 1pt 0 0;
     font-size: 9.5pt;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--ink);
   }
 
@@ -1096,7 +1130,7 @@
     border-bottom: 0.75pt solid var(--ink-3);
     text-align: left;
     font-size: 7.5pt;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -1144,7 +1178,7 @@
   }
 
   .pane-risk-note.is-knockout {
-    font-weight: 600;
+    font-weight: 700;
     color: var(--critical-ink);
   }
 
@@ -1225,7 +1259,7 @@
 
   .pane-outcome-count {
     font-size: 8.5pt;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--ink-2);
   }
 
@@ -1254,7 +1288,7 @@
     border-bottom: 0.75pt solid var(--ink-3);
     text-align: left;
     font-size: 7.5pt;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--ink-3);

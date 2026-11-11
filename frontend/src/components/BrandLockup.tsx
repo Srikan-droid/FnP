@@ -1,23 +1,14 @@
 /**
- * The iRIS lockup: the IRIS mark with "iRIS", and the tagline set against the star's right arm,
- * as in the product logo. One drawing, so the parts stay aligned at any size. Its colours come from the theme; the dark theme uses the logo's light version.
- *
- * Coordinates are those of the logo image (323 x 205): the "iRIS" baseline is at y 93, its letters
- * end at x 319, and the star's right arm ends at x 198 at y 114 (the tagline starts a little after it).
+ * The iRIS mark, as supplied (the IRIS Corporate Identity Guidelines' secondary lockup: the mark
+ * alone). The tagline is part of the primary lockup's own artwork and is never set as text beside
+ * the mark; until that artwork is supplied, the mark alone is used. The dark theme shows the reverse
+ * mark in IRIS Oat.
  */
 export default function BrandLockup({ className = "" }: { className?: string }) {
   return (
-    <svg
-      className={`lockup ${className}`}
-      viewBox="0 0 740 205"
-      role="img"
-      aria-label="iRIS. Building Transparency. Driving Growth."
-    >
+    <svg className={`lockup ${className}`} viewBox="0 0 323 205" role="img" aria-label="iRIS">
       <image className="lockup-mark lockup-light" href="/brand/iris-logo.png" width="323" height="205" />
-      <image className="lockup-mark lockup-dark" href="/brand/iris-logo-dark.png" width="323" height="205" />
-      <text className="lockup-tagline" x="218" y="123">
-        Building Transparency. Driving Growth.
-      </text>
+      <image className="lockup-mark lockup-dark" href="/brand/iris-logo-oat.png" width="323" height="205" />
     </svg>
   );
 }

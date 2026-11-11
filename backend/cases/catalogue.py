@@ -59,14 +59,16 @@ def version_for(assessment: Assessment) -> QuestionnaireVersion:
 
 def questions(version_id: int) -> dict[str, Question]:
     """qid -> question for one version, in form order. Cached: a published version is immutable.
-    The key names the shape of what is cached (v2: with answer types and added questions), so
-    copies cached by an earlier release, without those fields, are never read back."""
-    key = f"catalogue:questions:v2:{version_id}"
+    The key names the shape of what is cached (v3: with answer types, added questions and
+    follow-ups), so copies cached by an earlier release, without those fields, are never read back."""
+    key = f"catalogue:questions:v3:{version_id}"
     found = cache.get(key)
     if found is None:
         found = {
             q.qid: q
-            for q in Question.objects.filter(version_id=version_id).select_related("section").order_by("position")
+            for q in Question.objects.filter(version_id=version_id)
+            .select_related("section", "parent")
+            .order_by("position")
         }
         cache.set(key, found, None)
     return found
@@ -76,6 +78,27 @@ def default_answer(question: Question) -> str:
     """What a question reads before it is answered: No for a choice (what a blank form starts
     from), nothing for a text question."""
     return "" if question.answer_type == AnswerType.TEXT else Answer.NO
+
+
+def with_defaults(questions: dict[str, Question], saved: dict[str, str]) -> dict[str, str]:
+    """Every question's answer: the one saved, or what the form starts from (No; nothing for text)."""
+    return {qid: saved.get(qid, default_answer(q)) for qid, q in questions.items()}
+
+
+def parent_qid(question: Question) -> str | None:
+    """The code of the question a follow-up follows on from; None for an ordinary question."""
+    return question.parent.qid if question.parent_id else None
+
+
+def asked(questions: dict[str, Question], answers: dict[str, str]) -> set[str]:
+    """The questions the form asks for these answers: every ordinary question, and each follow-up
+    whose parent is answered as it asks (show_when). The one rule for what the form shows, what
+    must be complete before submitting, what can take a document and what is sent as asked.
+    `answers`: every question's answer (see with_defaults)."""
+    return {
+        qid for qid, q in questions.items()
+        if not q.parent_id or answers.get(parent_qid(q)) == q.show_when
+    }
 
 
 def evidence_required(question: Question, answer: str) -> bool:

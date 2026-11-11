@@ -15,6 +15,7 @@ import QuestionOutcomes from "./QuestionOutcomes";
 import { concernKey } from "../domain/concerns";
 import { detailedQids } from "../domain/riskSections";
 import { reviewedQids } from "../domain/reviewLabels";
+import { summaryPoints } from "../domain/summaryPoints";
 import type { Assessment, Case, FinalAssessment, ReviewEntry } from "../api/types";
 import type { ScoreResult } from "../domain/types";
 
@@ -211,6 +212,8 @@ export default function AssessmentSummaryPane({
   const concerns = assessment?.concerns ?? [];
   const strengths = assessment?.strengths ?? [];
   const forSupervisor = assessment?.for_supervisor ?? [];
+  // The executive summary as bullet points (the engine sends a paragraph, or lines).
+  const summary = summaryPoints(assessment?.executive_summary);
   const outcomes = assessment?.questions ?? {};
   const override = determination?.authentication_override;
   // Each concern shows once, under its question in "Where the risk comes from". Only one with no
@@ -332,10 +335,16 @@ export default function AssessmentSummaryPane({
                 )}
               </section>
 
-              {assessment.executive_summary && (
+              {summary.length > 0 && (
                 <section className="pane-section">
                   <h3>Executive summary</h3>
-                  <p className="pane-prose">{assessment.executive_summary}</p>
+                  <ul className="pane-list pane-list-points">
+                    {summary.map((point, i) => (
+                      <li key={i}>
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </section>
               )}
 

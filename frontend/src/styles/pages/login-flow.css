@@ -6,24 +6,8 @@
 .lockup {
   display: block;
   height: var(--lockup-h, 84px);
-  width: calc(var(--lockup-h, 84px) * 740 / 205);
+  width: calc(var(--lockup-h, 84px) * 323 / 205);
   overflow: visible;
-}
-
-.lockup-tagline {
-  font-family: var(--sans);
-  font-weight: 500;
-  font-size: 26px;
-  fill: var(--accent);
-}
-
-/* On a phone the lockup is small, so its tagline is set as text under it instead. */
-.login-tagline-text {
-  display: none;
-  margin: 0.35rem 0 0;
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--accent);
 }
 
 .lockup-dark {
@@ -52,6 +36,8 @@
    Phases: 0–15% the application arrives; 15–50% the AI reads and checks it; 50–96% the score and
    the decision. Every part's own style is its finished state, so with the motion off it is drawn
    complete. */
+/* The illustration takes the room the panel has left, and is what gives way on a short window:
+   it shrinks within its area rather than make the page scroll. */
 .login-flow {
   position: relative;
   z-index: 1;
@@ -59,11 +45,13 @@
   align-items: center;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .login-flow svg {
   display: block;
-  height: clamp(110px, 32vh - 60px, 205px);
+  height: clamp(80px, 32vh - 90px, 205px);
+  max-height: 100%;
   width: auto;
   aspect-ratio: 440 / 205;
   max-width: 100%;
@@ -91,17 +79,17 @@
 }
 
 .lf-mark circle {
-  fill: var(--good);
+  fill: var(--good-fill);
 }
 
 .lf-mark.is-flag circle {
-  fill: var(--warning);
+  fill: var(--warning-fill);
 }
 
 .lf-mark path,
 .lf-stamp path {
   fill: none;
-  stroke: #ffffff;
+  stroke: var(--white);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -128,7 +116,7 @@
 
 .lf-chip text {
   fill: var(--accent);
-  font-family: "Montserrat", var(--sans);
+  font-family: var(--sans);
   font-size: 26px;
   font-weight: 700;
   text-anchor: middle;
@@ -159,7 +147,7 @@
 .lf-score-band {
   fill: var(--ink-2);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   text-anchor: middle;
 }
 
@@ -189,7 +177,7 @@
 .lf-caption {
   fill: var(--ink-3);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   text-anchor: middle;
 }
 
@@ -358,13 +346,5 @@
 @media (max-width: 880px) {
   .login-flow {
     display: none;
-  }
-
-  .login-lockup .lockup-tagline {
-    display: none;
-  }
-
-  .login-tagline-text {
-    display: block;
   }
 }

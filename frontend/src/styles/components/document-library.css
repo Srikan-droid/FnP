@@ -17,7 +17,7 @@
 .doc-library-head h2 {
   margin: 0;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-2);
@@ -33,7 +33,7 @@
 
 .doc-library-count {
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-2);
   white-space: nowrap;
 }
@@ -128,7 +128,7 @@
 
 .doc-row-name {
   font-size: var(--fs-md);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   overflow-wrap: anywhere;
   text-decoration: none;
@@ -176,7 +176,7 @@
 }
 
 .doc-unused {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--warning-ink);
 }
 
@@ -262,9 +262,20 @@
   overflow-wrap: anywhere;
 }
 
+/* A follow-up's offer to use its parent's document as it is. */
+.evidence-from-parent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
 .evidence-drop-note {
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--accent-ink);
 }
 
@@ -338,7 +349,7 @@
 .doc-row-grip {
   flex: none;
   margin-right: -0.25rem;
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
   line-height: 1;
   color: var(--ink-3);
   cursor: grab;
@@ -367,7 +378,7 @@
 .evidence-drop-ready,
 .evidence-drop-blocked {
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .evidence-drop-ready {
@@ -392,7 +403,7 @@
 .drop-types-title {
   margin: 0;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink);
 }
 

@@ -57,6 +57,8 @@ def form_payload(assessment: Assessment, viewer) -> dict:
     version = catalogue.version_for(assessment)
     questions = catalogue.questions(version.pk)
     saved = dict(assessment.answers.values_list("qid", "value"))
+    # The follow-up questions these answers ask (every ordinary question is asked).
+    shown = catalogue.asked(questions, catalogue.with_defaults(questions, saved))
     own = _own_options(questions)
     evidence = list(
         assessment.evidence.filter(superseded_at__isnull=True).select_related("document").order_by("uploaded_at")
@@ -77,7 +79,8 @@ def form_payload(assessment: Assessment, viewer) -> dict:
                 "qid": qid,
                 "value": saved.get(qid, catalogue.default_answer(q)),
                 "answerType": q.answer_type,
-                "evidenceRequired": catalogue.evidence_required(q, saved.get(qid, catalogue.default_answer(q))),
+                "evidenceRequired": qid in shown
+                and catalogue.evidence_required(q, saved.get(qid, catalogue.default_answer(q))),
                 # The rule behind it ("always" or "if_yes"), so the form can follow a changed answer
                 # at once without reading the rule from the active catalogue (maybe another version).
                 "evidenceRule": q.evidence_required,
@@ -89,6 +92,11 @@ def form_payload(assessment: Assessment, viewer) -> dict:
                 # (the catalogue lists the latest version's), so the picker offers what an upload
                 # is checked against. Null otherwise: the engine's own list applies.
                 "evidenceOptions": own.get(qid),
+                # A follow-up question: the question it follows on from and the answer that asks
+                # it; whether the answers saved ask it now. Null / true for an ordinary question.
+                "parentQid": catalogue.parent_qid(q),
+                "showWhen": q.show_when or None,
+                "asked": qid in shown,
             }
             for qid, q in questions.items()
         ],
@@ -168,6 +176,22 @@ class FormView(APIView):
             no_longer_needed = [
                 qid for qid, value in answers.items() if not catalogue.evidence_required(questions[qid], value)
             ]
+            # A follow-up the answers no longer ask starts over: its answer is cleared and its
+            # documents taken off it (they stay in "Your documents"), so asked again it is blank.
+            # Only follow-ups this save could have hidden are looked at: those under a parent
+            # answered here, and any answered here itself.
+            touched = [
+                qid for qid, q in questions.items()
+                if q.parent_id and (qid in answers or catalogue.parent_qid(q) in answers)
+            ]
+            hidden = []
+            if touched:
+                saved = dict(assessment.answers.values_list("qid", "value"))
+                shown = catalogue.asked(questions, catalogue.with_defaults(questions, saved))
+                hidden = [qid for qid in touched if qid not in shown]
+            if hidden:
+                AnswerValue.objects.filter(assessment=assessment, qid__in=hidden).delete()
+                no_longer_needed = [*no_longer_needed, *hidden]
             if no_longer_needed:
                 remove_files(EvidenceFile.objects.filter(assessment=assessment, qid__in=no_longer_needed))
             assessment.save(update_fields=["updated_at"])

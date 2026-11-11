@@ -99,9 +99,8 @@
 .sk {
   display: block;
   border-radius: var(--r-sm);
-  background: linear-gradient(90deg, var(--surface-sunken) 0%, var(--hairline) 50%, var(--surface-sunken) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.3s ease-in-out infinite;
+  background: var(--surface-sunken);
+  animation: sk-pulse 1.3s ease-in-out infinite alternate;
 }
 
 .sk-title {
@@ -126,12 +125,13 @@
   border-radius: var(--r-lg);
 }
 
-@keyframes shimmer {
+/* Between two flat colours of the ground: no gradient, no transparency. */
+@keyframes sk-pulse {
   from {
-    background-position: 100% 0;
+    background-color: var(--surface-sunken);
   }
   to {
-    background-position: -100% 0;
+    background-color: var(--hairline);
   }
 }
 

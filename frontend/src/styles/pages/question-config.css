@@ -62,7 +62,7 @@
 }
 
 .weight-check.is-off {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--critical);
 }
 
@@ -79,7 +79,7 @@
   background: var(--surface);
   font: inherit;
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
   cursor: pointer;
 }
@@ -333,7 +333,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .qstatus svg {
@@ -359,7 +359,7 @@
 }
 
 .qstatus .link-button {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* A share of 100 as one bar: parts, a grey gap for what is left, red when over. */
@@ -391,25 +391,30 @@
   color: var(--on-accent);
   font: inherit;
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   overflow: hidden;
 }
 
-/* Four tones in turn, so neighbouring parts (and their legend swatches) always differ. */
+/* Four tones in turn, so neighbouring parts (and their legend swatches) always differ: steps of
+   Seagreen from the palette, each with the text colour that reads on it. */
 .tone-0 {
-  background: var(--accent);
+  background: var(--weight-0);
+  color: var(--weight-0-text);
 }
 
 .tone-1 {
-  background: color-mix(in srgb, var(--accent) 72%, var(--surface));
+  background: var(--weight-1);
+  color: var(--weight-1-text);
 }
 
 .tone-2 {
-  background: color-mix(in srgb, var(--accent) 50%, var(--surface));
+  background: var(--weight-2);
+  color: var(--weight-2-text);
 }
 
 .tone-3 {
-  background: color-mix(in srgb, var(--accent) 80%, var(--ink));
+  background: var(--weight-3);
+  color: var(--weight-3-text);
 }
 
 button.weight-bar-part {
@@ -421,7 +426,8 @@ button.weight-bar-part:hover {
 }
 
 .weight-bar.is-over .weight-bar-part {
-  background: var(--critical);
+  background: var(--critical-fill);
+  color: var(--white);
 }
 
 .weight-bar-label {
@@ -435,10 +441,6 @@ button.weight-bar-part:hover {
 
 .weight-bar-value {
   font-weight: 500;
-}
-
-.weight-bar-part.tone-2 .weight-bar-label {
-  color: var(--ink);
 }
 
 /* ---- The legend under a numbered bar: every part's number, name and share, in full ---- */
@@ -460,7 +462,7 @@ button.weight-bar-part:hover {
   background: var(--surface);
   font: inherit;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-2);
   cursor: pointer;
 }
@@ -535,8 +537,8 @@ button.weight-legend-item:hover {
 }
 
 .weight-legend.is-over .weight-legend-swatch {
-  background: var(--critical);
-  color: #ffffff;
+  background: var(--critical-fill);
+  color: var(--white);
 }
 
 .weight-legend-name {
@@ -547,7 +549,7 @@ button.weight-legend-item:hover {
 
 .weight-legend-value {
   flex: none;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
@@ -584,6 +586,27 @@ button.weight-legend-item:hover {
 
 .qrow.is-off {
   box-shadow: inset 3px 0 0 var(--critical);
+}
+
+/* A follow-up question: set in under the question that asks it, with a rule down its side. */
+.qrow.is-follow-up {
+  margin-left: 1.25rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--accent-wash);
+}
+
+.qrow-no-weight {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  align-self: center;
+}
+
+.qrow-follow-up {
+  margin: 0 0 0.2rem;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-3);
 }
 
 .qrow-main {
@@ -782,7 +805,7 @@ button.weight-legend-item:hover {
 
 .qpanel-head h2 {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: var(--fs-h3);
 }
 
 .qpanel-section {

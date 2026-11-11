@@ -1,7 +1,26 @@
+import { useRef, useState } from "react";
 import AnswerTag from "./AnswerTag";
+import ReadMore from "./ReadMore";
+import { useClipped } from "../state/clipped";
 import { AlertTriangleIcon, ExternalLinkIcon, FileTextIcon } from "./icons";
 import { displaySection } from "../domain/sectionLabels";
+import { followUpLabel } from "../domain/followUps";
 import type { ApplicationForm } from "../domain/types";
+
+/** A question cut to a few lines, with "Read more" to show it whole. */
+function QuestionText({ text }: { text: string }) {
+  const [full, setFull] = useState(false);
+  const ref = useRef<HTMLParagraphElement>(null);
+  const clipped = useClipped(ref, text);
+  return (
+    <div className="review-question-line">
+      <p ref={ref} className={`review-question${full ? " is-full" : ""}`}>
+        {text}
+      </p>
+      <ReadMore clipped={clipped} full={full} onToggle={() => setFull((v) => !v)} />
+    </div>
+  );
+}
 
 /**
  * The form's answers and documents, read-only: every question with its answer and attached
@@ -40,11 +59,14 @@ export default function FormAnswers({ form }: { form: ApplicationForm }) {
                 {form.responses
                   .filter((r) => r.section === section)
                   .map((r) => (
-                    <tr key={r.qid}>
+                    <tr key={r.qid} className={r.parentQid ? "is-follow-up" : undefined}>
                       <td>
                         <div className="review-question-cell">
                           <span className="qid">{r.qid}</span>
-                          <p className="review-question">{r.question}</p>
+                          <div className="review-question-text">
+                            {r.parentQid && <span className="review-follow-up">{followUpLabel(r)}</span>}
+                            <QuestionText text={r.question} />
+                          </div>
                         </div>
                       </td>
                       <td>

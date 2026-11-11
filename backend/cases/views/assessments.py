@@ -95,15 +95,19 @@ def document_progress(drafts: list[Assessment]) -> dict[int, dict]:
     for a in drafts:
         questions = catalogue.questions(versions[a.department_id].pk)
         # An answer not saved yet reads as the form starts it (No, or nothing for a text question).
-        answers = {qid: saved.get(a.pk, {}).get(qid, catalogue.default_answer(q)) for qid, q in questions.items()}
-        needed = workflow.documents_needed(questions, answers)
+        answers = catalogue.with_defaults(questions, saved.get(a.pk, {}))
+        shown = catalogue.asked(questions, answers)
+        needed = workflow.documents_needed(questions, answers, shown)
         have = attached.get(a.pk, set())
         progress[a.pk] = {
             "documentsNeeded": len(needed),
             "documentsAttached": sum(1 for qid in needed if qid in have),
-            # Questions answered in words still blank: submitting waits for them too.
+            # Questions answered in words still blank (among those the form asks): submitting
+            # waits for them too.
             "answersMissing": sum(
-                1 for qid, q in questions.items() if q.answer_type == AnswerType.TEXT and not answers[qid].strip()
+                1 for qid, q in questions.items()
+                if q.answer_type == AnswerType.TEXT and not answers[qid].strip()
+                and qid in shown
             ),
         }
     return progress

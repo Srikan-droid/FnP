@@ -75,7 +75,7 @@
   border-radius: 50%;
   border: 1.5px solid var(--hairline);
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
   flex-shrink: 0;
   transition: all 0.2s ease;
@@ -111,7 +111,7 @@
 
 .stepper .is-current .step-label {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* A finished step opened again: its marker keeps the tick, ringed to show it is the page in view. */
@@ -121,7 +121,7 @@
 
 .stepper .is-viewing .step-label {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ---- Page loading indicator ---- */

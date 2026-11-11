@@ -69,7 +69,7 @@
 }
 
 .status-title {
-  font-size: 1.125rem;
+  font-size: var(--fs-h3);
 }
 
 .status-detail {
@@ -124,7 +124,7 @@
 
 .status-stages .is-active {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .status-stages .is-active .stage-dot {

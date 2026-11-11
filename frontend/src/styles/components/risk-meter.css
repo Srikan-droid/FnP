@@ -37,7 +37,7 @@
 
 .riskmeter-title {
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-3);
@@ -45,27 +45,23 @@
 
 .riskmeter-reading {
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
-/* Colour stops sit on the band boundaries from the scoring model (10 / 25 / 45), so each band
-   holds its own colour across its width and blends only where one band meets the next. */
+/* Each band a flat block of its own colour, its edges on the scoring model's band boundaries
+   (10 / 25 / 45): hard stops, no blending (the guide allows flat colour only). */
 .riskmeter-track {
   position: relative;
   height: 10px;
   border-radius: 5px;
   background: linear-gradient(
     90deg,
-    var(--good) 0%,
-    var(--good) 8%,
-    var(--warning) 14%,
-    var(--warning) 22%,
-    var(--serious) 30%,
-    var(--serious) 42%,
-    var(--critical) 52%,
-    var(--critical) 100%
+    var(--band-low) 0% 10%,
+    var(--band-moderate) 10% 25%,
+    var(--band-elevated) 25% 45%,
+    var(--band-high) 45% 100%
   );
 }
 
@@ -125,19 +121,19 @@
 }
 
 .tone-good {
-  --tone: var(--good);
+  --tone: var(--band-low);
 }
 .tone-warning {
-  --tone: var(--warning);
+  --tone: var(--band-moderate);
 }
 .tone-serious {
-  --tone: var(--serious);
+  --tone: var(--band-elevated);
 }
 .tone-critical {
-  --tone: var(--critical);
+  --tone: var(--band-high);
 }
 
 .riskmeter-range {
   font-variant-numeric: tabular-nums;
-  opacity: 0.75;
+  color: var(--ink-3);
 }

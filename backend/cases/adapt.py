@@ -92,9 +92,15 @@ def submission_payload(
     profile: ApplicantProfile | None,
     evidence: list[EvidenceFile],
     history: RunHistory | None = None,
+    shown: set[str] | None = None,
 ) -> dict:
     """The submission in the format the engine reads (the test set's form_data with a
     cv_verification block). Unanswered questions are No, as on the form.
+
+    The questions the applicant was asked go, in form order. A follow-up question names the
+    question it follows on from (parent_qid) and the answer that asks it (show_when); one these
+    answers did not ask (`shown`, from catalogue.asked; None: all asked) is not sent at all, as the
+    applicant never saw it. Ordinary questions go with no parent.
 
     On a resubmission it also says what changed since the last run: each question the reviewer
     sent back (rejected) is marked resubmitted, and so is a section holding one; every question
@@ -109,6 +115,9 @@ def submission_payload(
 
     sections: list[dict] = []
     for q in questions.values():
+        # A follow-up the answers did not ask was never shown to the applicant: it is not sent.
+        if shown is not None and q.qid not in shown:
+            continue
         if not sections or sections[-1]["section"] != q.section.name:
             sections.append({
                 "section": q.section.name, "section_weight": float(q.section.weight),
@@ -133,6 +142,10 @@ def submission_payload(
             "resubmitted": sent_back,
             "evidence_version": _label(_evidence_version(history, q.qid, files)),
             "reviewer_review": review,
+            # A follow-up question: the question it follows on from and the answer that asks it
+            # (null for an ordinary question).
+            "parent_qid": catalogue.parent_qid(q),
+            "show_when": q.show_when or None,
         })
         # A section is resubmitted when any of its questions is; all false, it is false.
         if sent_back:
@@ -207,8 +220,11 @@ def question_results(result: dict) -> list[dict]:
     return rows
 
 
-def authentication(assessment: Assessment, result: dict, evidence: list[EvidenceFile]) -> dict:
-    """The engine's authentication result in the API's shape, with our links."""
+def authentication(
+    assessment: Assessment, result: dict, evidence: list[EvidenceFile], not_asked: set[str] = frozenset()
+) -> dict:
+    """The engine's authentication result in the API's shape, with our links. A follow-up question
+    the run did not ask (`not_asked`) is left out: it was not the applicant's to answer."""
     # A question can hold two documents of the same type (a primary and a supporting one), so each
     # is found by its role too; the type alone is the fallback for an entry that names no role.
     files: dict[tuple, EvidenceFile] = {}
@@ -259,20 +275,22 @@ def authentication(assessment: Assessment, result: dict, evidence: list[Evidence
 
     summary = result.get("data_authentication_summary", {})
     cv = result.get("cvVerification")
+    sections = [_section(s, question, not_asked) for s in result.get("sections", [])]
+    is_clean, with_issues = summary.get("isClean"), summary.get("questionsWithIssues")
+    reported = sum(len(s.get("questions", [])) for s in result.get("sections", []))
+    if sum(len(s["questions"]) for s in sections) != reported:
+        # A follow-up the run did not ask was left out (the engine reported on it all the same):
+        # the counts are of the questions shown. The outcome stays the engine's, which the run
+        # has already acted on.
+        with_issues = sum(s["issueCount"] for s in sections)
+        is_clean = bool(is_clean) or (with_issues == 0 and not (cv or {}).get("flagCount"))
     return {
         "outcome": summary.get("outcome"),
-        "isClean": summary.get("isClean"),
+        "isClean": is_clean,
         "overallConfidence": summary.get("overallConfidence"),
         "checksRun": summary.get("checksRun"),
-        "questionsWithIssues": summary.get("questionsWithIssues"),
-        "sections": [
-            {
-                "section": s.get("section"),
-                "issueCount": s.get("issueCount", 0),
-                "questions": [question(q) for q in s.get("questions", [])],
-            }
-            for s in result.get("sections", [])
-        ],
+        "questionsWithIssues": with_issues,
+        "sections": sections,
         "cvVerification": None if not cv else {
             "docType": cv.get("docType"),
             "status": cv.get("status"),
@@ -281,6 +299,18 @@ def authentication(assessment: Assessment, result: dict, evidence: list[Evidence
             "suitabilityFindings": [finding(f) for f in cv.get("suitabilityFindings", [])],
             "flagCount": cv.get("flagCount", 0),
         },
+    }
+
+
+def _section(s: dict, question, not_asked: set[str]) -> dict:
+    """One section of the authentication result. Its issue count is the engine's, recounted only
+    where a follow-up the run did not ask was left out of it."""
+    kept = [q for q in s.get("questions", []) if q.get("qid") not in not_asked]
+    dropped = len(kept) != len(s.get("questions", []))
+    return {
+        "section": s.get("section"),
+        "issueCount": sum(1 for q in kept if q.get("question_status") == "issue") if dropped else s.get("issueCount", 0),
+        "questions": [question(q) for q in kept],
     }
 
 

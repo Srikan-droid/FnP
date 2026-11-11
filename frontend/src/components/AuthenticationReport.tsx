@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { displaySection } from "../domain/sectionLabels";
 import { percent } from "../utils/format";
 import CvVerificationCard from "./CvVerificationCard";
+import ReadMore from "./ReadMore";
+import { useClipped } from "../state/clipped";
 import { CheckItem } from "./Confidence";
 import { AlertTriangleIcon, CheckCircleIcon, ChevronDownIcon, ExternalLinkIcon, FileTextIcon, InfoIcon } from "./icons";
 import { questionsWithIssues } from "../api/adapt";
@@ -41,20 +43,34 @@ function QuestionRow({
   const [open, setOpen] = useState(result.status === "issue");
   const bodyId = `auth-${result.qid}`;
   const chip = REVIEW_CHIP[reviewState];
+  // A long question is cut to a line; "Read more", right after its "…", shows it whole.
+  const [full, setFull] = useState(false);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const clipped = useClipped(textRef, result.question);
 
   return (
     <div className={`auth-question is-${result.status} review-${reviewState}`}>
-      <button
-        className="auth-question-head"
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="auth-chevron">
-          <ChevronDownIcon size={15} />
+      {/* The toggle's click area covers the whole row, as before; "Read more" sits above it. */}
+      <div className="auth-question-head">
+        <button
+          type="button"
+          className="auth-question-toggle"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          aria-labelledby={`${bodyId}-qid ${bodyId}-text`}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span className="auth-chevron">
+            <ChevronDownIcon size={15} />
+          </span>
+          <span className="qid" id={`${bodyId}-qid`}>
+            {result.qid}
+          </span>
+        </button>
+        <span ref={textRef} id={`${bodyId}-text`} className={`auth-question-text${full ? " is-full" : ""}`}>
+          {result.question}
         </span>
-        <span className="qid">{result.qid}</span>
-        <span className="auth-question-text">{result.question}</span>
+        <ReadMore clipped={clipped} full={full} onToggle={() => setFull((v) => !v)} className="auth-read-more" />
 
         <span className="auth-question-meta">
           {result.confidence === null ? (
@@ -70,7 +86,7 @@ function QuestionRow({
             </>
           )}
         </span>
-      </button>
+      </div>
 
       {open && (
         <div className="auth-question-body" id={bodyId}>

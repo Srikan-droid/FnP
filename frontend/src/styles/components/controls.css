@@ -9,13 +9,18 @@
   padding: 0.55rem 1.1rem;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--fs-body);
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   text-decoration: none;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
     transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+/* Every control a person taps is at least 44 x 44px (the guide's interactive-target rule). */
+.btn {
+  min-height: 2.75rem;
 }
 
 .btn:hover {
@@ -27,18 +32,29 @@
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--ochre);
+  color: var(--on-ochre);
   box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
+  background: var(--ochre-strong);
+}
+
+/* Secondary: Institutional Seagreen, for an action beside the one primary (Ochre) action. */
+.btn-secondary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn-secondary:hover {
   background: var(--accent-strong);
 }
 
+/* Tertiary: a Seagreen outline. */
 .btn-ghost {
   background: var(--surface);
-  border-color: var(--hairline);
+  border-color: var(--field-border);
   color: var(--ink);
 }
 
@@ -66,11 +82,15 @@
 }
 
 .btn-primary:disabled:hover {
+  background: var(--ochre);
+}
+
+.btn-secondary:disabled:hover {
   background: var(--accent);
 }
 
 .btn-ghost:disabled:hover {
-  border-color: var(--hairline);
+  border-color: var(--field-border);
   color: var(--ink);
 }
 
@@ -82,7 +102,7 @@
 
 .field-label {
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-2);
 }
 
@@ -90,10 +110,11 @@
   width: 100%;
   padding: 0.6rem 0.75rem;
   background: var(--surface-raised);
-  border: 1px solid var(--hairline);
+  /* A control's edge holds 3:1 against its ground (WCAG 2.2, as the guide requires). */
+  border: 1px solid var(--field-border);
   border-radius: var(--r-sm);
   color: var(--ink);
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -113,18 +134,18 @@
    and text inset as an input, and the app's own chevron, inset like the input's padding. */
 :root {
   /* An input's height: its line box plus padding and border. Dropdowns are held to it. */
-  --control-height: calc(0.875rem * 1.55 + 1.2rem + 2px);
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234f5551' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --control-height: calc(var(--fs-body) * 1.625 + 1.2rem + 2px);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2355524c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b3bcb6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c3cdc9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   }
 }
 
 :root[data-theme="dark"] {
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b3bcb6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c3cdc9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 select.input {
@@ -183,7 +204,7 @@ select.input:disabled {
   padding: 0.2rem 0.6rem;
   border-radius: var(--r-pill);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -192,16 +213,21 @@ select.input:disabled {
   color: var(--good-ink);
 }
 
-.chip-moderate,
 .chip-warning {
   background: var(--warning-wash);
   color: var(--warning-ink);
 }
 
+/* Risk bands keep their own colours (see --band-* in global.css). */
+.chip-moderate {
+  background: var(--band-moderate-wash);
+  color: var(--band-moderate-ink);
+}
+
 .chip-elevated,
 .chip-serious {
-  background: var(--serious-wash);
-  color: var(--serious-ink);
+  background: var(--band-elevated-wash);
+  color: var(--band-elevated-ink);
 }
 
 .chip-high,
@@ -210,8 +236,7 @@ select.input:disabled {
   color: var(--critical-ink);
 }
 
-/* Ready for the reviewer's decision: its own hue, apart from the red of review pending and the
-   orange of a serious finding. */
+/* Ready for the reviewer's decision: Earthy Brown on Sand, apart from the status hues. */
 .chip-decision {
   background: var(--decision-wash);
   color: var(--decision-ink);
@@ -236,7 +261,7 @@ select.input:disabled {
   padding: 0.15rem 0.5rem;
   border-radius: var(--r-xs);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   background: var(--surface-sunken);
   border: 1px solid var(--hairline);
   color: var(--ink-2);
@@ -278,7 +303,7 @@ select.input:disabled {
 
 .notice strong {
   color: inherit;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .notice svg {
@@ -318,7 +343,7 @@ select.input:disabled {
   gap: 0.75rem;
   margin-top: 1.25rem;
   padding: 0.85rem 0 1.25rem;
-  background: linear-gradient(to top, var(--page) 62%, transparent);
+  background: var(--page);
 }
 
 .actionbar-note {
@@ -351,4 +376,30 @@ select.input:disabled {
   font-size: var(--fs-xs);
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
+}
+
+/* Small icon controls keep their size on screen, but are 44 x 44px to tap: an invisible area
+   centred on each (the guide's interactive-target rule). */
+.theme-option,
+.btn-remove,
+.toast-close,
+.icon-button,
+.doc-row-open,
+.pane-close {
+  position: relative;
+}
+
+.theme-option::after,
+.btn-remove::after,
+.toast-close::after,
+.icon-button::after,
+.doc-row-open::after,
+.pane-close::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 2.75rem);
+  height: max(100%, 2.75rem);
+  transform: translate(-50%, -50%);
 }

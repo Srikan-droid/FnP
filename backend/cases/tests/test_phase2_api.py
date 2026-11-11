@@ -310,6 +310,8 @@ def test_answers_save_and_personal_details_are_refused(applicant, opened):
     assert next(a for a in body["answers"] if a["qid"] == "A4") == {
         "qid": "A4", "value": "Yes", "answerType": "choice", "evidenceRequired": True, "evidenceRule": "if_yes",
         "allowedAnswers": ["Yes", "No"], "fileTypes": ["pdf"], "maxFiles": 1, "evidenceOptions": None,
+        # An ordinary question: no parent, always asked.
+        "parentQid": None, "showWhen": None, "asked": True,
     }
     assert applicant.get(f"/api/assessments/{opened}").json()["hasDraft"] is True
 

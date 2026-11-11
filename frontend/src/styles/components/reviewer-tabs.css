@@ -17,7 +17,7 @@
   background: none;
   font: inherit;
   font-size: var(--fs-md);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
   cursor: pointer;
 }

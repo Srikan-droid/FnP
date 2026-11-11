@@ -5,6 +5,9 @@ import {
   evenSplit,
   fromVersion,
   isEdited,
+  pctTotal,
+  previewCodes,
+  questionProblem,
   remainder,
   shareStatus,
   summaryLine,
@@ -219,5 +222,104 @@ describe("check names", () => {
     expect(checkName("Age_Check")).toBe("Age_Check");
     expect(checkName(" -- ")).toBeNull();
     expect(checkLabel("ID_Number_Check")).toBe("ID number check");
+  });
+});
+
+describe("follow-up questions", () => {
+  const withFollowUp: QuestionnaireVersion = {
+    ...version,
+    questions: [
+      question("A1", "Basic Details", 82),
+      question("Q1", "Qualifications", 9),
+      question("Q2", "Qualifications", 9),
+      // A follow-up has no weight of its own.
+      question("Q3", "Qualifications", 0, { parentQid: "Q1", showWhen: "Yes" }),
+    ],
+  } as QuestionnaireVersion;
+
+  it("sit right after their parent in the editor, and go nested under it", () => {
+    const sections = fromVersion(withFollowUp);
+    const quals = sections[1];
+    expect(quals.questions.map((q) => q.qid)).toEqual(["Q1", "Q3", "Q2"]);
+    expect(quals.questions[1].parentKey).toBe(quals.questions[0].key);
+    expect(quals.questions[1].showWhen).toBe("Yes");
+
+    const body = toBody(sections)[1];
+    expect(body.questions.map((q) => q.qid)).toEqual(["Q1", "Q2"]);
+    expect(body.questions[0].followUps.map((f) => [f.qid, f.showWhen, f.weight])).toEqual([["Q3", "Yes", 0]]);
+    // The section's weight is shared by its own questions only.
+    expect(body.questions.map((q) => q.weight)).toEqual([9, 9]);
+    expect(quals.questions.map((q) => q.pct)).toEqual(["50", "0", "50"]);
+    expect(pctTotal(quals)).toBe(10000);
+    expect(body.questions[1].followUps).toEqual([]);
+    // Published as it was: nothing to summarise.
+    expect(changeSummary(withFollowUp, toBody(sections), null)).toEqual([]);
+  });
+
+  it("stay follow-ups when stored in another section than their parent", () => {
+    const apart = {
+      ...version,
+      questions: [
+        question("A1", "Basic Details", 82),
+        question("Q1", "Qualifications", 9),
+        question("Q2", "Qualifications", 9),
+        question("Q3", "Qualifications", 0, { parentQid: "A1", showWhen: "Yes" }),
+      ],
+    } as QuestionnaireVersion;
+    const sections = fromVersion(apart);
+    expect(sections[0].questions.map((q) => [q.qid, q.parentKey === sections[0].questions[0].key])).toEqual([
+      ["A1", false],
+      ["Q3", true],
+    ]);
+    expect(sections[1].questions.map((q) => q.qid)).toEqual(["Q1", "Q2"]);
+    const body = toBody(sections);
+    expect(body[0].questions[0].followUps.map((f) => [f.qid, f.showWhen, f.weight])).toEqual([["Q3", "Yes", 0]]);
+    expect(body[1].questions.map((q) => q.weight)).toEqual([9, 9]);
+  });
+
+  it("show from the start the code applying will give them", () => {
+    const sections = fromVersion(version);
+    const [basic, quals] = sections;
+    const a1 = basic.questions[0];
+    // Two follow-ups under A1, a new question in Qualifications, and a follow-up under that.
+    const f1 = blankQuestion("0", { parentKey: a1.key, showWhen: "Yes" });
+    const f2 = blankQuestion("0", { parentKey: a1.key, showWhen: "No" });
+    basic.questions.push(f1, f2);
+    const added = blankQuestion("0");
+    const addedFollowUp = blankQuestion("0", { parentKey: added.key, showWhen: "Yes" });
+    quals.questions.push(added, addedFollowUp);
+    // A1-1 and N4 were used before (since deleted): never given again.
+    const codes = previewCodes(sections, ["A1", "Q1", "Q2", "Q3", "A1-1", "N4"]);
+    expect([f1, f2, added, addedFollowUp].map((q) => codes.get(q.key))).toEqual(["A1-2", "A1-3", "N5", "N5-1"]);
+    // Published questions keep their own code.
+    expect(codes.has(a1.key)).toBe(false);
+  });
+
+  it("are checked against their parent", () => {
+    const quals = fromVersion(withFollowUp)[1];
+    const [q1, q3] = quals.questions;
+    expect(questionProblem(q3, quals)).toBeNull();
+    const noYes = { ...quals, questions: quals.questions.map((q) => (q === q1 ? { ...q, allowedAnswers: ["No" as const] } : q)) };
+    expect(questionProblem(noYes.questions[1], noYes)).toMatch(/no longer offers/);
+    expect(questionProblem(noYes.questions[0], noYes)).toMatch(/keep Yes among the answers/);
+    const words = { ...quals, questions: quals.questions.map((q) => (q === q1 ? { ...q, answerType: "text" as const } : q)) };
+    expect(questionProblem(words.questions[0], words)).toMatch(/cannot have follow-up questions/);
+    expect(questionProblem(q3)).toBeNull(); // without its section, only its own settings
+  });
+
+  it("say what is added or moved before applying", () => {
+    const sections = fromVersion(version);
+    const q1 = sections[1].questions[0];
+    sections[1].questions.splice(1, 0, { ...blankQuestion("0", { parentKey: q1.key, showWhen: "No" }), text: "Why not?" });
+    const lines = changeSummary(version, toBody(sections), null);
+    expect(lines).toContain('New follow-up question in Qualifications (to Q1, asked when it is No): "Why not?"');
+    // Adding it changes no weight.
+    expect(toBody(sections)[1].questions.map((q) => q.weight)).toEqual([6, 6, 6]);
+
+    const moved = fromVersion(withFollowUp);
+    const q3 = moved[1].questions[1];
+    moved[1].questions[1] = { ...q3, showWhen: "No" };
+    expect(isEdited(moved[1].questions[1])).toBe(true);
+    expect(changeSummary(withFollowUp, toBody(moved), null)).toContain("Q3: now a follow-up to Q1, asked when it is No");
   });
 });

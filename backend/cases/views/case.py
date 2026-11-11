@@ -20,7 +20,8 @@ from .common import (
 _HIGHLIGHT_NAME = re.compile(r"[A-Za-z0-9._-]{1,120}\.pdf")  # used with fullmatch
 
 
-def _score_payload(score) -> dict:
+def _score_payload(score, not_asked=()) -> dict:
+    """The score as the pages show it; a follow-up question the run did not ask has no line."""
     return {
         "source": score.source,
         "riskScore": float(score.risk_score),
@@ -43,6 +44,7 @@ def _score_payload(score) -> dict:
                 "knockOutTriggered": bool(line["knockout_triggered"]),
             }
             for line in score.lines
+            if line["qid"] not in not_asked
         ],
     }
 
@@ -169,7 +171,9 @@ def case_payload(assessment: Assessment, viewer: User) -> dict:
         payload["unreplaced"] = workflow.unreplaced_rejections(assessment, current, submission)
     if authenticated:
         evidence = list(submission.evidence_files.all())
-        payload["authentication"] = adapt.authentication(assessment, docs.authentication, evidence)
+        payload["authentication"] = adapt.authentication(
+            assessment, docs.authentication, evidence, not_asked=set(submission.not_asked)
+        )
         payload["flags"] = flags
         payload["rulings"] = {
             r.qid: {"verdict": r.verdict, "comment": r.comment, "at": r.created_at}
@@ -181,7 +185,7 @@ def case_payload(assessment: Assessment, viewer: User) -> dict:
     # which, the pages label it, and on an undecided case the reviewer can ask the engine for its
     # own score, which replaces it.
     if score is not None:
-        payload["score"] = _score_payload(score)
+        payload["score"] = _score_payload(score, set(submission.not_asked))
     if docs and docs.assessment:
         payload["assessment"] = adapt.final_assessment(assessment, docs.assessment)
     return payload

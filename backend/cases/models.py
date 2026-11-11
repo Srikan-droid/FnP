@@ -313,12 +313,23 @@ class Question(models.Model):
     file_types = ArrayField(models.CharField(max_length=8), default=list)
     max_files = models.PositiveSmallIntegerField(default=1)
     position = models.PositiveSmallIntegerField()
+    # A follow-up question: asked only while its parent (a Yes/No question in the same section and
+    # version, itself not a follow-up) is answered show_when. Empty for an ordinary question.
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="follow_ups"
+    )
+    show_when = models.CharField(max_length=3, choices=Answer.choices, blank=True, default="")
 
     class Meta:
         db_table = "question"
         ordering = ["position"]
         constraints = [
             models.UniqueConstraint(fields=["version", "qid"], name="question_unique_qid"),
+            # A follow-up names the answer that asks it; an ordinary question names none.
+            models.CheckConstraint(
+                condition=(Q(parent__isnull=True) & Q(show_when="")) | (Q(parent__isnull=False) & Q(show_when__in=Answer.values)),
+                name="question_follow_up_complete",
+            ),
             _in_choices("polarity", Polarity, "question_polarity_valid"),
             _in_choices("evidence_required", EvidenceRule, "question_evidence_rule_valid"),
             _in_choices("answer_type", AnswerType, "question_answer_type_valid"),
@@ -532,6 +543,10 @@ class Submission(models.Model):
     version = models.ForeignKey(QuestionnaireVersion, on_delete=models.PROTECT, related_name="+")
     # Exactly what was sent, so any outcome can be reconstructed later.
     payload = models.JSONField()
+    # The follow-up questions this run did not ask (their parent's answer did not call for them).
+    # They are not sent to the engine; should its result mention one all the same, it is left out
+    # of the results, flags and score shown.
+    not_asked = ArrayField(models.CharField(max_length=10), default=list, blank=True)
     evidence_files = models.ManyToManyField(EvidenceFile, related_name="submissions", db_table="submission_evidence")
     submitted_at = models.DateTimeField(auto_now_add=True)
     authenticated_at = models.DateTimeField(null=True, blank=True)

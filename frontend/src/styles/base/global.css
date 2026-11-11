@@ -1,51 +1,91 @@
 :root {
-  /* Neutrals — the warm off-whites of the IRIS brand, so its green stays the only saturated thing */
-  --page: #f3f1ec;
-  --surface: #fdfcfa;
+  /* Colours follow the IRIS Corporate Identity Guidelines (v2.0). Every value is a palette colour
+     or a step of one, made the guide's way: mixed toward IRIS Oat #F7F5F1 or IRIS Ink #1B1A18,
+     never by lowering opacity. Text pairs meet WCAG 2.2 AA (4.5:1; 3:1 for large text). */
+
+  /* Neutrals: IRIS Oat is the page ground, white the cards on it, every grey warm. */
+  --page: #f7f5f1; /* IRIS Oat */
+  --surface: #ffffff;
   --surface-raised: #ffffff;
-  --surface-sunken: #f7f5f1;
-  --ink: #121a16;
-  --ink-2: #4f5551;
-  --ink-3: #7c827e;
-  --hairline: #e5e1d9;
+  --surface-sunken: #f2f0ec; /* Oat mixed 2.5% toward Ink */
+  --ink: #1b1a18; /* IRIS Ink: body text and headings */
+  --ink-2: #55524c; /* IRIS Slate: secondary text (7.78:1 on white) */
+  --ink-3: #686660; /* Slate mixed 12% toward Oat: muted text (5.27:1 on Oat) */
+  --hairline: #d9d7d1; /* Mist mixed toward Oat: rules and dividers only */
+  --field-border: #87847d; /* Mist mixed toward Slate: a control's edge, 3.73:1 on white */
   --ring: rgba(11, 11, 11, 0.08);
 
-  /* Accent — the IRIS green (from the logo) and steps of its ramp. White text on it: 7.8:1. */
+  /* Institutional Seagreen #36594B, the primary brand colour, and its steps. Oat text on it: 7.18:1. */
   --accent: #36594b;
-  --accent-strong: #2a4a3d;
-  --accent-bright: #4a7766;
-  --accent-wash: #e8f0eb;
-  --accent-track: #cfe0d6;
-  --accent-ink: #24443a;
-  /* Unfilled chart track — a lighter step of the fill's own ramp */
-  --bar-track: #d5e3db;
+  --accent-strong: #2e463c; /* Seagreen mixed toward Ink */
+  --accent-wash: #e8efeb; /* IRIS Sage: Seagreen at 8% */
+  --accent-track: #cdd3cc;
+  --accent-ink: #2e463c;
+  /* Unfilled chart track: a lighter step of the fill's own ramp */
+  --bar-track: #d4d9d3;
   /* Text and icons on the accent */
-  --on-accent: #ffffff;
+  --on-accent: #f7f5f1;
 
-  /* IRIS brand — copper from the logo, and the sand and sage of its background shapes. For the
-     logo, the login artwork and small accents only: never buttons or status. */
+  /* IRIS Ochre #C9861F: the one accent, a signal. Primary buttons, the focus ring, the single most
+     important number. A fill only, with Ink text on it (5.73:1); as text on a light ground, Gold. */
+  --ochre: #c9861f;
+  --ochre-strong: #d0973f;
+  --on-ochre: #1b1a18;
+  --gold-text: #8a5e10;
+
+  /* Earthy Brown #6F4A2F, the second brand colour, and IRIS Sand (Brown at 8%). For the logo, the
+     login artwork and small accents: never status. */
   --brand-copper: #6f4a2f;
-  --brand-copper-soft: #b98a63;
-  --brand-sand: #ebe4e1;
-  --brand-sage: #a8b6af;
-  --brand-deep: #547166;
+  --brand-sand: #f3ede6;
+  /* The login artwork: Seagreen mixed toward Oat, two steps. */
+  --art-mid: #aebab2;
+  --art-deep: #7f948a;
+  /* The question-settings weight bar: four steps of Seagreen, neighbours distinct, each with
+     the text colour that reads on it (6.9:1 or more). */
+  --weight-0: #36594b;
+  --weight-0-text: #f7f5f1;
+  --weight-1: #d0d6d0;
+  --weight-1-text: #1b1a18;
+  --weight-2: #97a79e;
+  --weight-2-text: #1b1a18;
+  --weight-3: #2a3d34;
+  --weight-3-text: #f7f5f1;
   --brand-logo: url("/brand/iris-logo.png");
 
-  /* Status — fixed palette, always paired with an icon and a label */
-  --good: #0ca30c;
-  --good-wash: #e7f6e7;
-  --good-ink: #0a6b0a;
-  --warning: #fab219;
-  --warning-wash: #fdf3e0;
-  --warning-ink: #7a4f00;
-  --serious: #ec835a;
-  --serious-wash: #fdf0ea;
-  --serious-ink: #9c4520;
-  --critical: #d03b3b;
-  --critical-wash: #fbeaea;
-  --critical-ink: #a32b2b;
-  --decision-wash: #ebf0fb;
-  --decision-ink: #2f4b9c;
+  /* Status, from the guide's product status colours: accepted, in review, rejected. Small labels
+     and icons only, never a page colour; always with an icon or a label. */
+  --good: #1b7f5c;
+  --good-wash: #e4f0eb;
+  --good-ink: #1b7052;
+  --warning: #b4531c;
+  --warning-wash: #f6eae4;
+  --warning-ink: #9d4a1b;
+  --critical: #b3261e;
+  --critical-wash: #f6e5e4;
+  --critical-ink: #9c241d;
+  /* Solid status colours behind white text or marks (a destructive button, a tick): the same in
+     both themes. White on them: 4.96, 5.01 and 6.54:1. */
+  --good-fill: #1b7f5c;
+  --warning-fill: #b4531c;
+  --critical-fill: #b3261e;
+  /* Ready for the reviewer's decision: Earthy Brown on Sand (6.70:1), apart from the status hues. */
+  --decision-wash: #f3ede6;
+  --decision-ink: #6f4a2f;
+
+  /* Risk bands: Low, Moderate, Elevated and High, kept as they were (the guide's three status
+     colours do not cover four bands). The meters, the band scale and the band chips. */
+  --band-low: #0ca30c;
+  --band-low-wash: #e7f6e7;
+  --band-low-ink: #0a6b0a;
+  --band-moderate: #fab219;
+  --band-moderate-wash: #fdf3e0;
+  --band-moderate-ink: #7a4f00;
+  --band-elevated: #ec835a;
+  --band-elevated-wash: #fdf0ea;
+  --band-elevated-ink: #9c4520;
+  --band-high: #d03b3b;
+  --band-high-wash: #fbeaea;
+  --band-high-ink: #a32b2b;
 
   --r-xs: 6px;
   --r-sm: 8px;
@@ -58,14 +98,27 @@
   --shadow-md: 0 2px 4px rgba(11, 11, 11, 0.04), 0 8px 20px -6px rgba(11, 11, 11, 0.1);
   --shadow-lg: 0 4px 8px rgba(11, 11, 11, 0.04), 0 24px 48px -12px rgba(11, 11, 11, 0.18);
 
-  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* The IRIS type system: Nunito Sans for everything; Playfair Display for display only (page
+     titles at 28px and above; its hairlines break up below that on screen). */
+  --sans: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Playfair Display", Georgia, "Times New Roman", serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  /* Small text steps used across the app; body text is 15px (see font-size below) */
-  --fs-2xs: 0.625rem;
-  --fs-xs: 0.6875rem;
-  --fs-sm: 0.75rem;
-  --fs-md: 0.8125rem;
+  /* The guide's digital type scale (px, on a 4px baseline): nothing below 12px, body text 16px.
+     Playfair Display only at 28px and above. */
+  --fs-micro: 0.75rem; /* 12 / 16: eyebrows, badges (uppercase +0.12em) */
+  --fs-label: 0.8125rem; /* 13 / 18: form labels, table headers, tabs */
+  --fs-body: 1rem; /* 16 / 26: running text */
+  --fs-body-lg: 1.125rem; /* 18 / 30: intro paragraphs, lead copy */
+  --fs-h3: 1.25rem; /* 20 / 28: sub-sections, card titles (Nunito Sans) */
+  --fs-h2: 1.75rem; /* 28 / 34: section titles, the serif floor (Playfair Display 600) */
+  --fs-h1: 2.5rem; /* 40 / 46: page titles (Playfair Display 700) */
+  --fs-display: 3.5rem; /* 56 / 60: the one hero number */
+  /* The steps the components were written against, on the scale. */
+  --fs-2xs: var(--fs-micro);
+  --fs-xs: var(--fs-micro);
+  --fs-sm: var(--fs-label);
+  --fs-md: var(--fs-body);
 
   /* Theme-independent: these read the same in light and dark, so the dark blocks leave them alone */
   --white: #ffffff;
@@ -73,8 +126,8 @@
 
   color-scheme: light;
   font-family: var(--sans);
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.625;
   color: var(--ink-2);
   background: var(--page);
   -webkit-font-smoothing: antialiased;
@@ -84,92 +137,144 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --page: #0c110f;
-    --surface: #161c19;
-    --surface-raised: #1d2420;
-    --surface-sunken: #111613;
-    --ink: #f1f4f2;
-    --ink-2: #b3bcb6;
-    --ink-3: #87918b;
-    --hairline: #29322d;
+    /* Dark: Institutional Seagreen mixed toward Ink for the ground (#26342D); cards are the ground
+       mixed 16% toward Oat. Text is IRIS Oat, secondary text Seagreen 30 (#C3CDC9), per the guide. */
+    --page: #26342d;
+    --surface: #47534c;
+    --surface-raised: #4c5750;
+    --surface-sunken: #232c27;
+    --ink: #f7f5f1;
+    --ink-2: #dde1dd;
+    --ink-3: #c3cdc9;
+    --hairline: #616a64;
+    --field-border: #a3a8a3;
     --ring: rgba(255, 255, 255, 0.1);
 
-    --accent: #86b8a2;
-    --accent-strong: #9fcab6;
-    --accent-bright: #9fcab6;
-    --accent-wash: rgba(134, 184, 162, 0.14);
-    --accent-track: #2c4a3d;
-    --bar-track: rgba(134, 184, 162, 0.22);
-    --accent-ink: #b6d8c8;
-    --on-accent: #0f1512;
+    /* On a dark ground the green is Seagreen 30: a step of the same hue, never a brightened one. */
+    --accent: #c3cdc9;
+    --accent-strong: #d8ddd9;
+    --accent-wash: #2f483e;
+    --accent-track: #505b54;
+    --bar-track: #505b54;
+    --accent-ink: #c3cdc9;
+    --on-accent: #1b1a18;
 
-    --brand-copper: #c9966c;
-    --brand-copper-soft: #a87a55;
-    --brand-sand: #2a2622;
-    --brand-sage: #33443c;
-    --brand-deep: #1f2c26;
-    --brand-logo: url("/brand/iris-logo-dark.png");
+    --ochre: #c9861f;
+    --ochre-strong: #d0973f;
+    --on-ochre: #1b1a18;
+    --gold-text: #d0973f;
 
-    --good-wash: rgba(12, 163, 12, 0.16);
-    --good-ink: #6fd06f;
-    --warning-wash: rgba(250, 178, 25, 0.16);
-    --warning-ink: #f2c464;
-    --serious-wash: rgba(236, 131, 90, 0.16);
-    --serious-ink: #f0a184;
-    --critical-wash: rgba(208, 59, 59, 0.16);
-    --critical-ink: #e88c8c;
-    --decision-wash: rgba(110, 140, 230, 0.17);
-    --decision-ink: #a9bcf3;
+    --brand-copper: #d5cac1;
+    --brand-sand: #403c2e;
+    --art-mid: #35423b;
+    --art-deep: #222b26;
+    --weight-0: #c3cdc9;
+    --weight-0-text: #1b1a18;
+    --weight-1: #656e68;
+    --weight-1-text: #f7f5f1;
+    --weight-2: #8c9792;
+    --weight-2-text: #1b1a18;
+    --weight-3: #2e473c;
+    --weight-3-text: #f7f5f1;
+    /* The reverse mark: single-colour IRIS Oat, never recoloured. */
+    --brand-logo: url("/brand/iris-logo-oat.png");
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px -6px rgba(0, 0, 0, 0.55);
-    --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.4), 0 24px 48px -12px rgba(0, 0, 0, 0.7);
+    --good: #c0d8cc;
+    --good-wash: #224c3c;
+    --good-ink: #c0d8cc;
+    --warning: #e6cdbc;
+    --warning-wash: #533e28;
+    --warning-ink: #e6cdbc;
+    --critical: #e6c1bc;
+    --critical-wash: #533028;
+    --critical-ink: #e6c1bc;
+    --decision-wash: #473e2e;
+    --decision-ink: #c3b4a7;
+
+    --band-low-wash: #224628;
+    --band-low-ink: #6fd06f;
+    --band-moderate-wash: #48482a;
+    --band-moderate-ink: #f2c464;
+    --band-elevated-wash: #464134;
+    --band-elevated-ink: #f0a184;
+    --band-high-wash: #41352f;
+    --band-high-ink: #e88c8c;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.28), 0 8px 20px -6px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.28), 0 24px 48px -12px rgba(0, 0, 0, 0.5);
 
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --page: #0c110f;
-  --surface: #161c19;
-  --surface-raised: #1d2420;
-  --surface-sunken: #111613;
-  --ink: #f1f4f2;
-  --ink-2: #b3bcb6;
-  --ink-3: #87918b;
-  --hairline: #29322d;
+  /* Dark: Institutional Seagreen mixed toward Ink for the ground (#26342D); cards are the ground
+     mixed 16% toward Oat. Text is IRIS Oat, secondary text Seagreen 30 (#C3CDC9), per the guide. */
+  --page: #26342d;
+  --surface: #47534c;
+  --surface-raised: #4c5750;
+  --surface-sunken: #232c27;
+  --ink: #f7f5f1;
+  --ink-2: #dde1dd;
+  --ink-3: #c3cdc9;
+  --hairline: #616a64;
+  --field-border: #a3a8a3;
   --ring: rgba(255, 255, 255, 0.1);
 
-  --accent: #86b8a2;
-  --accent-strong: #9fcab6;
-  --accent-bright: #9fcab6;
-  --accent-wash: rgba(134, 184, 162, 0.14);
-  --accent-track: #2c4a3d;
-  --bar-track: rgba(134, 184, 162, 0.22);
-  --accent-ink: #b6d8c8;
-  --on-accent: #0f1512;
+  /* On a dark ground the green is Seagreen 30: a step of the same hue, never a brightened one. */
+  --accent: #c3cdc9;
+  --accent-strong: #d8ddd9;
+  --accent-wash: #2f483e;
+  --accent-track: #505b54;
+  --bar-track: #505b54;
+  --accent-ink: #c3cdc9;
+  --on-accent: #1b1a18;
 
-  --brand-copper: #c9966c;
-  --brand-copper-soft: #a87a55;
-  --brand-sand: #2a2622;
-  --brand-sage: #33443c;
-  --brand-deep: #1f2c26;
-  --brand-logo: url("/brand/iris-logo-dark.png");
+  --ochre: #c9861f;
+  --ochre-strong: #d0973f;
+  --on-ochre: #1b1a18;
+  --gold-text: #d0973f;
 
-  --good-wash: rgba(12, 163, 12, 0.16);
-  --good-ink: #6fd06f;
-  --warning-wash: rgba(250, 178, 25, 0.16);
-  --warning-ink: #f2c464;
-  --serious-wash: rgba(236, 131, 90, 0.16);
-  --serious-ink: #f0a184;
-  --critical-wash: rgba(208, 59, 59, 0.16);
-  --critical-ink: #e88c8c;
-  --decision-wash: rgba(110, 140, 230, 0.17);
-  --decision-ink: #a9bcf3;
+  --brand-copper: #d5cac1;
+  --brand-sand: #403c2e;
+  --art-mid: #35423b;
+  --art-deep: #222b26;
+  --weight-0: #c3cdc9;
+  --weight-0-text: #1b1a18;
+  --weight-1: #656e68;
+  --weight-1-text: #f7f5f1;
+  --weight-2: #8c9792;
+  --weight-2-text: #1b1a18;
+  --weight-3: #2e473c;
+  --weight-3-text: #f7f5f1;
+  /* The reverse mark: single-colour IRIS Oat, never recoloured. */
+  --brand-logo: url("/brand/iris-logo-oat.png");
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px -6px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.4), 0 24px 48px -12px rgba(0, 0, 0, 0.7);
+  --good: #c0d8cc;
+  --good-wash: #224c3c;
+  --good-ink: #c0d8cc;
+  --warning: #e6cdbc;
+  --warning-wash: #533e28;
+  --warning-ink: #e6cdbc;
+  --critical: #e6c1bc;
+  --critical-wash: #533028;
+  --critical-ink: #e6c1bc;
+  --decision-wash: #473e2e;
+  --decision-ink: #c3b4a7;
+
+  --band-low-wash: #224628;
+  --band-low-ink: #6fd06f;
+  --band-moderate-wash: #48482a;
+  --band-moderate-ink: #f2c464;
+  --band-elevated-wash: #464134;
+  --band-elevated-ink: #f0a184;
+  --band-high-wash: #41352f;
+  --band-high-ink: #e88c8c;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.28), 0 8px 20px -6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.28), 0 24px 48px -12px rgba(0, 0, 0, 0.5);
 
   color-scheme: dark;
 }
@@ -189,17 +294,24 @@ h2,
 h3 {
   margin: 0;
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.014em;
   line-height: 1.25;
 }
 
+/* Page titles: Playfair Display, at 40px (28px on a phone, its floor on screen). */
 h1 {
-  font-size: 1.375rem;
+  font-family: var(--serif);
+  font-size: var(--fs-h1);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
 }
 
+/* Card and section titles: Nunito Sans at the h3 step. */
 h2 {
-  font-size: 1rem;
+  font-size: var(--fs-h3);
+  line-height: 1.4;
 }
 
 p {
@@ -223,14 +335,15 @@ select {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent-bright);
+  outline: 2px solid var(--ochre);
   outline-offset: 2px;
   border-radius: var(--r-xs);
 }
 
 code {
   font-family: var(--mono);
-  font-size: 0.85em;
+  /* A little smaller than the text around it, never below the 12px floor. */
+  font-size: max(0.85em, var(--fs-micro));
   background: var(--surface-sunken);
   border: 1px solid var(--hairline);
   padding: 0.05em 0.35em;

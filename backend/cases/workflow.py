@@ -184,22 +184,36 @@ UNCONFIRMED_SEND = (
     "check with the engine team before sending it again, or a second run will start."
 )
 
-def documents_needed(questions: dict, answers: dict[str, str]) -> list[str]:
+def documents_needed(questions: dict, answers: dict[str, str], shown: set[str] | None = None) -> list[str]:
     """The questions a form must have a document for before it can be submitted: every answer that
-    needs evidence, and the CV. The one rule for submitting and for the progress a draft shows."""
-    return [qid for qid, q in questions.items() if catalogue.evidence_required(q, answers[qid])] + [catalogue.CV_QID]
+    needs evidence among the questions it asks (a follow-up its parent's answer does not ask needs
+    none), and the CV. The one rule for submitting and for the progress a draft shows. (`shown`:
+    catalogue.asked for these answers, when already worked out.)"""
+    if shown is None:
+        shown = catalogue.asked(questions, answers)
+    return [
+        qid for qid, q in questions.items() if qid in shown and catalogue.evidence_required(q, answers[qid])
+    ] + [catalogue.CV_QID]
 
 
-def incomplete_for_submission(questions: dict, answers: dict[str, str], evidence: list[EvidenceFile]) -> list[str]:
+def incomplete_for_submission(
+    questions: dict, answers: dict[str, str], evidence: list[EvidenceFile], shown: set[str] | None = None
+) -> list[str]:
     """What a form still lacks before it can be submitted: the document for every answer that
     needs one, the CV included. (Personal details are not collected from the applicant.) The data
-    collection and review pages apply the same rule, and keep Submit disabled until it is met."""
+    collection and review pages apply the same rule, and keep Submit disabled until it is met.
+    (`shown`: catalogue.asked for these answers, when already worked out.)"""
     missing: list[str] = []
-    unanswered = [qid for qid, q in questions.items() if q.answer_type == AnswerType.TEXT and not answers[qid].strip()]
+    if shown is None:
+        shown = catalogue.asked(questions, answers)
+    unanswered = [
+        qid for qid, q in questions.items()
+        if qid in shown and q.answer_type == AnswerType.TEXT and not answers[qid].strip()
+    ]
     if unanswered:
         missing.append(f"answers for {', '.join(unanswered)}")
     attached = {e.qid for e in evidence}
-    documents = [qid for qid in documents_needed(questions, answers) if qid not in attached]
+    documents = [qid for qid in documents_needed(questions, answers, shown) if qid not in attached]
     if documents:
         missing.append(f"documents for {', '.join(documents)}")
     return missing
@@ -265,13 +279,17 @@ def _start_run(assessment: Assessment, actor: User, action: str, *from_stages: S
         version = catalogue.version_for(row)
         questions = catalogue.questions(version.pk)
         saved = dict(AnswerValue.objects.filter(assessment=row).values_list("qid", "value"))
-        # Every question is sent: one never answered goes as No, exactly as the form shows it.
-        answers = {qid: saved.get(qid, catalogue.default_answer(q)) for qid, q in questions.items()}
+        # A question never answered goes as No, exactly as the form shows it.
+        answers = catalogue.with_defaults(questions, saved)
+        # The questions these answers ask: every one but the follow-ups they do not call for,
+        # which the applicant never saw and which are not sent.
+        shown = catalogue.asked(questions, answers)
         # A draft can predate a settings change that withdrew an answer it holds, or the No it
-        # defaults to. (A text question has no list of answers.)
+        # defaults to. (A text question has no list of answers; a question not asked has none.)
         withdrawn = [
             qid for qid, value in answers.items()
-            if questions[qid].answer_type == AnswerType.CHOICE and value not in questions[qid].allowed_answers
+            if qid in shown and questions[qid].answer_type == AnswerType.CHOICE
+            and value not in questions[qid].allowed_answers
         ]
         if withdrawn:
             raise TransitionError(
@@ -282,16 +300,17 @@ def _start_run(assessment: Assessment, actor: User, action: str, *from_stages: S
         # question since deleted would reach the engine with nothing to answer.
         evidence = [e for e in evidence if e.qid in questions or e.qid == catalogue.CV_QID]
         # And only what an answer needs: a document left under a question that no longer asks for
-        # one (its settings changed) is not sent as if it did.
+        # one (its settings changed), or under a follow-up not asked, is not sent as if it did.
         evidence = [
             e for e in evidence
-            if e.qid == catalogue.CV_QID or catalogue.evidence_required(questions[e.qid], answers[e.qid])
+            if e.qid == catalogue.CV_QID
+            or (e.qid in shown and catalogue.evidence_required(questions[e.qid], answers[e.qid]))
         ]
         profile = ApplicantProfile.objects.filter(pk=row.pk).first()
         # A first submission and a resubmission send what the applicant has now, so both must be
         # complete and within the question settings in force. A retry resends the failed run as it was.
         if Stage.NOT_SUBMITTED in from_stages or Stage.AWAITING_APPLICANT in from_stages:
-            missing = incomplete_for_submission(questions, answers, evidence)
+            missing = incomplete_for_submission(questions, answers, evidence, shown)
             if missing:
                 raise TransitionError(f"Complete the form before submitting. Still missing: {'; '.join(missing)}.")
             broken = evidence_rule_breaks(questions, evidence)
@@ -311,14 +330,17 @@ def _start_run(assessment: Assessment, actor: User, action: str, *from_stages: S
             # the new attempt is exactly the one it repeats.
             payload = last.payload
             evidence = list(last.evidence_files.order_by("pk"))
+            not_asked = list(last.not_asked)
         else:
             # What earlier runs say about this one: its version, and on a resubmission the
             # reviewer's rulings and the documents already sent.
             previous = list(row.submissions.order_by("attempt_no").prefetch_related("evidence_files", "rulings"))
             history = adapt.run_history(previous)
-            payload = adapt.submission_payload(row, questions, answers, profile, evidence, history)
+            payload = adapt.submission_payload(row, questions, answers, profile, evidence, history, shown)
+            not_asked = [qid for qid in questions if qid not in shown]
         submission = Submission.objects.create(
-            assessment=row, attempt_no=(last.attempt_no + 1) if last else 1, version=version, payload=payload
+            assessment=row, attempt_no=(last.attempt_no + 1) if last else 1, version=version, payload=payload,
+            not_asked=not_asked,
         )
         submission.evidence_files.set(evidence)
         moved = set_stage(row, Stage.AUTH_RUNNING)
@@ -622,7 +644,9 @@ def _advance(submission: Submission, fetched: dict) -> None:
                 submission=submission, qid=r["qid"], status=r["status"], verdict=r["verdict"],
                 confidence=None if r["confidence"] is None else Decimal(str(r["confidence"])),
             )
-            for r in adapt.question_results(result)
+            # A follow-up the run did not ask is not the applicant's to answer for: nothing the
+            # engine says about it is flagged or ruled on.
+            for r in adapt.question_results(result) if r["qid"] not in submission.not_asked
         ])
         submission.outcome = outcome
         submission.engine_version = (result.get("engine") or {}).get("version", "")

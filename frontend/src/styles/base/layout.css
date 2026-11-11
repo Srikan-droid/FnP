@@ -72,8 +72,7 @@
 }
 
 .page-head-text h1 {
-  font-size: 1.75rem;
-  letter-spacing: -0.022em;
+  font-size: var(--fs-h1);
   margin-bottom: 0.35rem;
 }
 
@@ -83,7 +82,7 @@
 
 .page-sub {
   color: var(--ink-2);
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
 }
 
 .meta-grid {
@@ -101,7 +100,7 @@
   font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
 }
 
@@ -211,8 +210,8 @@
 }
 
 .brand-title {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--fs-body);
+  font-weight: 500;
   color: var(--ink);
   letter-spacing: -0.01em;
 }

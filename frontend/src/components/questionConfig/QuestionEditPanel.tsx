@@ -1,6 +1,17 @@
 import { useState } from "react";
 import Modal from "../Modal";
-import { ANSWERS, TOTAL, hundredths, questionProblem, settingsOf, show, weightsOf } from "../../domain/questionWeights";
+import {
+  ANSWERS,
+  TOTAL,
+  followUpsOf,
+  hundredths,
+  nameOf,
+  parentOf,
+  questionProblem,
+  settingsOf,
+  show,
+  weightsOf,
+} from "../../domain/questionWeights";
 import type { EditQuestion, EditSection, QuestionSettingsDraft } from "../../domain/questionWeights";
 import type { AnswerType, EvidenceRule } from "../../api/types";
 import { displaySection } from "../../domain/sectionLabels";
@@ -28,6 +39,8 @@ function polarityMeaning(polarity: EditQuestion["polarity"], answerType: AnswerT
 export default function QuestionEditPanel({
   question,
   section,
+  code: shownCode,
+  parentCode,
   isNew,
   configurableFileTypes,
   evidenceOptionChoices,
@@ -38,6 +51,10 @@ export default function QuestionEditPanel({
 }: {
   question: EditQuestion;
   section: EditSection;
+  /** Its code: as published, or the one applying will give it (null: unknown). */
+  code?: string | null;
+  /** For a follow-up: its parent's code, the same way. */
+  parentCode?: string | null;
   /** Added just now and never confirmed: cancelling takes it away again. */
   isNew: boolean;
   configurableFileTypes: string[];
@@ -108,17 +125,21 @@ export default function QuestionEditPanel({
 
   const takesDocs = draft.evidenceRequired !== "never";
   const asEdited: EditQuestion = { ...question, ...draft };
-  const problem = questionProblem(asEdited);
   // Its weight as the section now stands, with this question's settings as in the panel.
   const sectionNow: EditSection = { ...section, questions: section.questions.map((q) => (q.key === question.key ? asEdited : q)) };
+  const problem = questionProblem(asEdited, sectionNow);
+  // A follow-up: the question it follows on from. A parent: its follow-ups, which keep it a Yes / No
+  // question and keep the answers they are asked on.
+  const parent = parentOf(section, question);
+  const followUps = followUpsOf(section, question.key);
   const index = sectionNow.questions.findIndex((q) => q.key === question.key);
   const weights = weightsOf(sectionNow);
   const weight = weights ? weights[index] : null;
   const others = sectionNow.questions
-    .filter((q) => q.key !== question.key)
+    .filter((q) => q.key !== question.key && !q.parentKey)
     .reduce((sum, q) => sum + (hundredths(q.pct) ?? 0), 0);
   const titleId = `qpanel-${question.key}`;
-  const code = question.qid ?? "New question";
+  const code = shownCode ?? question.qid ?? "New question";
 
   return (
     <Modal labelledBy={titleId} panel dismissible={!changed} onClose={onCancel}>
@@ -127,6 +148,31 @@ export default function QuestionEditPanel({
         <h2 id={titleId}>{isNew ? "New question" : "Edit question"}</h2>
         <span className="qpanel-section">{displaySection(section.name) || "New section"}</span>
       </div>
+
+      {parent && (
+        <fieldset className="qpanel-step">
+          <legend>When it is asked</legend>
+          <label className="field-label" htmlFor={`${titleId}-when`}>
+            Asked when {parentCode ?? nameOf(parent)} is answered
+          </label>
+          <select
+            id={`${titleId}-when`}
+            className="input"
+            value={draft.showWhen ?? ""}
+            onChange={(e) => set({ showWhen: e.target.value as QuestionSettingsDraft["showWhen"] })}
+          >
+            {ANSWERS.filter((a) => parent.allowedAnswers.includes(a) || a === draft.showWhen).map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+          <p className="qpanel-hint">
+            {parent.text.trim() ? `“${parent.text.trim()}” — ` : ""}any other answer hides this question, and an
+            answer already given to it is cleared.
+          </p>
+        </fieldset>
+      )}
 
       <fieldset className="qpanel-step">
         <legend>Question</legend>
@@ -158,6 +204,13 @@ export default function QuestionEditPanel({
               role="radio"
               aria-checked={draft.answerType === type}
               className={`segment${draft.answerType === type ? " is-selected" : ""}`}
+              // Follow-ups are asked on a Yes / No answer: their parent stays a Yes / No question.
+              disabled={type === "text" && followUps.length > 0 && draft.answerType !== "text"}
+              title={
+                type === "text" && followUps.length > 0
+                  ? "It has follow-up questions, asked on its Yes / No answer; delete them to answer it in words"
+                  : undefined
+              }
               onClick={() =>
                 set({
                   answerType: type,
@@ -384,6 +437,8 @@ export default function QuestionEditPanel({
         />
       )}
 
+      {/* A follow-up has no weight of its own: it counts under its parent's. */}
+      {!parent && (
       <fieldset className="qpanel-step">
         <legend>Weight</legend>
         <label className="field-label" htmlFor={`${titleId}-pct`}>
@@ -415,6 +470,7 @@ export default function QuestionEditPanel({
               : ` — this one needs ${show(TOTAL - others)}% to make 100%.`}
         </p>
       </fieldset>
+      )}
 
       {problem && (
         <p className="field-error" role="status">

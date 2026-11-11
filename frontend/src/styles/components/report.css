@@ -38,13 +38,13 @@
   font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
 }
 
 .gauge-value {
-  font-size: 3rem;
-  font-weight: 600;
+  font-size: var(--fs-display);
+  font-weight: 700;
   line-height: 1;
   letter-spacing: -0.03em;
   color: var(--ink);
@@ -56,23 +56,23 @@
 }
 
 .band-low {
-  --meter: var(--good);
-  --meter-track: var(--good-wash);
+  --meter: var(--band-low);
+  --meter-track: var(--band-low-wash);
 }
 
 .band-moderate {
-  --meter: var(--warning);
-  --meter-track: var(--warning-wash);
+  --meter: var(--band-moderate);
+  --meter-track: var(--band-moderate-wash);
 }
 
 .band-elevated {
-  --meter: var(--serious);
-  --meter-track: var(--serious-wash);
+  --meter: var(--band-elevated);
+  --meter-track: var(--band-elevated-wash);
 }
 
 .band-high {
-  --meter: var(--critical);
-  --meter-track: var(--critical-wash);
+  --meter: var(--band-high);
+  --meter-track: var(--band-high-wash);
 }
 
 .verdict-body {
@@ -84,7 +84,7 @@
 }
 
 .verdict-reco {
-  font-size: 1.125rem;
+  font-size: var(--fs-h3);
   line-height: 1.35;
   letter-spacing: -0.015em;
 }
@@ -103,14 +103,14 @@
   font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
 }
 
 .verdict-stats dd {
   margin: 0.1rem 0 0;
-  font-size: 1.0625rem;
-  font-weight: 600;
+  font-size: var(--fs-body-lg);
+  font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
@@ -152,7 +152,7 @@
 .chip.chip-norisk {
   padding: 0.05rem 0.5rem;
   font-size: var(--fs-2xs);
-  font-weight: 600;
+  font-weight: 500;
   vertical-align: 0.1em;
 }
 
@@ -174,7 +174,7 @@
 
 .sbar-value {
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -206,7 +206,7 @@
   font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
   background: var(--surface-sunken);
   border-bottom: 1px solid var(--hairline);
@@ -241,13 +241,13 @@
 
 .data-table .strong {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .data-table tfoot td {
   border-bottom: none;
   padding-top: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   background: var(--surface-sunken);
 }

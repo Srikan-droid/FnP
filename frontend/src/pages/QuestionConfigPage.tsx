@@ -20,16 +20,21 @@ import {
   blankQuestion,
   changeSummary,
   evenSplit,
+  followUpsOf,
   fromVersion,
   hundredths,
+  nameOf,
   newKey,
+  parentOf,
   pctTotal,
+  previewCodes,
   questionProblem,
   remainder,
   shareStatus,
   show,
   toBody,
   undoEdits,
+  weighted,
   weightsOf,
 } from "../domain/questionWeights";
 import type { EditQuestion, EditSection, QuestionSettingsDraft } from "../domain/questionWeights";
@@ -187,6 +192,7 @@ function QuestionConfigEditor({
   departments,
   onDepartment,
   onRecheck,
+  codesUsed,
   save,
 }: QuestionnaireSettings & {
   departments: Department[];
@@ -315,6 +321,10 @@ function QuestionConfigEditor({
     return () => window.clearInterval(timer);
   }, [otherEditor]);
 
+  // The code a question added now will be given on applying, shown from the start (an older
+  // server that does not list the codes in use leaves them unknown: "New").
+  const codes = codesUsed ? previewCodes(sections, codesUsed) : new Map<string, string>();
+  const codeOf = (q: EditQuestion | undefined) => (q ? (q.qid ?? codes.get(q.key) ?? null) : null);
   // Closing or reloading the tab with changes not applied asks the browser to confirm.
   useEffect(() => {
     if (!dirty) return;
@@ -336,7 +346,7 @@ function QuestionConfigEditor({
   const sectionsOk =
     sectionsValid && sectionTotal === TOTAL && unweighted.length === 0 && sections.every((s, i) => !nameProblem(s, i));
   const frozen = !(sectionsValid && sectionTotal === TOTAL);
-  const sectionOff = (s: EditSection) => pctTotal(s) !== TOTAL || s.questions.some((q) => questionProblem(q));
+  const sectionOff = (s: EditSection) => pctTotal(s) !== TOTAL || s.questions.some((q) => questionProblem(q, s));
   const allOk = sectionsOk && sections.every((s) => !sectionOff(s));
 
   const updateSection = (key: string, change: Partial<EditSection>) => {
@@ -365,12 +375,16 @@ function QuestionConfigEditor({
     const last = sections[sections.length - 1];
     updateSection(last.key, { weight: show((hundredths(last.weight) ?? 0) + sectionLeft) });
   };
+  // Follow-ups have no weight of their own: only the section's other questions share it.
   const splitQuestions = (section: EditSection) => {
-    const shares = evenSplit(section.questions.length);
-    updateSection(section.key, { questions: section.questions.map((q, i) => ({ ...q, pct: show(shares[i]) })) });
+    const shared = weighted(section.questions);
+    const shares = evenSplit(shared.length);
+    updateSection(section.key, {
+      questions: section.questions.map((q) => (q.parentKey ? q : { ...q, pct: show(shares[shared.indexOf(q)]) })),
+    });
   };
   const fillLastQuestion = (section: EditSection, left: number) => {
-    const last = section.questions[section.questions.length - 1];
+    const last = weighted(section.questions).at(-1);
     if (!last || left <= 0) return;
     updateQuestion(section.key, last.key, { pct: show((hundredths(last.pct) ?? 0) + left) });
   };
@@ -405,14 +419,33 @@ function QuestionConfigEditor({
     setEditing({ sectionKey, questionKey: question.key, isNew: true });
     save.reset();
   };
+  /** Adds a follow-up under a Yes/No question, after its other follow-ups, asked on its first answer. */
+  const addFollowUp = (sectionKey: string, parent: EditQuestion) => {
+    const question = blankQuestion("0", { parentKey: parent.key, showWhen: parent.allowedAnswers[0] ?? "Yes" });
+    setSections((prev) =>
+      prev.map((s) => {
+        if (s.key !== sectionKey) return s;
+        const last = [parent, ...followUpsOf(s, parent.key)].at(-1) as EditQuestion;
+        const at = s.questions.indexOf(last) + 1;
+        return { ...s, questions: [...s.questions.slice(0, at), question, ...s.questions.slice(at)] };
+      })
+    );
+    setEditing({ sectionKey, questionKey: question.key, isNew: true });
+    save.reset();
+  };
   /** Removes a section; any weight it had is then left to share between the others. */
   const removeSection = (sectionKey: string) => {
     setSections((prev) => prev.filter((s) => s.key !== sectionKey));
     save.reset();
   };
+  /** Removes a question, and its follow-ups with it. */
   const removeQuestion = (sectionKey: string, questionKey: string) => {
     setSections((prev) =>
-      prev.map((s) => (s.key === sectionKey ? { ...s, questions: s.questions.filter((q) => q.key !== questionKey) } : s))
+      prev.map((s) =>
+        s.key === sectionKey
+          ? { ...s, questions: s.questions.filter((q) => q.key !== questionKey && q.parentKey !== questionKey) }
+          : s
+      )
     );
     save.reset();
   };
@@ -467,6 +500,11 @@ function QuestionConfigEditor({
       : confirm?.kind === "deleteQuestion"
         ? sections.find((s) => s.key === confirm.sectionKey)?.questions.find((q) => q.key === confirm.questionKey)
         : undefined;
+  // The follow-ups that go with a question being deleted.
+  const confirmFollowUps =
+    confirm?.kind === "deleteQuestion"
+      ? followUpsOf(sections.find((s) => s.key === confirm.sectionKey) as EditSection, confirm.questionKey)
+      : [];
   const sectionStatus = shareStatus(sectionLeft, "");
 
   return (
@@ -668,7 +706,8 @@ function QuestionConfigEditor({
       {sections.map((section, si) => {
         const weights = weightsOf(section);
         const pctSum = pctTotal(section);
-        const left = remainder(section.questions.map((q) => q.pct));
+        const shared = weighted(section.questions);
+        const left = remainder(shared.map((q) => q.pct));
         const status = shareStatus(left, "%");
         const off = !frozen && sectionOff(section);
         const sectionWeight = hundredths(section.weight);
@@ -763,7 +802,7 @@ function QuestionConfigEditor({
                 <WeightBar
                   unit="%"
                   label={`How ${section.name || "the section"} is shared between its questions`}
-                  parts={section.questions.map((q) => ({ key: q.key, label: q.qid ?? "New", value: hundredths(q.pct) ?? 0 }))}
+                  parts={shared.map((q) => ({ key: q.key, label: codeOf(q) ?? "New", value: hundredths(q.pct) ?? 0 }))}
                 />
                 {/* How much of the section is shared out (the percentage fields are described by it).
                     While the questions are locked it waits, neither passed nor failed. */}
@@ -775,13 +814,13 @@ function QuestionConfigEditor({
                   <span id={checkId} className={`qstatus is-${status.tone}`}>
                     {status.tone === "ok" ? <CheckCircleIcon size={13} /> : <AlertTriangleIcon size={13} />}
                     {status.text}
-                    {left !== null && left > 0 && section.questions.length > 0 && (
+                    {left !== null && left > 0 && shared.length > 0 && (
                       <button
                         type="button"
                         className="link-button"
                         onClick={() => fillLastQuestion(section, left)}
                       >
-                        Give it to {section.questions[section.questions.length - 1].qid ?? "the new question"}
+                        Give it to {codeOf(shared[shared.length - 1]) ?? "the new question"}
                       </button>
                     )}
                   </span>
@@ -792,13 +831,21 @@ function QuestionConfigEditor({
                 <QuestionRow
                   key={q.key}
                   question={q}
+                  code={codeOf(q)}
+                  parentCode={codeOf(parentOf(section, q))}
                   weight={weights ? weights[qi] : null}
                   sectionWeight={sectionWeight}
-                  problem={frozen ? null : questionProblem(q)}
+                  problem={frozen ? null : questionProblem(q, section)}
                   checkId={checkId}
                   pctInvalid={!frozen && pctSum !== TOTAL}
                   deleteDisabledReason={
-                    section.questions.length === 1 ? "A section needs at least one question; delete the section instead" : null
+                    !q.parentKey && shared.length === 1
+                      ? "A section needs at least one question; delete the section instead"
+                      : null
+                  }
+                  // Only a Yes / No question has follow-ups, and only one level deep.
+                  onAddFollowUp={
+                    !q.parentKey && q.answerType === "choice" ? () => addFollowUp(section.key, q) : undefined
                   }
                   onPct={(pct) => updateQuestion(section.key, q.key, { pct })}
                   onEdit={() => setEditing({ sectionKey: section.key, questionKey: q.key, isNew: false })}
@@ -817,7 +864,7 @@ function QuestionConfigEditor({
                   <PlusIcon size={14} />
                   Add question
                 </button>
-                {section.questions.length > 1 && (
+                {shared.length > 1 && (
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => splitQuestions(section)}>
                     Split equally
                   </button>
@@ -879,6 +926,8 @@ function QuestionConfigEditor({
           key={editing.questionKey}
           question={editingQuestion}
           section={editingSection}
+          code={codeOf(editingQuestion)}
+          parentCode={codeOf(parentOf(editingSection, editingQuestion))}
           isNew={editing.isNew}
           configurableFileTypes={configurableFileTypes}
           evidenceOptionChoices={evidenceOptionChoices}
@@ -979,12 +1028,12 @@ function QuestionConfigEditor({
           <h2 id="delete-title">
             {confirm.kind === "deleteSection"
               ? `Delete the section "${(confirmTarget as EditSection).name || "New section"}"?`
-              : `Delete question ${(confirmTarget as EditQuestion).qid ?? "(new)"}?`}
+              : `Delete question ${codeOf(confirmTarget as EditQuestion) ?? "(new)"}${confirmFollowUps.length > 0 ? " and its follow-ups" : ""}?`}
           </h2>
           <p className="modal-sub">
             {confirm.kind === "deleteSection"
               ? "The section and its questions are removed from the questionnaire once you apply. Share its weight between the other sections so they add up to 100."
-              : "The question is removed from the questionnaire once you apply. Share its percentage between the section's other questions so they add up to 100%."}{" "}
+              : `The question${confirmFollowUps.length > 0 ? `, with its follow-up${confirmFollowUps.length > 1 ? "s" : ""} ${confirmFollowUps.map(nameOf).join(", ")},` : ""} is removed from the questionnaire once you apply. Share its percentage between the section's other questions so they add up to 100%.`}{" "}
             Assessments already submitted keep it.
           </p>
           <div className="modal-actions">

@@ -19,7 +19,7 @@
   background: var(--surface);
   color: var(--ink);
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   text-align: left;
@@ -37,12 +37,54 @@
   gap: 0.6rem;
 }
 
+.review-question-text {
+  min-width: 0;
+}
+
+/* A follow-up question: set in under the question that asks it. */
+.review-table tr.is-follow-up .review-question-cell {
+  padding-left: 1.1rem;
+  border-left: 2px solid var(--accent-wash);
+}
+
+.review-follow-up {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
 .review-question {
   color: var(--ink-2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* The question, and "Read more" at the end of its last line. */
+.review-question-line {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+.review-question-line .read-more {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Shown whole after "Read more". */
+.review-question.is-full {
+  display: block;
+}
+
+/* "Read more" under a question cut off with an ellipsis (beats the shared link-button font). */
+.link-button.read-more {
+  display: inline-block;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--accent-ink);
 }
 
 .review-evidence-link,

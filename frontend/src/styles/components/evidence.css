@@ -56,7 +56,7 @@
 
 .evidence-name {
   font-size: var(--fs-md);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   overflow-wrap: anywhere;
 }

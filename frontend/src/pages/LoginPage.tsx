@@ -84,10 +84,6 @@ export default function LoginPage() {
       <section className="login-brand">
         <div className="login-brand-top">
           <BrandLockup className="login-lockup" />
-          {/* The tagline is part of the lockup; on a phone, where that is small, it is set here. */}
-          <p className="login-tagline-text" aria-hidden="true">
-            Building Transparency. Driving Growth.
-          </p>
         </div>
 
         <LoginFlow />
@@ -207,22 +203,13 @@ function LoginArtwork() {
       .join(" ");
   };
   return (
+    // Flat colour only (no gradients or transparency): IRIS Sand, Sage and steps of Seagreen.
     <svg className="login-art" viewBox="0 0 600 520" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id="login-sand" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" style={{ stopColor: "var(--brand-sand)", stopOpacity: 0.9 }} />
-          <stop offset="1" style={{ stopColor: "var(--brand-sand)", stopOpacity: 0.35 }} />
-        </linearGradient>
-        <linearGradient id="login-sage" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" style={{ stopColor: "var(--brand-sage)", stopOpacity: 0.45 }} />
-          <stop offset="1" style={{ stopColor: "var(--brand-deep)", stopOpacity: 0.95 }} />
-        </linearGradient>
-      </defs>
-      <polygon points={hex(150, 250, 300)} fill="url(#login-sand)" />
-      <polygon points={hex(390, 120, 240)} fill="url(#login-sand)" opacity="0.7" />
-      <polygon points={hex(330, 330, 260)} fill="url(#login-sage)" opacity="0.55" />
-      <polygon points={hex(250, 470, 230)} fill="url(#login-sage)" opacity="0.75" />
-      <polygon points={hex(440, 470, 230)} fill="url(#login-sage)" />
+      <polygon points={hex(150, 250, 300)} className="login-art-sand" />
+      <polygon points={hex(390, 120, 240)} className="login-art-sand" />
+      <polygon points={hex(330, 330, 260)} className="login-art-sage" />
+      <polygon points={hex(250, 470, 230)} className="login-art-mid" />
+      <polygon points={hex(440, 470, 230)} className="login-art-deep" />
     </svg>
   );
 }

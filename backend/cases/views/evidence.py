@@ -277,12 +277,11 @@ class EvidenceUploadView(APIView):
         if qid == catalogue.CV_QID:
             allowed, max_files = CV_FILE_TYPES, 1
         else:
-            question = catalogue.questions(catalogue.version_for(assessment).pk).get(qid)
+            questions = catalogue.questions(catalogue.version_for(assessment).pk)
+            question = questions.get(qid)
             if question is None:
                 raise ValidationError({"qid": "Unknown question."})
-            answer = AnswerValue.objects.filter(assessment=assessment, qid=qid).values_list("value", flat=True).first()
-            if not catalogue.evidence_required(question, catalogue.default_answer(question) if answer is None else answer):
-                raise ValidationError({"qid": "The current answer to this question does not need a document."})
+            _require_takes_document(assessment, questions, qid)
             allowed, max_files = question.file_types, question.max_files
 
         try:
@@ -379,16 +378,26 @@ def _is_uuid(value: str) -> bool:
     return True
 
 
+def _require_takes_document(assessment: Assessment, questions: dict, qid: str) -> None:
+    """Refuses a document for a question the form does not ask (a follow-up its parent's answer
+    does not call for) or whose current answer needs none."""
+    saved = dict(AnswerValue.objects.filter(assessment=assessment).values_list("qid", "value"))
+    answers = catalogue.with_defaults(questions, saved)
+    if qid not in catalogue.asked(questions, answers):
+        raise ValidationError({"qid": "This follow-up question is not asked for the current answers."})
+    if not catalogue.evidence_required(questions[qid], answers[qid]):
+        raise ValidationError({"qid": "The current answer to this question does not need a document."})
+
+
 def _still_takes(assessment: Assessment, qid: str, code: str, name: str, role: str) -> None:
     """With the form locked, whether the question as now published still takes this document: the
     settings may have been published anew while the file was being received (a publish locks the
     drafts it changes, so it has either finished or waits for this upload)."""
-    question = catalogue.questions(catalogue.version_for(assessment).pk).get(qid)
+    questions = catalogue.questions(catalogue.version_for(assessment).pk)
+    question = questions.get(qid)
     if question is None:
         raise ValidationError({"qid": "This question is no longer on the form."})
-    answer = AnswerValue.objects.filter(assessment=assessment, qid=qid).values_list("value", flat=True).first()
-    if not catalogue.evidence_required(question, catalogue.default_answer(question) if answer is None else answer):
-        raise ValidationError({"qid": "The current answer to this question does not need a document."})
+    _require_takes_document(assessment, questions, qid)
     if catalogue.option(qid, code, question) is None:
         raise ValidationError({"optionCode": "Choose a document type from the list."})
     if not validation.format_allowed(name, question.file_types):

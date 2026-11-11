@@ -191,23 +191,27 @@ export type QuestionSettings = Record<
 >;
 
 /** The whole questionnaire as edited: its sections in order, each with its questions (qid null: added). */
+/** One question as the editor sends it. */
+export interface QuestionEdit {
+  qid: string | null;
+  text: string;
+  polarity: "Positive" | "Negative";
+  answerType: AnswerType;
+  weight: number;
+  allowedAnswers: Answer[];
+  fileTypes: string[];
+  maxFiles: 1 | 2;
+  evidenceRequired: EvidenceRule;
+  evidenceOptions: string[];
+  /** The checks the engine runs on its documents (none for a question that takes none). */
+  checks: string[];
+}
+
 export interface SectionEdit {
   name: string;
   weight: number;
-  questions: {
-    qid: string | null;
-    text: string;
-    polarity: "Positive" | "Negative";
-    answerType: AnswerType;
-    weight: number;
-    allowedAnswers: Answer[];
-    fileTypes: string[];
-    maxFiles: 1 | 2;
-    evidenceRequired: EvidenceRule;
-    evidenceOptions: string[];
-    /** The checks the engine runs on its documents (none for a question that takes none). */
-    checks: string[];
-  }[];
+  /** In form order; each question's follow-ups (asked on one of its answers) nested under it. */
+  questions: (QuestionEdit & { followUps: (QuestionEdit & { showWhen: Answer })[] })[];
 }
 
 /**
@@ -473,12 +477,30 @@ export interface Upload {
   documentId?: string;
 }
 
+/**
+ * Resolves once no answer is still being saved on the form. A document is attached to a question
+ * against its saved answer (whether it needs one, whether a follow-up is asked), so an upload
+ * made right after changing an answer waits for that answer to reach the server first.
+ */
+function answersSaved(client: QueryClient, id: string): Promise<void> {
+  const mutationKey = [...keys.form(id), "save"];
+  if (client.isMutating({ mutationKey }) === 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    const unsubscribe = client.getMutationCache().subscribe(() => {
+      if (client.isMutating({ mutationKey }) > 0) return;
+      unsubscribe();
+      resolve();
+    });
+  });
+}
+
 export function useUploadEvidence(id: string) {
   const client = useQueryClient();
   return useMutation({
     // Under the form's key, so the page can tell work on the form is still being sent.
     mutationKey: [...keys.form(id), "upload"],
-    mutationFn: ({ file, ...fields }: Upload) => {
+    mutationFn: async ({ file, ...fields }: Upload) => {
+      await answersSaved(client, id);
       const body = new FormData();
       if (file) body.append("file", file);
       for (const [name, value] of Object.entries(fields)) if (value) body.append(name, value);

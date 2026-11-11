@@ -11,6 +11,7 @@ import type {
   ScoreResult,
 } from "../domain/types";
 import type { AnswerType, ApplicantInfo, Assessment, Case, Catalogue, EvidenceItem, EvidenceRule, Form } from "./types";
+import { askedQids } from "../domain/followUps";
 
 /** One uploaded document as the form shows it. */
 export function evidenceRef(item: EvidenceItem): EvidenceRef {
@@ -22,6 +23,7 @@ export function evidenceRef(item: EvidenceItem): EvidenceRef {
     description: item.description,
     fileName: item.fileName,
     url: item.url,
+    documentId: item.documentId ?? null,
   };
 }
 
@@ -51,9 +53,13 @@ export function evidenceNeeded(rule: EvidenceRule, answerType: AnswerType, answe
  * The form as the screens know it: one response per question, in catalogue order. Only the
  * questions this assessment's form has are included: the catalogue is the active version and may
  * be a few minutes old, so it is not assumed to match the form question for question.
+ *
+ * A follow-up question its parent's answer does not ask is left out, so every count, check and
+ * list on the screens leaves it out too; it comes back the moment the parent's answer asks it.
  */
 export function toApplicationForm(form: Form, catalogue: Catalogue, assessment: Assessment): ApplicationForm {
   const answers = new Map(form.answers.map((a) => [a.qid, a]));
+  const asked = askedQids(form.answers);
   const evidenceFor = (qid: string) => form.evidence.filter((e) => e.qid === qid).map(evidenceRef);
   return {
     application_id: assessment.id,
@@ -62,7 +68,7 @@ export function toApplicationForm(form: Form, catalogue: Catalogue, assessment: 
     submitted_at: assessment.submittedAt ?? "",
     responses: catalogue.questions.flatMap((q) => {
       const saved = answers.get(q.qid);
-      if (saved === undefined) return [];
+      if (saved === undefined || !asked.has(q.qid)) return [];
       const answer = saved.value;
       const answerType = saved.answerType ?? "choice";
       return [
@@ -77,6 +83,8 @@ export function toApplicationForm(form: Form, catalogue: Catalogue, assessment: 
           evidence_required: evidenceNeeded(saved.evidenceRule, answerType, answer),
           evidence: evidenceFor(q.qid),
           checks_to_perform: q.checks,
+          parentQid: saved.parentQid ?? null,
+          showWhen: saved.showWhen ?? null,
         },
       ];
     }),

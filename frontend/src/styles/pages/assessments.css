@@ -47,8 +47,8 @@
 }
 
 .tile-dept {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--fs-body);
+  font-weight: 700;
   color: var(--ink);
   letter-spacing: -0.012em;
 }
@@ -70,7 +70,7 @@
   font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
 }
 

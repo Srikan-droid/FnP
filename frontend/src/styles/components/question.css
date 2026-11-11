@@ -64,7 +64,7 @@
   font-size: var(--fs-sm);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-2);
   margin-right: auto;
 }
@@ -78,7 +78,7 @@
   background: var(--warning-wash);
   color: var(--warning-ink);
   font-size: var(--fs-2xs);
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -97,6 +97,20 @@
 
 .qcard + .qcard {
   border-top: 1px solid var(--hairline);
+}
+
+/* A follow-up question: set in under the question that asks it, with a rule down its side. */
+.qcard.is-follow-up {
+  margin-left: 1.25rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--accent-wash);
+}
+
+.qcard-follow-up {
+  margin: 0 0 0.5rem;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-3);
 }
 
 .qcard-main {
@@ -130,7 +144,7 @@
 }
 
 .qtext {
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
   line-height: 1.5;
   color: var(--ink);
 }
@@ -138,7 +152,7 @@
 .required-mark {
   margin-left: 0.2rem;
   color: var(--critical);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ============================================================
@@ -173,7 +187,7 @@
 .segment.is-selected {
   background: var(--surface-raised);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
   box-shadow: var(--shadow-sm);
 }
 

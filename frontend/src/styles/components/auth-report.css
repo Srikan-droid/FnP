@@ -16,7 +16,7 @@
   padding: 0.4rem 1rem;
   border-radius: var(--r-pill);
   font-size: var(--fs-md);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-2);
   text-decoration: none;
 }
@@ -63,13 +63,13 @@
   font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-3);
 }
 
 .auth-stat-value {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: var(--fs-h3);
+  font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
@@ -97,15 +97,42 @@
 }
 
 .auth-question-head {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.6rem;
   width: 100%;
   padding: 0.75rem 1.25rem;
+  cursor: pointer;
+}
+
+/* Opens and closes the row; its click area is stretched over the whole row. */
+.auth-question-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  padding: 0;
   background: none;
   border: none;
-  text-align: left;
+  color: inherit;
   cursor: pointer;
+}
+
+.auth-question-toggle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.auth-question-toggle:focus-visible {
+  outline: none;
+}
+
+.auth-question-toggle:focus-visible::after {
+  outline: 2px solid var(--ochre);
+  outline-offset: -2px;
+  border-radius: var(--r-xs);
 }
 
 .auth-chevron {
@@ -116,7 +143,7 @@
   flex-shrink: 0;
 }
 
-.auth-question-head[aria-expanded="false"] .auth-chevron {
+.auth-question-toggle[aria-expanded="false"] .auth-chevron {
   transform: rotate(-90deg);
 }
 
@@ -131,6 +158,19 @@
   overflow: hidden;
 }
 
+/* Shown whole after "Read more". */
+.auth-question-text.is-full {
+  display: block;
+}
+
+/* On the question line, right after its "…" (above the row's click area). */
+.auth-read-more {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .auth-question-meta {
   display: flex;
   align-items: center;
@@ -140,7 +180,7 @@
 
 .auth-confidence {
   font-size: var(--fs-md);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
   min-width: 2.5rem;
@@ -220,7 +260,7 @@
 
 .check-label {
   font-size: var(--fs-md);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
 }
 
@@ -229,7 +269,7 @@
   align-items: center;
   gap: 0.45rem;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;

@@ -2,7 +2,9 @@ import AnswerToggle from "./AnswerToggle";
 import TextAnswer from "./TextAnswer";
 import EvidenceBlock from "./EvidenceBlock";
 import { answerOptions } from "../domain/catalogue";
+import { followUpLabel } from "../domain/followUps";
 import type { AttachHandler } from "./EvidenceBlock";
+import type { ParentDocument } from "../domain/parentDocument";
 import type { CatalogueQuestion, LibraryDocument } from "../api/types";
 import type { EvidenceOption } from "../domain/catalogue";
 import type { Answer, EvidenceRef, ResponseItem } from "../domain/types";
@@ -14,6 +16,7 @@ export default function QuestionCard({
   defaultCode,
   labelFor,
   library,
+  fromParent,
   onAnswerChange,
   onAttach,
   onRemove,
@@ -26,14 +29,19 @@ export default function QuestionCard({
   labelFor: (file: EvidenceRef) => string;
   /** "Your documents", to attach one from there. */
   library?: LibraryDocument[];
+  /** For a follow-up question: its parent's document, which it can use too. */
+  fromParent?: ParentDocument;
   onAnswerChange: (answer: string) => void;
   onAttach: AttachHandler;
   onRemove: (evidenceId: string) => Promise<unknown>;
 }) {
   const labelId = `q-${response.qid}-label`;
+  // A follow-up sits under the question that asks it, saying why it is asked.
+  const followUp = followUpLabel(response);
 
   return (
-    <article className="qcard" id={`question-${response.qid}`}>
+    <article className={`qcard${followUp ? " is-follow-up" : ""}`} id={`question-${response.qid}`}>
+      {followUp && <p className="qcard-follow-up">{followUp}</p>}
       <div className="qcard-main">
         <div className="qcard-prompt">
           <span className="qid">{response.qid}</span>
@@ -67,6 +75,7 @@ export default function QuestionCard({
           allowSupporting={question.maxFiles > 1}
           labelFor={labelFor}
           library={library}
+          fromParent={fromParent}
           onAttach={onAttach}
           onRemove={onRemove}
         />

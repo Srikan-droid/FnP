@@ -208,6 +208,10 @@ export interface CatalogueQuestion {
   allowedAnswers: Answer[];
   fileTypes: string[];
   maxFiles: 1 | 2;
+  /** A follow-up question: the Yes/No question it follows on from (null for an ordinary one). */
+  parentQid?: string | null;
+  /** A follow-up question: the parent's answer that asks it. */
+  showWhen?: Answer | null;
 }
 
 export interface EngineOption {
@@ -257,6 +261,8 @@ export interface QuestionnaireSettings {
   engineEvidenceOptions?: Record<string, string[]>;
   /** Every check a question's documents can be given (those in use on any question), in words too. */
   checkChoices?: { name: string; label: string }[];
+  /** Every question code ever used, deleted questions' included (codes are never reused). */
+  codesUsed?: string[];
 }
 
 /** What changing the questions reaches on the applications not yet submitted (read on applying). */
@@ -326,6 +332,11 @@ export interface Form {
     maxFiles: 1 | 2;
     /** For a question added here: its document types as this form's version gives them. */
     evidenceOptions?: EngineOption[] | null;
+    /** A follow-up question: the question it follows on from and the answer that asks it. */
+    parentQid?: string | null;
+    showWhen?: Answer | null;
+    /** Whether the saved answers ask it (always true for an ordinary question). */
+    asked?: boolean;
   }[];
   evidence: EvidenceItem[];
   /** "Your documents": everything uploaded, attached or not (left out by an older server). */
