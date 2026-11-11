@@ -353,8 +353,11 @@ export interface ApiQuestionResult {
   } | null;
 }
 
+/** How the engine's authentication came out: anything but CLEAR goes to the reviewer. */
+export type AuthenticationOutcomeCode = "CLEAR" | "RETURN_TO_FILER" | "REVIEW";
+
 export interface ApiAuthentication {
-  outcome: "CLEAR" | "RETURN_TO_FILER" | null;
+  outcome: AuthenticationOutcomeCode | null;
   isClean: boolean;
   overallConfidence: number | null;
   checksRun: number;
@@ -422,7 +425,7 @@ export interface Case {
   run: {
     attempt: number;
     status: "queued" | "running" | "completed" | "failed";
-    outcome: "CLEAR" | "RETURN_TO_FILER" | null;
+    outcome: AuthenticationOutcomeCode | null;
     submittedAt: string;
     authenticatedAt: string | null;
     completedAt: string | null;

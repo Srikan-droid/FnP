@@ -1,12 +1,5 @@
-import { CheckCircleIcon, AlertTriangleIcon, ArrowLeftIcon } from "./icons";
-import { latestReviewLabel, reviewLine, type ReviewKind } from "../domain/reviewLabels";
+import { latestReviewLabel, reviewLine } from "../domain/reviewLabels";
 import type { ReviewEntry } from "../api/types";
-
-const ICON: Record<ReviewKind, typeof CheckCircleIcon> = {
-  accepted: CheckCircleIcon,
-  overridden: AlertTriangleIcon,
-  rejected: ArrowLeftIcon,
-};
 
 /**
  * What the reviewer last did with a question, as a small label after its outcome ("Accepted by
@@ -15,11 +8,10 @@ const ICON: Record<ReviewKind, typeof CheckCircleIcon> = {
 export function ReviewChips({ entries }: { entries?: ReviewEntry[] }) {
   const label = latestReviewLabel(entries);
   if (!label) return null;
-  const Icon = ICON[label.kind];
+  // Words only: a small icon beside them shrank to a dot once the label wrapped in a narrow column.
   return (
     <span className="review-chips">
       <span className={`chip chip-${label.tone} chip-review is-${label.kind}`} title={label.title}>
-        <Icon size={11} />
         {label.text}
       </span>
     </span>

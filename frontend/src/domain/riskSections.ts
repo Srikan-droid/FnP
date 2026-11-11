@@ -37,6 +37,14 @@ export function sectionTotals(scoreResult: ScoreResult): SectionTotal[] {
 }
 
 /**
+ * Whether a section has no risk at all: nothing scored against it, and no question in it marked
+ * Risk. It reads "No risk" in place of its score.
+ */
+export function noRisk(total: SectionTotal): boolean {
+  return total.risk === 0 && total.lines.every((l) => l.riskFlag !== 1);
+}
+
+/**
  * The questions the printed breakdown shows in full (what each asks, and the AI engine's concerns
  * about it): those carrying risk, and any the engine wrote a concern about. A section holding one
  * prints open.

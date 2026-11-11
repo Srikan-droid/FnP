@@ -1034,9 +1034,15 @@
 
   .pane-risk-track,
   .pane-risk-fill,
-  .pane-risk-table .chip {
+  .pane-risk-table .chip,
+  .pane-risk-value .chip-norisk {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .pane-risk-value .chip-norisk {
+    padding: 0.5pt 5pt;
+    font-size: 7pt;
   }
 
   .pane-risk-value {

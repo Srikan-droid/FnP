@@ -13,7 +13,7 @@ import AnswerTag from "./AnswerTag";
 import ConcernCard from "./ConcernCard";
 import { ReviewChips, ReviewNotes } from "./ReviewMarks";
 import { concernKey, type Concern } from "../domain/concerns";
-import { sectionTotals, type SectionTotal } from "../domain/riskSections";
+import { noRisk, sectionTotals, type SectionTotal } from "../domain/riskSections";
 import type {
   AuthenticationOutcome,
   ScoreResult,
@@ -156,8 +156,15 @@ function SectionRow({
           />
         </span>
         <span className="sbar-value">
-          {total.risk.toFixed(1)}
-          <span className="sbar-denom"> / {total.weight}</span>
+          {noRisk(total) ? (
+            // Every question clear: said in words in place of "0.0 / 18".
+            <span className="chip chip-low chip-norisk">No risk</span>
+          ) : (
+            <>
+              {total.risk.toFixed(1)}
+              <span className="sbar-denom"> / {total.weight}</span>
+            </>
+          )}
         </span>
       </button>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detailedQids, riskShare, sectionTotals } from "./riskSections";
+import { detailedQids, noRisk, riskShare, sectionTotals } from "./riskSections";
 import type { ScoreResult, SectionScoreLine } from "./types";
 
 const line = (qid: string, section: string, weight: number, risk: number, answer: "Yes" | "No" = "No"): SectionScoreLine => ({
@@ -67,5 +67,20 @@ describe("where the risk comes from", () => {
     expect(riskShare(coi)).toBeCloseTo(35.71, 1);
     expect(riskShare({ section: "Empty", weight: 0, risk: 0, lines: [] })).toBe(0);
     expect(riskShare({ section: "Over", weight: 4, risk: 9, lines: [] })).toBe(100);
+  });
+});
+
+describe("noRisk", () => {
+  it("is a section where nothing scored and no question is marked Risk", () => {
+    const [risky, clear] = sectionTotals(
+      score([line("A1", "Basic", 4, 1.5), line("A4", "Basic", 2, 0), line("Q1", "Experience", 6, 0), line("Q3", "Experience", 12, 0)])
+    );
+    expect(noRisk(risky)).toBe(false);
+    expect(noRisk(clear)).toBe(true);
+  });
+
+  it("is not a section with a question marked Risk, even one adding nothing", () => {
+    const [section] = sectionTotals(score([{ ...line("Q1", "Experience", 6, 0), riskFlag: 1 }]));
+    expect(noRisk(section)).toBe(false);
   });
 });

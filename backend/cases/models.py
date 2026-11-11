@@ -95,8 +95,15 @@ class RunStatus(models.TextChoices):
 
 
 class Outcome(models.TextChoices):
+    """How the engine's authentication of a run came out. Anything but CLEAR goes to the reviewer
+    (to rule on the flagged answers, or straight to the decision when none is flagged), and is
+    scored only if the reviewer asks for it."""
+
     CLEAR = "CLEAR"
     RETURN_TO_FILER = "RETURN_TO_FILER"
+    # Given by the engine (on a resubmission, so far) where a person must look at the answers;
+    # handled as RETURN_TO_FILER is.
+    REVIEW = "REVIEW"
 
 
 class ResultStatus(models.TextChoices):
@@ -515,7 +522,10 @@ class Submission(models.Model):
 
     assessment = models.ForeignKey(Assessment, on_delete=models.PROTECT, related_name="submissions", db_index=False)  # indexed by the composite index or unique rule that starts with it
     attempt_no = models.PositiveSmallIntegerField()
+    # The engine keeps one request id per application: each resubmission comes back with the same
+    # id and its own submission version ("V001", "V002" ...; empty for the first submission).
     engine_request_id = models.CharField(max_length=64, null=True, blank=True)
+    engine_submission_version = models.CharField(max_length=20, blank=True)
     status = models.CharField(max_length=10, choices=RunStatus.choices, default=RunStatus.QUEUED)
     outcome = models.CharField(max_length=20, choices=Outcome.choices, null=True, blank=True)
     engine_version = models.CharField(max_length=20, blank=True)
@@ -539,7 +549,10 @@ class Submission(models.Model):
         db_table = "submission"
         constraints = [
             models.UniqueConstraint(fields=["assessment", "attempt_no"], name="submission_attempt_unique"),
-            models.UniqueConstraint(fields=["engine_request_id"], name="submission_request_id_unique"),
+            # One run per request id and submission version: a resubmission shares its case's id.
+            models.UniqueConstraint(
+                fields=["engine_request_id", "engine_submission_version"], name="submission_request_version_unique"
+            ),
             _in_choices("status", RunStatus, "submission_status_valid"),
             models.CheckConstraint(
                 condition=Q(outcome__isnull=True) | Q(outcome__in=Outcome.values),

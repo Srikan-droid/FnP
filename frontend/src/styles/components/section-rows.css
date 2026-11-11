@@ -189,10 +189,20 @@ button.sbar-row {
   line-height: 1.35;
 }
 
-/* The scoring page's table scrolls sideways when narrow, so a label stays on one line there; the
-   summary's table has fixed columns, so a long label wraps inside its chip instead. */
+/* The scoring page's table scrolls sideways when narrow, so a label stays on one line there. The
+   summary's table (and its PDF) has fixed columns: the label goes on its own line under the
+   outcome, lined up with it and a little apart, and wraps inside a box rather than a stretched
+   pill. */
+.pane-risk-table .review-chips {
+  display: flex;
+  margin: 0.45rem 0 0;
+}
+
 .pane-risk-table .chip.chip-review {
+  max-width: 100%;
   white-space: normal;
+  text-align: left;
+  border-radius: var(--r-sm);
 }
 
 .chip-review.is-rejected {

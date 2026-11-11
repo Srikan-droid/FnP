@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { ApiError } from "../api/client";
 import { acceptAttribute, fileProblem, formatHint, sizeHint } from "../domain/catalogue";
-import { CheckCircleIcon, FileTextIcon, UploadIcon, XIcon } from "./icons";
+import { CheckCircleIcon, FileTextIcon, InfoIcon, UploadIcon, XIcon } from "./icons";
 import { DOCUMENT_DRAG } from "../domain/attachSource";
 import { leftFor, useDocumentDrag, useDragOver } from "../state/documentDrag";
 import type { LibraryDocument } from "../api/types";
@@ -332,9 +332,11 @@ export default function DocumentLibrary({
                   {used ? <CheckCircleIcon size={15} /> : <FileTextIcon size={15} />}
                 </span>
                 <span className="doc-row-main">
-                  <a className="doc-row-name" href={doc.url} target="_blank" rel="noreferrer">
+                  {/* Plain text: the row is dragged onto a question, and a link here would be
+                      dragged (and opened) instead. The "i" beside it opens the document. */}
+                  <span className="doc-row-name" title={doc.fileName}>
                     {doc.fileName}
-                  </a>
+                  </span>
                   <span className="doc-row-sub">
                     {doc.format.toUpperCase()} · {formatBytes(doc.sizeBytes)} ·{" "}
                     {used ? (
@@ -375,18 +377,32 @@ export default function DocumentLibrary({
                     </span>
                   )}
                 </span>
-                {!asking && (
-                  <button
-                    type="button"
-                    className="btn-remove"
-                    disabled={busy[doc.id]}
-                    aria-label={`Remove ${doc.fileName}`}
-                    title="Remove from your documents"
-                    onClick={() => (used ? setConfirming(doc.id) : void remove(doc))}
+                <span className="doc-row-actions">
+                  {/* Never dragged itself: a drag started here moves the row, as anywhere on it. */}
+                  <a
+                    className="doc-row-open"
+                    href={doc.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    draggable={false}
+                    aria-label={`Open ${doc.fileName}`}
+                    title="Open the document"
                   >
-                    <XIcon size={14} />
-                  </button>
-                )}
+                    <InfoIcon size={15} />
+                  </a>
+                  {!asking && (
+                    <button
+                      type="button"
+                      className="btn-remove"
+                      disabled={busy[doc.id]}
+                      aria-label={`Remove ${doc.fileName}`}
+                      title="Remove from your documents"
+                      onClick={() => (used ? setConfirming(doc.id) : void remove(doc))}
+                    >
+                      <XIcon size={14} />
+                    </button>
+                  )}
+                </span>
               </li>
             );
           })}

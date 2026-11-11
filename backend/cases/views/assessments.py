@@ -564,7 +564,10 @@ def _removal_record(assessment: Assessment) -> dict:
     run = Submission.objects.filter(assessment=assessment).select_related("score").order_by("-attempt_no").first()
     if run is not None:
         record["latestRun"] = {
-            "attempt": run.attempt_no, "requestId": run.engine_request_id, "status": run.status, "outcome": run.outcome,
+            "attempt": run.attempt_no, "requestId": run.engine_request_id,
+            # The engine's submission version for a resubmission ("V001" ...); null for a first submission.
+            "submissionVersion": run.engine_submission_version or None,
+            "status": run.status, "outcome": run.outcome,
         }
         score = getattr(run, "score", None)
         if score is not None:

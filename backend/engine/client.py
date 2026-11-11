@@ -5,6 +5,7 @@ import json
 import time
 from contextlib import contextmanager
 from functools import cache
+from typing import NamedTuple
 
 import httpx
 from django.conf import settings
@@ -87,9 +88,19 @@ class _UntilDeadline:
         return getattr(self._fh, name)
 
 
-def submit(payload: dict, files: list[tuple[str, object, str, str]]) -> str:
+class Accepted(NamedTuple):
+    """The engine's answer to a submission. It keeps one request id per application: a resubmission
+    comes back with the application's request id and a new submission version ("V001" for the first
+    resubmission, then "V002" ...); a first submission has none."""
+
+    request_id: str
+    submission_version: str | None = None
+
+
+def submit(payload: dict, files: list[tuple[str, object, str, str]]) -> Accepted:
     """Starts a run. files are (file name, file object, content type, doc_type). Returns the
-    engine's request id. Never takes longer than submit_max_seconds()."""
+    engine's request id, and its submission version on a resubmission. Never takes longer than
+    submit_max_seconds()."""
     deadline = time.monotonic() + _upload_seconds()
     try:
         response = _client().post(
@@ -100,10 +111,12 @@ def submit(payload: dict, files: list[tuple[str, object, str, str]]) -> str:
             timeout=_send_timeout(),
         )
         response.raise_for_status()
-        return response.json()["request_id"]
+        body = response.json()
+        version = body.get("submission_version")
+        return Accepted(body["request_id"], str(version) if version else None)
     except httpx.ReadTimeout as exc:
         raise EngineUnconfirmed("POST /authentication/verify sent, but not answered in time") from exc
-    except (httpx.HTTPError, ValueError, KeyError) as exc:
+    except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
         raise EngineUnavailable("POST /authentication/verify failed") from exc
 
 

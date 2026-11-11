@@ -3,7 +3,7 @@ import ConcernCard from "./ConcernCard";
 import { ReviewChips, ReviewNotes } from "./ReviewMarks";
 import { reviewedQids } from "../domain/reviewLabels";
 import { displaySection } from "../domain/sectionLabels";
-import { detailedQids, riskShare, sectionTotals } from "../domain/riskSections";
+import { detailedQids, noRisk, riskShare, sectionTotals } from "../domain/riskSections";
 import { concernKey, type Concern } from "../domain/concerns";
 import type { ScoreResult, SectionScoreLine } from "../domain/types";
 import type { ReviewEntry } from "../api/types";
@@ -53,7 +53,14 @@ export default function RiskBreakdown({
                 <span className="pane-risk-fill" style={{ width: `${riskShare(s)}%` }} />
               </span>
               <span className="pane-risk-value">
-                <strong>{s.risk.toFixed(1)}</strong> / {s.weight}
+                {noRisk(s) ? (
+                  // Every question clear: said in words in place of "0.0 / 18".
+                  <span className="chip chip-low chip-norisk">No risk</span>
+                ) : (
+                  <>
+                    <strong>{s.risk.toFixed(1)}</strong> / {s.weight}
+                  </>
+                )}
               </span>
             </div>
 

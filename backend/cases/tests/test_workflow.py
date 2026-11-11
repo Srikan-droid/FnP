@@ -30,6 +30,10 @@ class FakeEngine:
         self.sent = []
         self.calls = 0
         self.fail_submit = False
+        # application id -> (request id, how many times it was sent again); `versioning` off answers
+        # a resubmission with the earlier id and no version, as an engine not keeping them apart.
+        self.requests = {}
+        self.versioning = True
         # (request id, application id) of every force-score request; a refusal to raise instead.
         self.forced = []
         self.force_refusal = None
@@ -49,7 +53,13 @@ class FakeEngine:
         if self.fail_submit:
             raise EngineUnavailable("down")
         self.sent.append({"payload": payload, "files": [(name, ctype, doc) for name, _, ctype, doc in files]})
-        return f"req{len(self.sent)}"
+        application = payload.get("application_id")
+        if application not in self.requests:
+            self.requests[application] = (f"req{len(self.requests) + 1}", 0)
+            return client.Accepted(self.requests[application][0])
+        request_id, again = self.requests[application]
+        self.requests[application] = (request_id, again + 1)
+        return client.Accepted(request_id, f"V{again + 1:03d}" if self.versioning else None)
 
     def status(self, request_id):
         self.calls += 1
@@ -654,7 +664,7 @@ def test_a_send_uploads_every_document_and_returns_the_request_id(monkeypatch, t
     doc = tmp_path / "a.pdf"
     doc.write_bytes(PDF)
     with doc.open("rb") as fh:
-        assert client.submit({"application_id": "X"}, [("a.pdf", fh, "application/pdf", "passport")]) == "r1"
+        assert client.submit({"application_id": "X"}, [("a.pdf", fh, "application/pdf", "passport")]) == ("r1", None)
 
 
 def test_a_send_stops_once_the_upload_passes_its_deadline(monkeypatch, tmp_path):
@@ -1216,3 +1226,128 @@ def test_following_a_run_being_scored_does_not_read_its_saved_documents(monkeypa
     workflow.sync(assessment)
     assessment.refresh_from_db()
     assert assessment.stage == Stage.DECISION_PENDING and Score.objects.get().source == "engine"
+
+
+# ---- Resubmissions under the engine's one request id per application ---------------------------
+
+def _sent_back(monkeypatch, reviewer, applicant, case):
+    """The case submitted, flagged at PC1, sent back by the reviewer, and PC1 given a new document."""
+    fake = FakeEngine(monkeypatch, "APP004-return")
+    applicant.post(f"/api/assessments/{case}/submit")
+    fake.finish()
+    applicant.get(f"/api/assessments/{case}/case")
+    reviewer.put(f"/api/assessments/{case}/rulings/PC1", {"verdict": "rejected", "comment": "Need the court order."})
+    assert reviewer.post(f"/api/assessments/{case}/complete-review").json()["stage"] == "AWAITING_APPLICANT"
+    fake.status_doc = PENDING
+    attach(applicant, case, "PC1", "POLICE_CLEARANCE")
+    return fake
+
+
+def test_a_resubmission_under_the_same_request_id_with_a_new_version_is_followed(
+    monkeypatch, no_poll_delay, reviewer, applicant, case
+):
+    fake = _sent_back(monkeypatch, reviewer, applicant, case)
+    assert applicant.post(f"/api/assessments/{case}/resubmit").json()["stage"] == "AUTH_RUNNING"
+    first, again = Submission.objects.filter(assessment__public_id=case).order_by("attempt_no")
+    # One request id for the application; the resubmission is its first new version.
+    assert again.engine_request_id == first.engine_request_id == "req1"
+    assert (first.engine_submission_version, again.engine_submission_version) == ("", "V001")
+    assert again.status == "running" and first.status == "completed"
+    # The earlier run keeps what it was: its outcome and the reviewer's ruling on it.
+    assert first.outcome and first.rulings.filter(qid="PC1", verdict="rejected").exists()
+    # Followed as the case's run: the engine's status for the id is now the new version's.
+    fake.finish()
+    body = applicant.get(f"/api/assessments/{case}/case").json()
+    assert body["stage"] != "AUTH_FAILED" and body["run"]["attempt"] == 2
+    # Removed, the audit trail's record of its latest run says which version the engine gave it.
+    assert reviewer.delete(f"/api/assessments/{case}").status_code == 204
+    removed = AuditEvent.objects.get(action="assessment.remove", assessment_ref=case)
+    assert removed.metadata["latestRun"]["requestId"] == "req1"
+    assert removed.metadata["latestRun"]["submissionVersion"] == "V001"
+
+
+def test_a_resubmission_back_with_the_earlier_request_id_and_no_new_version_fails(
+    monkeypatch, no_poll_delay, reviewer, applicant, case
+):
+    fake = _sent_back(monkeypatch, reviewer, applicant, case)
+    fake.versioning = False  # the engine gives the earlier id and no version: its results could be the old run's
+    assert applicant.post(f"/api/assessments/{case}/resubmit").json()["stage"] == "AUTH_FAILED"
+    again = Submission.objects.get(assessment__public_id=case, attempt_no=2)
+    assert again.engine_request_id is None and "without a new submission version" in again.error
+
+
+def test_a_version_the_engine_already_gave_is_not_taken_again(monkeypatch, no_poll_delay, reviewer, applicant, case):
+    fake = _sent_back(monkeypatch, reviewer, applicant, case)
+    first = Submission.objects.get(assessment__public_id=case, attempt_no=1)
+    Submission.objects.filter(pk=first.pk).update(engine_submission_version="V001")  # as if V001 were taken
+    assert applicant.post(f"/api/assessments/{case}/resubmit").json()["stage"] == "AUTH_FAILED"
+    assert "without a new submission version" in Submission.objects.get(assessment__public_id=case, attempt_no=2).error
+    assert fake.requests  # the engine was asked
+
+
+def test_a_retried_resubmission_gets_the_next_version(monkeypatch, no_poll_delay, reviewer, applicant, case):
+    fake = _sent_back(monkeypatch, reviewer, applicant, case)
+    fake.fail_submit = True
+    assert applicant.post(f"/api/assessments/{case}/resubmit").json()["stage"] == "AUTH_FAILED"
+    fake.fail_submit = False
+    assert reviewer.post(f"/api/assessments/{case}/retry").json()["stage"] == "AUTH_RUNNING"
+    retried = Submission.objects.filter(assessment__public_id=case).order_by("-attempt_no").first()
+    assert (retried.engine_request_id, retried.engine_submission_version) == ("req1", "V001")
+
+
+def test_the_engines_submission_version_is_read_from_its_answer(monkeypatch, tmp_path):
+    import httpx
+
+    def accept_again(request):
+        request.read()
+        return httpx.Response(202, json={"request_id": "r1", "submission_version": "V002"})
+
+    _engine_answering(monkeypatch, accept_again)
+    doc = tmp_path / "a.pdf"
+    doc.write_bytes(PDF)
+    with doc.open("rb") as fh:
+        accepted = client.submit({"application_id": "X"}, [("a.pdf", fh, "application/pdf", "passport")])
+    assert (accepted.request_id, accepted.submission_version) == ("r1", "V002")
+
+
+# ---- The engine's REVIEW outcome: to the reviewer, as RETURN_TO_FILER ----------------------------
+
+def _review_result():
+    result = engine_fixture("result-APP004-return.json")
+    result["data_authentication_summary"]["outcome"] = "REVIEW"
+    return result
+
+
+def test_a_review_outcome_goes_to_the_reviewer_with_its_flags(monkeypatch, no_poll_delay, applicant, case):
+    fake = FakeEngine(monkeypatch, "APP004-return")
+    monkeypatch.setattr(client, "result", lambda rid: _review_result())
+    applicant.post(f"/api/assessments/{case}/submit")
+    fake.finish()
+    body = applicant.get(f"/api/assessments/{case}/case").json()
+    assert body["stage"] == "REVIEW_PENDING" and body["flags"] == ["PC1"] and body["score"] is None
+    assert Submission.objects.get().outcome == "REVIEW" and not Submission.objects.get().error
+
+
+def test_a_review_outcome_with_nothing_flagged_goes_to_the_decision(monkeypatch, no_poll_delay, applicant, case):
+    original = adapt.question_results
+    monkeypatch.setattr(adapt, "question_results", lambda result: [
+        {**r, "status": "authenticated" if r["status"] == "issue" else r["status"]} for r in original(result)
+    ])
+    fake = FakeEngine(monkeypatch, "APP004-return")
+    monkeypatch.setattr(client, "result", lambda rid: _review_result())
+    applicant.post(f"/api/assessments/{case}/submit")
+    fake.finish()
+    body = applicant.get(f"/api/assessments/{case}/case").json()
+    assert body["stage"] == "DECISION_PENDING" and body["flags"] == [] and body["score"] is None
+
+
+def test_a_resubmission_coming_back_for_review_goes_to_the_reviewer(monkeypatch, no_poll_delay, reviewer, applicant, case):
+    """As FNP-2026-1041: the resubmission, under the case's request id and V001, authenticated REVIEW."""
+    fake = _sent_back(monkeypatch, reviewer, applicant, case)
+    assert applicant.post(f"/api/assessments/{case}/resubmit").json()["stage"] == "AUTH_RUNNING"
+    monkeypatch.setattr(client, "result", lambda rid: _review_result())
+    fake.finish()
+    body = applicant.get(f"/api/assessments/{case}/case").json()
+    assert body["stage"] == "REVIEW_PENDING" and body["run"]["attempt"] == 2
+    again = Submission.objects.get(assessment__public_id=case, attempt_no=2)
+    assert (again.engine_request_id, again.engine_submission_version, again.outcome) == ("req1", "V001", "REVIEW")

@@ -2,7 +2,7 @@
 
     NOT_SUBMITTED --submit--> AUTH_RUNNING --CLEAR--> SCORING (engine) --> DECISION_PENDING --> ACCEPTED / REJECTED
                                    |                                          ^
-                                   +--RETURN_TO_FILER--> REVIEW_PENDING --every flag ruled, all accepted, reviewer sends it on--> SCORING (forced)
+                                   +--RETURN_TO_FILER or REVIEW--> REVIEW_PENDING --every flag ruled, all accepted, reviewer sends it on--> SCORING (forced)
                                    |       (no answer flagged: straight to DECISION_PENDING, unscored)
                                    |                         +--every flag ruled, any rejected, reviewer returns it--> AWAITING_APPLICANT --resubmit--> AUTH_RUNNING
                                    +--engine failure--> AUTH_FAILED --retry--> AUTH_RUNNING
@@ -333,7 +333,7 @@ def _start_run(assessment: Assessment, actor: User, action: str, *from_stages: S
     files = []
     try:
         files = adapt.submission_files(evidence)
-        request_id = engine.submit(payload, files)
+        accepted = engine.submit(payload, files)
     except engine.EngineUnconfirmed:
         # The engine may have the run. It has no way to recognise a repeated submission, so a retry
         # starts a second run; the failure says so, for whoever sends it again.
@@ -345,21 +345,48 @@ def _start_run(assessment: Assessment, actor: User, action: str, *from_stages: S
         logger.exception("Sending %s attempt %s failed", row.public_id, submission.attempt_no)
         _fail(submission, "The submission could not be sent.")
     else:
-        try:
-            # Only if the run is still waiting: one that sync gave up on as interrupted stays failed.
-            with transaction.atomic():
-                Submission.objects.filter(pk=submission.pk, status=RunStatus.QUEUED).update(
-                    engine_request_id=request_id, status=RunStatus.RUNNING
-                )
-        except IntegrityError:
-            # The engine named another run's id: following it would mix the two cases up.
-            logger.error("The engine returned request id %s, already used by another run", request_id)
-            _fail(submission, "The engine returned a request id that belongs to another run.")
+        refused = _not_this_runs(row, submission, accepted)
+        if refused:
+            logger.error(
+                "%s attempt %s: the engine returned request id %s (submission version %s): %s",
+                row.public_id, submission.attempt_no, accepted.request_id, accepted.submission_version, refused,
+            )
+            _fail(submission, refused)
+        else:
+            try:
+                # Only if the run is still waiting: one that sync gave up on as interrupted stays failed.
+                with transaction.atomic():
+                    Submission.objects.filter(pk=submission.pk, status=RunStatus.QUEUED).update(
+                        engine_request_id=accepted.request_id,
+                        engine_submission_version=accepted.submission_version or "",
+                        status=RunStatus.RUNNING,
+                    )
+            except IntegrityError:
+                # Another run took this request id and version at the same moment.
+                logger.error("The engine returned request id %s, already used by another run", accepted.request_id)
+                _fail(submission, "The engine returned a request id that belongs to another run.")
     finally:
         for _, fh, *_ in files:
             fh.close()
     submission.refresh_from_db()
     return submission
+
+
+def _not_this_runs(row: Assessment, submission: Submission, accepted) -> str | None:
+    """Why the request id the engine returned cannot be this run's, or None if it can. The engine
+    keeps one request id per application: a resubmission (or a retry of one) comes back with the id
+    the case already has and a submission version it has not given before (V001, V002 ...), and the
+    engine's status for that id is then the new version's. An id that belongs to another case, or
+    the case's id again without a new version, would show one run's results as another's."""
+    earlier = Submission.objects.filter(engine_request_id=accepted.request_id).exclude(pk=submission.pk)
+    if not earlier.exists():
+        return None
+    if earlier.exclude(assessment_id=row.pk).exists():
+        return "The engine returned a request id that belongs to another run."
+    version = accepted.submission_version or ""
+    if not version or earlier.filter(engine_submission_version=version).exists():
+        return "The AI engine returned this application's earlier request id without a new submission version."
+    return None
 
 
 def submit(assessment: Assessment, applicant: User) -> Submission:
